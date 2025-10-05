@@ -127,11 +127,11 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
 
       {/* Dropdown */}
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[70vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-gray-800">Notifications</h3>
+              <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
@@ -146,8 +146,8 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <p className="text-4xl mb-2">🔕</p>
+              <div className="p-6 sm:p-8 text-center text-gray-500">
+                <p className="text-3xl sm:text-4xl mb-2">🔕</p>
                 <p className="text-sm">No notifications yet</p>
               </div>
             ) : (
@@ -156,11 +156,11 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                       !notification.read ? 'bg-blue-50' : ''
                     }`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2 sm:gap-3">
                       {/* Icon */}
                       <div className="text-2xl flex-shrink-0">
                         {getNotificationIcon(notification.type)}
