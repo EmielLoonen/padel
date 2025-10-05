@@ -24,8 +24,11 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middleware
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+console.log(`🌐 CORS enabled for origin: ${corsOrigin}`);
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: corsOrigin,
+  credentials: true,
 }));
 app.use(express.json());
 
