@@ -81,18 +81,15 @@ function App() {
     <div className="min-h-screen bg-dark-bg p-3 sm:p-4 py-4 sm:py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-800">
-          <div className="flex justify-between items-start sm:items-center flex-wrap gap-3 sm:gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
-                <span className="text-3xl sm:text-5xl">🎾</span>
-                <span className="truncate">Padel Coordinator</span>
-              </h1>
-              <p className="text-sm sm:text-lg text-gray-400">
-                Welcome, <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
-              </p>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-8 mb-4 sm:mb-8 border border-gray-800">
+          {/* Mobile: Compact top row */}
+          <div className="flex items-center justify-between gap-2 sm:hidden mb-2">
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              <span className="text-2xl">🎾</span>
+              <span>POPKNOTS</span>
+            </h1>
+            <div className="flex items-center gap-2">
+              <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
               <button
                 onClick={() => setShowSettings(true)}
                 className="hover:opacity-80 transition-opacity"
@@ -100,13 +97,39 @@ function App() {
               >
                 <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
               </button>
+            </div>
+          </div>
+          
+          {/* Mobile: Welcome message */}
+          <p className="text-xs text-gray-400 sm:hidden">
+            Hey <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
+          </p>
+
+          {/* Desktop: Original layout */}
+          <div className="hidden sm:flex justify-between items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                <span className="text-5xl">🎾</span>
+                <span className="truncate">POPKNOTS</span>
+              </h1>
+              <p className="text-lg text-gray-400">
+                Welcome, <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
               <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
               <button
-                onClick={logout}
-                className="bg-gradient-to-r from-red-500 to-red-600 text-white py-2 sm:py-2.5 px-3 sm:px-6 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl font-medium text-sm sm:text-base"
+                onClick={() => setShowSettings(true)}
+                className="hover:opacity-80 transition-opacity"
+                title="Settings"
               >
-                <span className="hidden sm:inline">Sign Out</span>
-                <span className="sm:hidden">Out</span>
+                <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
+              </button>
+              <button
+                onClick={logout}
+                className="bg-gradient-to-r from-red-500 to-red-600 text-white py-2.5 px-6 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl font-medium"
+              >
+                Sign Out
               </button>
             </div>
           </div>

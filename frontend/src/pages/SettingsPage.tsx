@@ -10,7 +10,7 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({ onBack }: SettingsPageProps) {
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, logout } = useAuthStore();
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [emailPassword, setEmailPassword] = useState('');
@@ -350,6 +350,16 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                 {isLoading ? 'Changing Password...' : 'Change Password'}
               </button>
             </form>
+          </div>
+
+          {/* Logout Button */}
+          <div className="border-t border-gray-700 pt-6">
+            <button
+              onClick={logout}
+              className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-6 rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-bold text-lg shadow-2xl hover:shadow-red-500/50 hover:scale-[1.02] transform"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>
