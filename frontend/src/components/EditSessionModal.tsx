@@ -14,12 +14,67 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
     date: session.date.split('T')[0], // Format as YYYY-MM-DD
     time: session.time,
     venueName: session.venueName,
-    totalCost: session.totalCost?.toString() || '',
     notes: session.notes || '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deletingCourtId, setDeletingCourtId] = useState<string | null>(null);
+  const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
+  const [courtEdits, setCourtEdits] = useState<Record<string, any>>({});
+
+  const handleEditCourt = (court: any) => {
+    setEditingCourtId(court.id);
+    setCourtEdits({
+      [court.id]: {
+        courtNumber: court.courtNumber,
+        startTime: court.startTime,
+        duration: court.duration,
+        cost: court.cost || '',
+      },
+    });
+  };
+
+  const handleCourtEditChange = (courtId: string, field: string, value: any) => {
+    setCourtEdits((prev) => ({
+      ...prev,
+      [courtId]: {
+        ...prev[courtId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveCourtEdit = async (courtId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const edits = courtEdits[courtId];
+      
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/courts/${courtId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          courtNumber: parseInt(edits.courtNumber),
+          startTime: edits.startTime,
+          duration: parseInt(edits.duration),
+          cost: edits.cost ? parseFloat(edits.cost) : null,
+        }),
+      });
+      
+      setEditingCourtId(null);
+      setCourtEdits({});
+      onSuccess();
+    } catch (error) {
+      alert('Failed to update court');
+    }
+  };
+
+  const handleCancelCourtEdit = () => {
+    setEditingCourtId(null);
+    setCourtEdits({});
+  };
 
   const handleDeleteCourt = async (courtId: string) => {
     if (!confirm('Are you sure you want to delete this empty court?')) return;
@@ -57,10 +112,6 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
     if (!formData.time) newErrors.time = 'Time is required';
     if (!formData.venueName.trim()) newErrors.venueName = 'Venue name is required';
 
-    if (formData.totalCost && isNaN(Number(formData.totalCost))) {
-      newErrors.totalCost = 'Cost must be a number';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -75,7 +126,6 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
         date: formData.date,
         time: formData.time,
         venueName: formData.venueName.trim(),
-        totalCost: formData.totalCost ? Number(formData.totalCost) : undefined,
         notes: formData.notes.trim() || undefined,
       });
 
@@ -123,36 +173,119 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
           {session.courts && session.courts.length > 0 && (
             <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Courts ({session.courts.length})</h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {session.courts.map((court) => {
                   const hasPlayers = court.rsvps && court.rsvps.length > 0;
+                  const isEditing = editingCourtId === court.id;
+                  const edits = courtEdits[court.id];
+                  
                   return (
-                    <div key={court.id} className="flex items-center justify-between p-2 bg-white border rounded">
-                      <div className="flex-1">
-                        <span className="font-medium text-gray-700">Court {court.courtNumber}</span>
-                        <span className="text-sm text-gray-500 ml-2">
-                          {court.startTime} ({court.duration} min) - {court.rsvps?.length || 0}/{court.maxPlayers} players
-                        </span>
-                      </div>
-                      {!hasPlayers && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCourt(court.id)}
-                          disabled={deletingCourtId === court.id}
-                          className="text-red-500 hover:text-red-700 text-sm font-medium disabled:opacity-50"
-                        >
-                          {deletingCourtId === court.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      )}
-                      {hasPlayers && (
-                        <span className="text-xs text-gray-400">Has players</span>
+                    <div key={court.id} className="p-3 bg-white border rounded-lg">
+                      {isEditing ? (
+                        // Edit mode
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Court #</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={edits.courtNumber}
+                                onChange={(e) => handleCourtEditChange(court.id, 'courtNumber', e.target.value)}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                              <input
+                                type="time"
+                                value={edits.startTime}
+                                onChange={(e) => handleCourtEditChange(court.id, 'startTime', e.target.value)}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Duration (min)</label>
+                              <select
+                                value={edits.duration}
+                                onChange={(e) => handleCourtEditChange(court.id, 'duration', e.target.value)}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              >
+                                <option value="60">60</option>
+                                <option value="90">90</option>
+                                <option value="120">120</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">Cost (€)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={edits.cost}
+                                onChange={(e) => handleCourtEditChange(court.id, 'cost', e.target.value)}
+                                className="w-full px-2 py-1 border rounded text-sm"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveCourtEdit(court.id)}
+                              className="flex-1 py-1 px-3 bg-padel-green text-white rounded text-sm hover:bg-green-700"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelCourtEdit}
+                              className="flex-1 py-1 px-3 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View mode
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-700">Court {court.courtNumber}</span>
+                            <span className="text-sm text-gray-500 ml-2">
+                              {court.startTime} ({court.duration} min)
+                              {court.cost && <span> • €{court.cost}</span>}
+                            </span>
+                            <span className="text-xs text-gray-400 ml-2">
+                              {court.rsvps?.length || 0}/{court.maxPlayers} players
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEditCourt(court)}
+                              className="text-padel-green hover:text-green-700 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                            {!hasPlayers && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCourt(court.id)}
+                                disabled={deletingCourtId === court.id}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium disabled:opacity-50"
+                              >
+                                {deletingCourtId === court.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
                 })}
               </div>
               <p className="text-xs text-gray-600 mt-2">
-                You can only delete courts with no players assigned.
+                You can edit court details or delete courts with no players assigned.
               </p>
             </div>
           )}
@@ -210,28 +343,6 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
               />
               {errors.venueName && (
                 <p className="text-red-500 text-sm mt-1">{errors.venueName}</p>
-              )}
-            </div>
-
-            {/* Total Cost */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Cost (€) (Optional)
-              </label>
-              <input
-                type="number"
-                name="totalCost"
-                value={formData.totalCost}
-                onChange={handleChange}
-                placeholder="e.g., 60"
-                step="0.01"
-                min="0"
-                className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-padel-green ${
-                  errors.totalCost ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.totalCost && (
-                <p className="text-red-500 text-sm mt-1">{errors.totalCost}</p>
               )}
             </div>
 
