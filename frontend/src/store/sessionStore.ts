@@ -11,6 +11,7 @@ interface Court {
   maxPlayers: number;
   rsvps?: Array<{
     id: string;
+    status: 'yes' | 'no' | 'maybe';
     user: {
       id: string;
       name: string;
@@ -23,6 +24,7 @@ interface Court {
     addedBy: {
       id: string;
       name: string;
+      avatarUrl?: string;
     };
   }>;
   availableSpots?: number;
@@ -51,6 +53,7 @@ interface Session {
     user: {
       id: string;
       name: string;
+      avatarUrl?: string;
     };
   }>;
   rsvpSummary?: {

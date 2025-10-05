@@ -43,10 +43,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: padel-coordinator-api
-          property: host
+        value: https://padel-coordinator-api.onrender.com
 
 # Database - You'll need to create this separately on Neon.tech
 # and add the DATABASE_URL to the backend service
