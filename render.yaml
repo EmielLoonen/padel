@@ -6,7 +6,7 @@ services:
   - type: web
     name: padel-coordinator-api
     env: node
-    buildCommand: cd backend && npm install && npx prisma generate
+    buildCommand: cd backend && npm install && npx prisma generate && npm run build
     startCommand: cd backend && npm start
     healthCheckPath: /health
     envVars:
