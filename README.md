@@ -139,6 +139,6 @@ Private project - All rights reserved
 
 ## Contact
 
-Your Name - your.email@example.com
+Your Name - emiel@emielloonen.nl
 
 
