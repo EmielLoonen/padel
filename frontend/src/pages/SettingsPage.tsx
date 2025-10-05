@@ -168,7 +168,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               </div>
             )}
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
               <Avatar src={user?.avatarUrl} name={user?.name || ''} size="xl" />
               
               <div className="flex-1">
@@ -182,14 +182,19 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
                 />
                 <label
                   htmlFor="avatar-upload"
-                  className={`inline-block bg-gradient-to-r from-padel-green to-emerald-600 text-white py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-bold shadow-2xl hover:shadow-green-500/50 hover:scale-[1.02] transform cursor-pointer ${
+                  className={`inline-block bg-gradient-to-r from-padel-green to-emerald-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-lg sm:rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-bold shadow-lg hover:shadow-green-500/50 active:scale-95 sm:hover:scale-[1.02] transform cursor-pointer text-sm sm:text-base ${
                     isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  {isUploadingAvatar ? 'Uploading...' : 'Upload New Picture'}
+                  {isUploadingAvatar ? 'Uploading...' : (
+                    <>
+                      <span className="hidden sm:inline">Upload New Picture</span>
+                      <span className="sm:hidden">Upload Photo</span>
+                    </>
+                  )}
                 </label>
                 <p className="text-xs text-gray-400 mt-2">
-                  JPG, PNG, GIF or WebP. Max 5MB.
+                  Max 5MB
                 </p>
               </div>
             </div>

@@ -21,25 +21,25 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
-      <div className="bg-dark-card rounded-3xl shadow-2xl p-10 w-full max-w-md border border-gray-800">
-        <div className="text-center mb-8">
-          <div className="text-7xl mb-4 animate-bounce">🎾</div>
-          <h1 className="text-4xl font-bold mb-2 text-white">
+    <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-dark-card rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-10 w-full max-w-md border border-gray-800">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="text-5xl sm:text-7xl mb-3 sm:mb-4 animate-bounce">🎾</div>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-white">
             Padel Coordinator
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-base sm:text-lg">
             Sign in to manage your matches
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-400 rounded">
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-400 rounded text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-gray-300 mb-2">
               Email
@@ -50,7 +50,7 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all text-base"
               placeholder="john@test.com"
             />
           </div>
@@ -65,7 +65,7 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all text-base"
               placeholder="••••••••"
             />
           </div>
@@ -73,7 +73,7 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-padel-green to-emerald-600 text-white py-4 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-padel-green focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-2xl hover:shadow-green-500/50 transition-all transform hover:scale-[1.02]"
+                  className="w-full bg-gradient-to-r from-padel-green to-emerald-600 text-white py-3 sm:py-4 px-6 rounded-lg sm:rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-padel-green focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-base sm:text-lg shadow-2xl hover:shadow-green-500/50 transition-all transform active:scale-95 sm:hover:scale-[1.02]"
                 >
                   {isLoading ? 'Signing in...' : 'Sign In 🎾'}
                 </button>
