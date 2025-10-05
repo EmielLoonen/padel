@@ -108,8 +108,8 @@ router.post('/avatar', upload.single('avatar'), async (req: Request, res: Respon
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Construct the avatar URL (relative path)
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    // Get Cloudinary URL from the uploaded file
+    const avatarUrl = (req.file as any).path; // Cloudinary returns the full URL in file.path
 
     // Update user's avatar in database
     const user = await userService.updateProfile(req.user.userId, { avatarUrl });

@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
 import authRoutes from './routes/auth';
 import sessionRoutes from './routes/sessions';
 import rsvpRoutes from './routes/rsvps';
@@ -17,12 +15,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
 // Middleware
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 console.log(`🌐 CORS enabled for origin: ${corsOrigin}`);
@@ -33,9 +25,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
-
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

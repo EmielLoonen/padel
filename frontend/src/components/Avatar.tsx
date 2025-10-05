@@ -25,7 +25,8 @@ export default function Avatar({ src, name, size = 'md', className = '' }: Avata
   };
 
   const initials = getInitials(name);
-  const fullSrc = src ? `${API_URL}${src}` : null;
+  // Check if src is already a full URL (Cloudinary) or a relative path (local)
+  const fullSrc = src ? (src.startsWith('http') ? src : `${API_URL}${src}`) : null;
 
   return (
     <div
