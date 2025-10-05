@@ -7,6 +7,7 @@ interface CourtData {
   courtNumber: number;
   startTime: string;
   duration?: number; // default 60 minutes
+  cost?: number;
 }
 
 interface CreateSessionData {
@@ -48,6 +49,7 @@ export const sessionService = {
             startTime: court.startTime,
             duration: court.duration || 60,
             maxPlayers: 4,
+            cost: court.cost,
           })),
         },
       },

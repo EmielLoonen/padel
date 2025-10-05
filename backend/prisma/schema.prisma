@@ -60,6 +60,7 @@ model Court {
   startTime               String   @map("start_time") // "HH:MM"
   duration                Int      @default(60) // minutes
   maxPlayers              Int      @default(4) @map("max_players")
+  cost                    Decimal? @db.Decimal(10, 2) // Cost for this specific court
   createdAt               DateTime @default(now()) @map("created_at")
 
   // Relations

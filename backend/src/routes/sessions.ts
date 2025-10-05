@@ -56,6 +56,7 @@ router.post(
       .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
       .withMessage('Court start time must be in HH:MM format'),
     body('courts.*.duration').optional().isInt({ min: 30, max: 180 }).withMessage('Duration must be 30-180 minutes'),
+    body('courts.*.cost').optional().isFloat({ min: 0 }).withMessage('Court cost must be a positive number'),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);

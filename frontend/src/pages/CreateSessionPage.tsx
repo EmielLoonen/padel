@@ -4,7 +4,6 @@ import { useSessionStore, type CourtInput } from '../store/sessionStore';
 export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => void }) {
   const [date, setDate] = useState('');
   const [venueName, setVenueName] = useState('Padel Next');
-  const [totalCost, setTotalCost] = useState('');
   const [notes, setNotes] = useState('');
   const [numberOfCourts, setNumberOfCourts] = useState(1);
   const [courts, setCourts] = useState<CourtInput[]>([
@@ -46,15 +45,13 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
         date,
         time: sessionTime,
         venueName,
-        totalCost: totalCost ? parseFloat(totalCost) : undefined,
         notes: notes || undefined,
         courts,
       });
 
       // Reset form
       setDate('');
-      setVenueName('');
-      setTotalCost('');
+      setVenueName('Padel Next');
       setNotes('');
       setNumberOfCourts(1);
       setCourts([{ courtNumber: 1, startTime: '20:30', duration: 60 }]);
@@ -151,7 +148,19 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-padel-green">Court {court.courtNumber}</h4>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Court #</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={court.courtNumber}
+                        onChange={(e) =>
+                          updateCourt(court.courtNumber, 'courtNumber', parseInt(e.target.value) || 1)
+                        }
+                        className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Start Time</label>
                       <input
@@ -178,27 +187,24 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
                       </select>
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Cost (€)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={court.cost || ''}
+                      onChange={(e) =>
+                        updateCourt(court.courtNumber, 'cost', e.target.value ? parseFloat(e.target.value) : 0)
+                      }
+                      className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+                      placeholder="20.00"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
           )}
-
-          {/* Total Cost */}
-          <div>
-            <label htmlFor="totalCost" className="block text-sm font-semibold text-gray-300 mb-2">
-              Total Court Cost (€)
-            </label>
-            <input
-              id="totalCost"
-              type="number"
-              step="0.01"
-              min="0"
-              value={totalCost}
-              onChange={(e) => setTotalCost(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
-              placeholder="40.00"
-            />
-          </div>
 
           {/* Notes */}
           <div>

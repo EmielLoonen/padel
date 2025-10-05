@@ -9,6 +9,7 @@ interface Court {
   startTime: string;
   duration: number;
   maxPlayers: number;
+  cost?: number;
   rsvps?: Array<{
     id: string;
     status: 'yes' | 'no' | 'maybe';
@@ -69,6 +70,7 @@ interface CourtInput {
   courtNumber: number;
   startTime: string;
   duration?: number;
+  cost?: number;
 }
 
 interface CreateSessionData {

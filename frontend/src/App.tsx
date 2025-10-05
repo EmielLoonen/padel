@@ -188,7 +188,10 @@ function App() {
                       month: 'short',
                       day: 'numeric'
                     })}
-                    {session.totalCost && <span className="ml-2">• €{session.totalCost}</span>}
+                    {(() => {
+                      const totalCourtCost = session.courts?.reduce((sum, court) => sum + (court.cost || 0), 0) || 0;
+                      return totalCourtCost > 0 ? <span className="ml-2">• €{totalCourtCost}</span> : null;
+                    })()}
                   </p>
 
                   {session.notes && (
@@ -216,6 +219,7 @@ function App() {
                                 </span>
                                 <span className="text-[10px] sm:text-xs text-gray-500">
                                   {court.startTime} • {court.duration}min
+                                  {court.cost && <span className="ml-1">• €{(court.cost / 4).toFixed(2)}/p</span>}
                                 </span>
                               </div>
                               <span className={`text-[10px] sm:text-xs font-semibold ${

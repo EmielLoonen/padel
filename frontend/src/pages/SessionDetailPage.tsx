@@ -319,6 +319,11 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       <p className="text-gray-400">
                         🕐 {court.startTime} ({court.duration} min)
                       </p>
+                      {court.cost && (
+                        <p className="text-padel-green font-semibold mt-1">
+                          💰 €{court.cost} <span className="text-sm text-gray-400">(€{(court.cost / 4).toFixed(2)}/person)</span>
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
@@ -384,7 +389,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                               {(guest.addedBy.id === user?.id || isCreator) && (
                                 <button
                                   onClick={() => handleRemoveGuest(guest.id)}
-                                  className="ml-1 text-red-400 hover:text-red-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="ml-1 text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                   title="Remove guest"
                                 >
                                   ✕
