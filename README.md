@@ -1,27 +1,31 @@
-# 🎾 Padel Match Coordinator
+# 🎾 POPKNOTS - Padel Match Coordinator
 
 A web application for coordinating weekly padel matches with your group.
 
-**[🚀 Deploy to Production in 5 Minutes](DEPLOY_NOW.md)** | [📚 Full Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+**Live:** https://padel-coordinator-frontend.onrender.com
 
 ## Features
 
-- 🎾 Session planning and management
-- ✅ RSVP tracking with real-time updates
-- 🏟️ Court booking coordination with guest players
-- 🔔 In-app notifications
-- 👤 User profiles with avatars
-- 🔐 Password management
-- 📱 Progressive Web App (mobile-first)
-- 🚀 Production-ready deployment
+- 🎾 **Multi-Court Session Management** - Create sessions with multiple courts, each with custom times and durations
+- ✅ **Smart RSVP System** - Court-specific RSVPs with waitlist and maybe options
+- 👥 **Guest Player Support** - Add guest players to fill courts
+- 💰 **Cost Per Court** - Track costs per court with automatic per-person breakdown
+- 🔢 **Custom Court Numbers** - Specify actual venue court numbers
+- 🔔 **Real-time Notifications** - In-app notifications for session updates
+- 👤 **User Profiles** - Avatars with Cloudinary integration
+- 🔐 **Account Management** - Password, email, and phone number updates
+- 📱 **Mobile-Optimized** - Responsive design with mobile-first approach
+- ✏️ **Session Editing** - Edit session details and court properties
+- 🚀 **Production-Ready** - Deployed on Render.com with Neon PostgreSQL
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS
+- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Zustand
 - **Backend:** Node.js + Express + TypeScript
-- **Database:** PostgreSQL 17 + Prisma ORM
-- **Deployment:** Render.com + Neon (or Docker)
-- **File Storage:** Local (upgradeable to Cloudinary)
+- **Database:** PostgreSQL (Neon.tech) + Prisma ORM
+- **Deployment:** Render.com (Frontend + Backend)
+- **File Storage:** Cloudinary (avatars)
+- **Authentication:** JWT with bcrypt
 
 ## Prerequisites
 
@@ -127,18 +131,33 @@ padel-coordinator/
 
 ## Deployment
 
-The application is deployed on Railway with automatic deployments from the `main` branch.
+The application is deployed on Render.com with automatic deployments from the `main` branch.
 
-- Frontend: TBD
-- Backend API: TBD
-- Database: Railway PostgreSQL
+- **Frontend:** https://padel-coordinator-frontend.onrender.com
+- **Backend API:** https://padel-coordinator-api.onrender.com
+- **Database:** Neon.tech PostgreSQL
+
+See [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
 
 ## License
 
 Private project - All rights reserved
 
-## Contact
+## Environment Variables
 
-Your Name - emiel@emielloonen.nl
+### Backend (.env)
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=https://padel-coordinator-frontend.onrender.com
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+### Frontend (.env)
+```
+VITE_API_URL=https://padel-coordinator-api.onrender.com
+```
 
 
