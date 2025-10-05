@@ -49,18 +49,23 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
       const token = localStorage.getItem('token');
       const edits = courtEdits[courtId];
       
+      const payload: any = {
+        courtNumber: parseInt(edits.courtNumber),
+        startTime: edits.startTime,
+        duration: parseInt(edits.duration),
+      };
+      
+      if (edits.cost) {
+        payload.cost = parseFloat(edits.cost);
+      }
+      
       await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/courts/${courtId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          courtNumber: parseInt(edits.courtNumber),
-          startTime: edits.startTime,
-          duration: parseInt(edits.duration),
-          cost: edits.cost ? parseFloat(edits.cost) : null,
-        }),
+        body: JSON.stringify(payload),
       });
       
       setEditingCourtId(null);
