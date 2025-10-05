@@ -18,10 +18,11 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     initializeAuth();
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -38,12 +39,19 @@ function App() {
   }
 
   if (showSettings) {
-    return <SettingsPage onBack={() => setShowSettings(false)} />;
+    return <SettingsPage onBack={() => {
+      setShowSettings(false);
+      // Trigger user data refresh by updating the key
+      setRefreshKey(prev => prev + 1);
+      // Also refresh sessions to update avatars in session cards
+      fetchSessions('upcoming');
+    }} />;
   }
 
   if (selectedSessionId) {
     return (
       <SessionDetailPage
+        key={refreshKey}
         sessionId={selectedSessionId}
         onBack={() => {
           setSelectedSessionId(null);
@@ -85,13 +93,14 @@ function App() {
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
               <button
                 onClick={() => setShowSettings(true)}
-                className="bg-dark-elevated text-gray-300 hover:text-white py-2 sm:py-2.5 px-3 sm:px-6 rounded-lg hover:bg-gray-700 transition-all shadow-lg border border-gray-700 font-medium text-sm sm:text-base"
+                className="hover:opacity-80 transition-opacity"
+                title="Settings"
               >
-                ⚙️ <span className="hidden sm:inline">Settings</span>
+                <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
               </button>
+              <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
               <button
                 onClick={logout}
                 className="bg-gradient-to-r from-red-500 to-red-600 text-white py-2 sm:py-2.5 px-3 sm:px-6 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl font-medium text-sm sm:text-base"
