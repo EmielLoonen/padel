@@ -11,6 +11,9 @@ A web application for coordinating weekly padel matches with your group.
 - 👥 **Guest Player Support** - Add guest players to fill courts
 - 💰 **Cost Per Court** - Track costs per court with automatic per-person breakdown
 - 🔢 **Custom Court Numbers** - Specify actual venue court numbers
+- 🏆 **Match Score Tracking** - Record match results with multiple sets for past sessions
+- 📊 **Player Statistics** - Track sets won/lost and win rate for each player
+- 🥇 **Leaderboard** - Rankings based on win rate and performance
 - 🔔 **Real-time Notifications** - In-app notifications for session updates
 - 👤 **User Profiles** - Avatars with Cloudinary integration
 - 🔐 **Account Management** - Password, email, and phone number updates
