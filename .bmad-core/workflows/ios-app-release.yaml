@@ -1,0 +1,258 @@
+workflow:
+  id: ios-app-release
+  name: iOS App Store Release
+  description: >-
+    End-to-end workflow for releasing iOS applications to Apple App Store.
+    Covers development completion through store submission and post-release monitoring.
+  type: deployment
+  platform: ios
+  project_types:
+    - ios-app
+    - mobile-app
+    - enterprise-ios
+
+  sequence:
+    - agent: ios-dev
+      action: final_development_validation
+      uses: ios-dev-checklist
+      notes: "Complete final development validation using ios-dev-checklist. Ensure all features are complete and tested."
+
+    - agent: qa
+      action: comprehensive_testing
+      creates: test-report.md
+      requires: completed_development
+      notes: |
+        Comprehensive QA testing:
+        - Manual testing on multiple iOS devices (iPhone/iPad, iOS 15-18+)
+        - Performance testing with Instruments
+        - Memory leak detection and retain cycle analysis
+        - Security vulnerability testing
+        - Accessibility compliance with VoiceOver testing
+        - Network connectivity and offline behavior testing
+
+    - agent: ios-dev
+      action: address_qa_issues
+      condition: qa_found_issues
+      notes: "Address any critical issues found during QA testing. Re-run ios-dev-checklist after fixes."
+
+    - agent: security
+      action: security_review
+      creates: security-assessment.md
+      requires: qa_approval
+      optional_steps:
+        - penetration_testing
+        - dependency_vulnerability_scan
+      notes: "Security review focused on iOS-specific vulnerabilities, data protection, and privacy compliance."
+
+    - agent: devops
+      action: configure_fastlane
+      creates: fastlane_config
+      requires: security_approval
+      notes: |
+        Fastlane configuration verification:
+        - Verify Fastfile configuration for iOS
+        - Check App Store Connect API credentials
+        - Validate code signing certificates and profiles
+        - Review lane configurations (beta, release, screenshots)
+        - Test match/cert configurations for code signing
+        - Verify Xcode project and scheme settings
+
+    - agent: devops
+      action: fastlane_testflight_release
+      creates: testflight_release
+      uses: fastlane_beta_lane
+      requires: fastlane_config
+      notes: |
+        Fastlane TestFlight release:
+        - Run fastlane beta lane
+        - Automated build, sign, and archive
+        - Upload to TestFlight for internal testing
+        - Generate release notes from git commits
+        - Automated screenshot generation if configured
+        - Send to TestFlight internal testers
+
+    - agent: qa
+      action: testflight_build_validation
+      requires: testflight_release
+      notes: |
+        TestFlight build validation:
+        - Download and install from TestFlight
+        - Verify all app functionality works in release build
+        - Performance testing with Instruments on release build
+        - Crash reporting integration testing
+        - Test on multiple iOS devices and versions
+
+    - app_store_preparation:
+      action: prepare_store_metadata
+      creates: store_metadata
+      notes: |
+        App Store metadata preparation:
+        - Update Fastlane metadata files in fastlane/metadata/
+        - Prepare app description, keywords, and promotional text
+        - Update privacy policy and terms of service links
+        - Configure age rating and content guidelines
+        - Review app screenshots and preview videos
+
+    - agent: pm
+      action: store_metadata_review
+      updates: store_metadata
+      requires: store_metadata
+      notes: "Review and approve App Store metadata, descriptions, and marketing materials in Fastlane configuration."
+
+    - agent: devops
+      action: fastlane_screenshot_generation
+      creates: automated_screenshots
+      requires: store_metadata_review
+      optional: true
+      notes: |
+        Automated screenshot generation (optional):
+        - Run fastlane screenshots lane
+        - Generate screenshots for iPhone and iPad
+        - Upload screenshots to App Store Connect
+        - Verify screenshots appear correctly in store listing
+
+    - agent: devops
+      action: fastlane_app_store_submission
+      creates: app_store_submission
+      uses: fastlane_release_lane
+      requires: automated_screenshots
+      notes: |
+        Fastlane App Store submission:
+        - Run fastlane release lane
+        - Automated submission to App Store review
+        - Upload metadata and screenshots
+        - Set release type (automatic/manual)
+        - Monitor submission status
+
+    - apple_review_wait:
+      action: await_apple_review
+      duration: variable
+      requires: app_store_submission
+      notes: |
+        Apple App Store review process:
+        - Wait for Apple's review (typically 24-48 hours)
+        - Monitor review status via Fastlane or App Store Connect
+        - Respond to any Apple feedback or rejection reasons
+        - Address any required changes promptly
+
+    - apple_review_response:
+      action: handle_review_feedback
+      condition: apple_review_issues
+      notes: |
+        If Apple review finds issues:
+        - Analyze Apple's feedback and rejection reasons
+        - Make required changes to app or metadata
+        - Use Fastlane to resubmit updated build if needed
+        - Return to TestFlight process if code changes required
+
+    - stakeholder_approval:
+      action: final_approval
+      requires: apple_review_approved
+      notes: |
+        Final stakeholder approval:
+        - Business stakeholder final approval
+        - Legal/compliance final review
+        - Marketing team coordination
+        - Go/no-go decision for production release
+
+    - agent: devops
+      action: fastlane_production_release
+      creates: production_release
+      uses: fastlane_production_lane
+      requires: stakeholder_approval
+      condition: approved_for_production
+      notes: |
+        Fastlane production release:
+        - Run fastlane production lane
+        - Automated release to App Store
+        - Configure phased release percentage if desired
+        - Set release notes and what's new content
+        - Monitor Fastlane output for deployment success
+
+    - post_release_monitoring:
+      action: monitor_release
+      duration: 48_hours
+      notes: |
+        Post-release monitoring:
+        - Monitor crash reports in Xcode Organizer
+        - Track user reviews and ratings in App Store Connect
+        - Monitor key performance metrics
+        - Watch for any critical issues requiring hotfix
+
+    - agent: pm
+      action: release_retrospective
+      creates: release-retrospective.md
+      condition: monitoring_complete
+      optional: true
+      notes: |
+        OPTIONAL: Release retrospective
+        - Document lessons learned
+        - Identify process improvements
+        - Review release timeline and bottlenecks
+        - Plan improvements for next release
+
+  flow_diagram: |
+    ```mermaid
+    graph TD
+        A[Start: iOS Release] --> B[ios-dev: Final validation]
+        B --> C[qa: Comprehensive testing]
+        C --> D{QA Issues?}
+        D -->|Yes| E[ios-dev: Fix issues]
+        D -->|No| F[security: Security review]
+        E --> C
+        F --> G[devops: Configure Fastlane]
+        G --> H[devops: Fastlane TestFlight release]
+        H --> I[qa: TestFlight build validation]
+        I --> J[Prepare store metadata]
+        J --> K[pm: Store metadata review]
+        K --> L{Screenshots needed?}
+        L -->|Yes| L1[devops: Fastlane screenshots]
+        L -->|No| M[devops: Fastlane App Store submission]
+        L1 --> M
+        M --> N[Await Apple review]
+        N --> P{Apple approved?}
+        P -->|No| Q[Handle review feedback]
+        P -->|Yes| R[Stakeholder approval]
+        Q --> G
+        R --> S{Approved?}
+        S -->|No| T[Address concerns]
+        S -->|Yes| U[devops: Fastlane production release]
+        T --> R
+        U --> V[Post-release monitoring]
+        V --> W{Issues found?}
+        W -->|Yes| X[Emergency hotfix process]
+        W -->|No| Y[pm: Release retrospective]
+        X --> Y
+        Y --> Z[Release Complete]
+
+        style Z fill:#90EE90
+        style U fill:#FFB6C1
+        style O fill:#FFA500
+        style F fill:#F0E68C
+        style C fill:#ADD8E6
+        style B fill:#E6E6FA
+    ```
+
+  decision_guidance:
+    when_to_use:
+      - iOS app ready for Apple App Store release
+      - Production mobile application deployment
+      - Enterprise iOS app distribution
+      - App updates requiring App Store approval
+
+    rollback_strategy:
+      - Use App Store Connect to remove app from sale if critical issues
+      - Prepare hotfix release process for critical bugs
+      - Maintain previous app version for emergency rollback reference
+      - Monitor user feedback and crash reports closely
+
+  handoff_prompts:
+    dev_to_qa: "Development complete. Application ready for comprehensive QA testing on iOS devices."
+    qa_to_security: "QA testing passed. Application ready for security review and vulnerability assessment."
+    security_to_fastlane: "Security review complete. Ready for Fastlane configuration and TestFlight release."
+    fastlane_to_qa: "Fastlane TestFlight release deployed. Ready for TestFlight build validation."
+    qa_to_metadata: "TestFlight build validated. Ready for store metadata preparation and review."
+    metadata_to_submission: "Store metadata approved. Ready for Fastlane App Store submission."
+    apple_review_wait: "Submitted to Apple via Fastlane. Monitor review status for approval."
+    apple_approved: "Apple review approved. Ready for final stakeholder approval and Fastlane production release."
+    production_monitoring: "Fastlane production release deployed. Begin 48-hour monitoring phase for stability."

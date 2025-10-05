@@ -1,0 +1,183 @@
+template:
+  id: agent-template-v1
+  name: BMad Agent Template
+  version: 1.0
+  output:
+    format: markdown
+    filename: "bmad-core/agents/{{agent_id}}.md"
+    title: "{{agent_name}} - BMad Agent"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+
+sections:
+  - id: agent-header
+    title: Agent Header
+    instruction: |
+      Generate the standard BMad agent header with activation notice and critical instructions.
+      This section is standardized across all BMad agents.
+    content: |
+      # {{agent_id}}
+
+      ACTIVATION-NOTICE: This file contains your full agent operating guidelines. DO NOT load any external agent files as the complete configuration is in the YAML block below.
+
+      CRITICAL: Read the full YAML BLOCK that FOLLOWS IN THIS FILE to understand your operating params, start and follow exactly your activation-instructions to alter your state of being, stay in this being until told to exit this mode:
+
+      ## COMPLETE AGENT DEFINITION FOLLOWS - NO EXTERNAL FILES NEEDED
+
+  - id: yaml-config
+    title: YAML Configuration Block
+    instruction: |
+      Generate the complete YAML configuration block for the agent. This includes all standard sections:
+      IDE-FILE-RESOLUTION, REQUEST-RESOLUTION, activation-instructions, agent metadata, persona, commands, and dependencies.
+    sections:
+      - id: file-resolution
+        title: File Resolution
+        type: yaml-block
+        instruction: Add standard IDE-FILE-RESOLUTION and REQUEST-RESOLUTION sections
+      - id: activation-instructions
+        title: Activation Instructions
+        type: yaml-section
+        instruction: |
+          Define the step-by-step activation sequence for the agent. Include:
+          - Standard activation steps (read file, adopt persona, greet)
+          - Any specific documentation loading requirements
+          - Critical workflow and interaction rules
+          - HALT behavior specification
+      - id: agent-metadata
+        title: Agent Metadata
+        type: yaml-section
+        instruction: |
+          Define the agent metadata including name, id, title, icon, whenToUse, and customization fields.
+          Use creative agent names that reflect the agent's purpose.
+      - id: persona-definition
+        title: Persona Definition
+        type: yaml-section
+        instruction: |
+          Define the comprehensive persona including role, style, identity, focus, and core_principles.
+          Core principles should be specific to the agent's domain and responsibilities.
+      - id: commands-section
+        title: Commands Section
+        type: yaml-section
+        instruction: |
+          Define all agent commands with descriptions. Include:
+          - help command with numbered list display
+          - Domain-specific commands for the agent's purpose
+          - exit command with proper persona abandonment
+          All commands require * prefix when used.
+      - id: dependencies-section
+        title: Dependencies Section
+        type: yaml-section
+        instruction: |
+          Define comprehensive dependencies including tasks, templates, checklists, and data files.
+          Dependencies should support all agent capabilities and follow established BMad patterns.
+
+elicitation:
+  - id: agent_basics
+    type: input
+    prompt: "What is the agent ID (e.g., 'web-dev', 'sa', 'bmad-dev')?"
+    variable: agent_id
+    required: true
+    validation: "^[a-z][a-z0-9-]*$"
+
+  - id: agent_name
+    type: input
+    prompt: "What is the creative agent name (e.g., 'Morgan', 'Winston', 'James')?"
+    variable: agent_name
+    required: true
+
+  - id: agent_title
+    type: input
+    prompt: "What is the agent's professional title (e.g., 'Solution Architect', 'Web Developer')?"
+    variable: agent_title
+    required: true
+
+  - id: agent_icon
+    type: input
+    prompt: "What emoji icon represents this agent (e.g., '🏗️', '💻', '🔧')?"
+    variable: agent_icon
+    required: true
+
+  - id: agent_purpose
+    type: textarea
+    prompt: "What is the agent's primary purpose and when should it be used?"
+    variable: agent_purpose
+    required: true
+
+  - id: agent_role
+    type: input
+    prompt: "What is the agent's role (e.g., 'Solution Architect & Business-Technology Bridge')?"
+    variable: agent_role
+    required: true
+
+  - id: agent_style
+    type: input
+    prompt: "What is the agent's communication style (e.g., 'Strategic, business-focused, technically pragmatic')?"
+    variable: agent_style
+    required: true
+
+  - id: agent_identity
+    type: textarea
+    prompt: "What is the agent's professional identity and expertise?"
+    variable: agent_identity
+    required: true
+
+  - id: agent_focus
+    type: input
+    prompt: "What are the agent's primary focus areas (comma-separated)?"
+    variable: agent_focus
+    required: true
+
+  - id: core_principles
+    type: textarea
+    prompt: "What are the agent's core principles (one per line, with brief descriptions)?"
+    variable: core_principles
+    required: true
+
+  - id: commands_list
+    type: textarea
+    prompt: "What commands should the agent support (format: 'command: description')?"
+    variable: commands_list
+    required: true
+
+  - id: required_tasks
+    type: textarea
+    prompt: "What task files should be in dependencies (one per line, e.g., 'create-doc.md')?"
+    variable: required_tasks
+    required: false
+
+  - id: required_templates
+    type: textarea
+    prompt: "What template files should be in dependencies (one per line, e.g., 'prd-tmpl.yaml')?"
+    variable: required_templates
+    required: false
+
+  - id: required_checklists
+    type: textarea
+    prompt: "What checklist files should be in dependencies (one per line, e.g., 'dev-checklist.md')?"
+    variable: required_checklists
+    required: false
+
+  - id: required_data
+    type: textarea
+    prompt: "What data files should be in dependencies (one per line, e.g., 'technical-preferences.md')?"
+    variable: required_data
+    required: false
+
+  - id: documentation_loading
+    type: textarea
+    prompt: "What documentation should be loaded during activation (one per line, optional)?"
+    variable: documentation_loading
+    required: false
+
+  - id: agent_complexity
+    type: select
+    prompt: "What is the agent complexity level?"
+    options:
+      - value: "lean"
+        label: "Lean (IDE-focused, minimal dependencies)"
+      - value: "comprehensive"
+        label: "Comprehensive (Rich context, extensive dependencies)"
+    variable: agent_complexity
+    required: true

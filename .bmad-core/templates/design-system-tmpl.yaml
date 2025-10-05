@@ -1,0 +1,569 @@
+template:
+  id: design-system-template-v1
+  name: Design System & Theme Specification
+  version: 1.0
+  output:
+    format: markdown
+    filename: docs/design-system-spec.md
+    title: "{{project_name}} Design System & Theme Specification"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+
+sections:
+  - id: introduction
+    title: Introduction
+    instruction: |
+      Review brand guidelines, existing design assets, and project requirements. Focus on understanding brand identity, target platforms, and design system scope before beginning the specification.
+      
+      Establish the document's purpose and relationship to the broader project ecosystem.
+    content: |
+      This document defines the design system architecture, theme specifications, and implementation guidelines for {{project_name}}. It serves as the comprehensive guide for creating consistent, accessible, and brand-compliant user interfaces across all platforms and touchpoints.
+    sections:
+      - id: design-system-goals
+        title: Design System Goals & Scope
+        instruction: |
+          Work with the user to establish and document the following design system objectives:
+          
+          1. Design System Scope - define what the system will cover
+          2. Target Platforms - identify web, mobile, and other platforms
+          3. Brand Alignment - establish brand compliance requirements
+          4. Accessibility Standards - define compliance targets
+        elicit: true
+        sections:
+          - id: system-scope
+            title: System Scope
+            template: "{{system_scope_description}}"
+            examples:
+              - "**Complete Design System:** Comprehensive tokens, components, patterns, and guidelines"
+              - "**Theme Extension:** Customization of existing Backbase Design System"
+              - "**Brand Implementation:** Application of brand identity to established system"
+          - id: target-platforms
+            title: Target Platforms
+            template: "{{target_platforms}}"
+            examples:
+              - "**Web Applications:** React, Angular, Vue.js implementations"
+              - "**Mobile Applications:** iOS and Android native applications"
+              - "**Multi-Platform:** Responsive web and native mobile applications"
+          - id: brand-requirements
+            title: Brand Alignment Requirements
+            template: "{{brand_alignment_requirements}}"
+          - id: accessibility-standards
+            title: Accessibility Standards
+            template: "**Compliance Target:** {{accessibility_standard}} - {{accessibility_details}}"
+            examples:
+              - "WCAG 2.1 AA - Full compliance for financial services applications"
+              - "WCAG 2.1 AAA - Enhanced compliance for government applications"
+      - id: changelog
+        title: Change Log
+        type: table
+        columns: [Date, Version, Description, Author]
+        instruction: Track document versions and changes
+
+  - id: brand-asset-audit
+    title: Brand Asset Collection & Audit
+    instruction: |
+      Follow Step 0 of the Backbase theming process: Collect and audit all brand assets needed for theme creation.
+      
+      1. Gather brand colors (primary, secondary, semantic)
+      2. Collect logo assets in multiple formats
+      3. Document typography specifications
+      4. Review brand guidelines and restrictions
+      5. Validate accessibility compliance of brand elements
+    elicit: true
+    sections:
+      - id: brand-colors
+        title: Brand Color Palette
+        type: table
+        columns: ["Color Role", "Hex Code", "Usage", "Contrast Validation"]
+        rows:
+          - ["Primary Brand", "{{primary_brand_color}}", "{{primary_usage}}", "{{primary_contrast_status}}"]
+          - ["Secondary Brand", "{{secondary_brand_color}}", "{{secondary_usage}}", "{{secondary_contrast_status}}"]
+          - ["Accent Color", "{{accent_color}}", "{{accent_usage}}", "{{accent_contrast_status}}"]
+          - ["Success Color", "{{success_color}}", "Success states, confirmations", "{{success_contrast_status}}"]
+          - ["Warning Color", "{{warning_color}}", "Warning states, cautions", "{{warning_contrast_status}}"]
+          - ["Error Color", "{{error_color}}", "Error states, destructive actions", "{{error_contrast_status}}"]
+      - id: logo-assets
+        title: Logo & Brand Assets
+        template: |
+          **Primary Logo:** {{primary_logo_description}}
+          
+          **Logo Variants Available:**
+          - {{logo_variant_1}}
+          - {{logo_variant_2}}
+          - {{logo_variant_3}}
+          
+          **Asset Formats:** {{asset_formats}}
+          
+          **Usage Restrictions:** {{logo_usage_restrictions}}
+      - id: typography-assets
+        title: Typography Specifications
+        sections:
+          - id: font-families
+            title: Brand Font Families
+            template: |
+              **Primary Font:** {{primary_font_family}} - {{primary_font_license}}
+              
+              **Secondary Font:** {{secondary_font_family}} - {{secondary_font_license}}
+              
+              **Monospace Font:** {{monospace_font_family}} - {{monospace_font_license}}
+              
+              **Fallback Strategy:** {{font_fallback_strategy}}
+          - id: typography-scale
+            title: Typography Scale
+            type: table
+            columns: ["Element", "Font Family", "Size", "Weight", "Line Height", "Usage"]
+            rows:
+              - ["Display", "{{display_font}}", "{{display_size}}", "{{display_weight}}", "{{display_line}}", "Hero sections, large headings"]
+              - ["H1", "{{h1_font}}", "{{h1_size}}", "{{h1_weight}}", "{{h1_line}}", "Primary page headings"]
+              - ["H2", "{{h2_font}}", "{{h2_size}}", "{{h2_weight}}", "{{h2_line}}", "Section headings"]
+              - ["H3", "{{h3_font}}", "{{h3_size}}", "{{h3_weight}}", "{{h3_line}}", "Subsection headings"]
+              - ["Body Large", "{{body_large_font}}", "{{body_large_size}}", "{{body_large_weight}}", "{{body_large_line}}", "Important body text"]
+              - ["Body", "{{body_font}}", "{{body_size}}", "{{body_weight}}", "{{body_line}}", "Standard body text"]
+              - ["Small", "{{small_font}}", "{{small_size}}", "{{small_weight}}", "{{small_line}}", "Captions, fine print"]
+      - id: brand-guidelines-review
+        title: Brand Guidelines Review
+        template: |
+          **Brand Guidelines Source:** {{brand_guidelines_source}}
+          
+          **Key Brand Principles:**
+          - {{brand_principle_1}}
+          - {{brand_principle_2}}
+          - {{brand_principle_3}}
+          
+          **Brand Restrictions:** {{brand_restrictions}}
+          
+          **Compliance Requirements:** {{brand_compliance_requirements}}
+
+  - id: design-token-architecture
+    title: Design Token Architecture
+    instruction: |
+      Define the comprehensive design token system following Backbase's three-tier approach:
+      
+      1. Primitive Tokens - foundational HEX-based values
+      2. Semantic Tokens - functional meaning and context
+      3. Component Tokens - specific component applications
+      
+      Ensure tokens support theming, accessibility, and multi-platform implementation.
+    elicit: true
+    sections:
+      - id: token-strategy
+        title: Token Strategy & Approach
+        template: |
+          **Token System Approach:** {{token_system_approach}}
+          
+          **Inheritance Strategy:** {{token_inheritance_strategy}}
+          
+          **Naming Convention:** {{token_naming_convention}}
+          
+          **Platform Support:** {{token_platform_support}}
+      - id: primitive-tokens
+        title: Primitive Tokens
+        instruction: Define foundational color, spacing, and sizing tokens
+        sections:
+          - id: primitive-colors
+            title: Primitive Color Tokens
+            type: table
+            columns: ["Token Name", "Hex Value", "Description"]
+            rows:
+              - ["primitive.blue.400", "{{primitive_blue_400}}", "Light brand blue"]
+              - ["primitive.blue.500", "{{primitive_blue_500}}", "Primary brand blue"]
+              - ["primitive.blue.600", "{{primitive_blue_600}}", "Dark brand blue"]
+              - ["primitive.neutral.100", "{{primitive_neutral_100}}", "Light background"]
+              - ["primitive.neutral.500", "{{primitive_neutral_500}}", "Medium neutral"]
+              - ["primitive.neutral.900", "{{primitive_neutral_900}}", "Dark text"]
+          - id: primitive-spacing
+            title: Primitive Spacing Tokens
+            type: table
+            columns: ["Token Name", "Value", "Pixels (16px base)", "Usage"]
+            rows:
+              - ["primitive.space.xs", "{{space_xs}}", "4px", "Minimal spacing"]
+              - ["primitive.space.sm", "{{space_sm}}", "8px", "Small spacing"]
+              - ["primitive.space.md", "{{space_md}}", "16px", "Medium spacing"]
+              - ["primitive.space.lg", "{{space_lg}}", "24px", "Large spacing"]
+              - ["primitive.space.xl", "{{space_xl}}", "32px", "Extra large spacing"]
+      - id: semantic-tokens
+        title: Semantic Tokens
+        instruction: Define functional tokens that reference primitive tokens
+        sections:
+          - id: semantic-colors
+            title: Semantic Color Tokens
+            type: table
+            columns: ["Token Name", "References", "Usage Context"]
+            rows:
+              - ["semantic.background.brand", "{{semantic_bg_brand_ref}}", "Brand-colored backgrounds"]
+              - ["semantic.background.surface", "{{semantic_bg_surface_ref}}", "Primary container backgrounds"]
+              - ["semantic.text.primary", "{{semantic_text_primary_ref}}", "Primary text color"]
+              - ["semantic.text.secondary", "{{semantic_text_secondary_ref}}", "Secondary text color"]
+              - ["semantic.border.default", "{{semantic_border_default_ref}}", "Standard border color"]
+              - ["semantic.focus.default", "{{semantic_focus_default_ref}}", "Focus indicator color"]
+          - id: semantic-layout
+            title: Semantic Layout Tokens
+            type: table
+            columns: ["Token Name", "References", "Usage Context"]
+            rows:
+              - ["semantic.container.padding", "{{semantic_container_padding_ref}}", "Standard container padding"]
+              - ["semantic.component.gap", "{{semantic_component_gap_ref}}", "Gap between components"]
+              - ["semantic.section.margin", "{{semantic_section_margin_ref}}", "Margin between sections"]
+
+  - id: component-library-definition
+    title: Component Library Definition
+    instruction: |
+      Define the atomic design hierarchy and component specifications. Include component states, variants, and usage guidelines.
+      
+      Reference the Backbase Design System patterns and extend or customize as needed for brand requirements.
+    elicit: true
+    sections:
+      - id: atomic-hierarchy
+        title: Atomic Design Hierarchy
+        template: |
+          **Design System Approach:** {{atomic_design_approach}}
+          
+          **Component Organization Strategy:** {{component_organization}}
+          
+          **Reusability Principles:** {{reusability_principles}}
+      - id: atoms
+        title: Atoms - Basic Building Blocks
+        repeatable: true
+        sections:
+          - id: atom
+            title: "{{atom_name}}"
+            template: |
+              **Purpose:** {{atom_purpose}}
+              
+              **Variants:** {{atom_variants}}
+              
+              **States:** {{atom_states}}
+              
+              **Token Dependencies:** {{atom_token_dependencies}}
+              
+              **Platform Considerations:** {{atom_platform_notes}}
+              
+              **Usage Guidelines:** {{atom_usage_guidelines}}
+      - id: molecules
+        title: Molecules - Component Groups
+        repeatable: true
+        sections:
+          - id: molecule
+            title: "{{molecule_name}}"
+            template: |
+              **Purpose:** {{molecule_purpose}}
+              
+              **Composed Of:** {{molecule_composition}}
+              
+              **Variants:** {{molecule_variants}}
+              
+              **Interactive States:** {{molecule_states}}
+              
+              **Responsive Behavior:** {{molecule_responsive}}
+              
+              **Usage Guidelines:** {{molecule_usage_guidelines}}
+      - id: organisms
+        title: Organisms - Complex Assemblies
+        repeatable: true
+        sections:
+          - id: organism
+            title: "{{organism_name}}"
+            template: |
+              **Purpose:** {{organism_purpose}}
+              
+              **Component Structure:** {{organism_structure}}
+              
+              **Layout Variations:** {{organism_layout_variants}}
+              
+              **Content Strategy:** {{organism_content_strategy}}
+              
+              **Platform Adaptations:** {{organism_platform_adaptations}}
+              
+              **Usage Guidelines:** {{organism_usage_guidelines}}
+
+  - id: theme-creation-process
+    title: Theme Creation Process
+    instruction: |
+      Document the complete theme creation workflow using the Backbase Design System Visualizer:
+      
+      1. Figma environment setup
+      2. Global branding configuration
+      3. Component styling customization
+      4. Illustration theming (if applicable)
+      5. Export and validation process
+    elicit: true
+    sections:
+      - id: figma-setup
+        title: Figma Environment Setup
+        template: |
+          **Figma File Version:** {{figma_file_version}}
+          
+          **Visualizer Plugin:** {{visualizer_plugin_status}}
+          
+          **Team Access:** {{figma_team_access}}
+          
+          **File Organization:** {{figma_file_organization}}
+      - id: global-branding
+        title: Global Branding Configuration
+        template: |
+          **Primary Brand Color Input:** {{primary_color_input}}
+          
+          **Secondary Colors:** {{secondary_colors_input}}
+          
+          **Typography Configuration:** {{typography_configuration}}
+          
+          **Logo Integration:** {{logo_integration_details}}
+          
+          **Token Generation Validation:** {{token_generation_status}}
+      - id: component-styling
+        title: Component Styling Customization
+        template: |
+          **Component Customization Approach:** {{component_customization_approach}}
+          
+          **Priority Components:** {{priority_components_list}}
+          
+          **State Definitions:** {{component_state_definitions}}
+          
+          **Context Variations:** {{component_context_variations}}
+      - id: export-configuration
+        title: Export Configuration
+        template: |
+          **Target Platforms:** {{export_target_platforms}}
+          
+          **File Structure:** {{export_file_structure}}
+          
+          **Asset Organization:** {{export_asset_organization}}
+          
+          **Quality Validation:** {{export_quality_validation}}
+
+  - id: platform-implementation
+    title: Platform Implementation Strategy
+    instruction: |
+      Define how the design system and theme will be implemented across target platforms. Include technical specifications, file structures, and integration requirements.
+    elicit: true
+    sections:
+      - id: web-implementation
+        title: Web Implementation
+        template: |
+          **Technology Stack:** {{web_technology_stack}}
+          
+          **CSS Implementation Strategy:** {{css_implementation_strategy}}
+          
+          **Token Integration:** {{web_token_integration}}
+          
+          **Component Library:** {{web_component_library}}
+          
+          **Build Process:** {{web_build_process}}
+      - id: ios-implementation
+        title: iOS Implementation
+        template: |
+          **iOS Version Support:** {{ios_version_support}}
+          
+          **Token File Format:** {{ios_token_format}}
+          
+          **Asset Integration:** {{ios_asset_integration}}
+          
+          **Component Mapping:** {{ios_component_mapping}}
+          
+          **Build Configuration:** {{ios_build_configuration}}
+      - id: android-implementation
+        title: Android Implementation
+        template: |
+          **Android Version Support:** {{android_version_support}}
+          
+          **Token File Format:** {{android_token_format}}
+          
+          **Resource Management:** {{android_resource_management}}
+          
+          **Component Integration:** {{android_component_integration}}
+          
+          **Build Configuration:** {{android_build_configuration}}
+
+  - id: accessibility-compliance
+    title: Accessibility & Compliance
+    instruction: |
+      Define comprehensive accessibility requirements and validation processes. Ensure the design system meets or exceeds target compliance standards.
+    elicit: true
+    sections:
+      - id: compliance-standards
+        title: Compliance Standards
+        template: |
+          **Primary Standard:** {{primary_accessibility_standard}}
+          
+          **Compliance Level:** {{compliance_level}}
+          
+          **Industry Requirements:** {{industry_accessibility_requirements}}
+          
+          **Testing Requirements:** {{accessibility_testing_requirements}}
+      - id: color-accessibility
+        title: Color & Contrast Accessibility
+        type: table
+        columns: ["Element Type", "Contrast Requirement", "Validation Method", "Status"]
+        rows:
+          - ["Normal Text", "4.5:1 minimum", "{{normal_text_validation}}", "{{normal_text_status}}"]
+          - ["Large Text", "3:1 minimum", "{{large_text_validation}}", "{{large_text_status}}"]
+          - ["Interactive Elements", "3:1 minimum", "{{interactive_validation}}", "{{interactive_status}}"]
+          - ["Focus Indicators", "3:1 minimum", "{{focus_validation}}", "{{focus_status}}"]
+          - ["Brand Colors", "Variable by usage", "{{brand_color_validation}}", "{{brand_color_status}}"]
+      - id: interaction-accessibility
+        title: Interaction Accessibility
+        template: |
+          **Keyboard Navigation:** {{keyboard_navigation_requirements}}
+          
+          **Screen Reader Support:** {{screen_reader_requirements}}
+          
+          **Touch Target Requirements:** {{touch_target_requirements}}
+          
+          **Motion & Animation:** {{motion_accessibility_requirements}}
+          
+          **Focus Management:** {{focus_management_requirements}}
+
+  - id: documentation-standards
+    title: Documentation & Maintenance
+    instruction: |
+      Define documentation standards, maintenance procedures, and governance processes for the design system.
+    elicit: true
+    sections:
+      - id: documentation-strategy
+        title: Documentation Strategy
+        template: |
+          **Documentation Platform:** {{documentation_platform}}
+          
+          **Content Organization:** {{documentation_organization}}
+          
+          **Update Procedures:** {{documentation_update_procedures}}
+          
+          **Access Control:** {{documentation_access_control}}
+      - id: component-documentation
+        title: Component Documentation Standards
+        template: |
+          **Documentation Template:** {{component_doc_template}}
+          
+          **Required Sections:** {{required_doc_sections}}
+          
+          **Code Examples:** {{code_example_requirements}}
+          
+          **Design Specifications:** {{design_spec_requirements}}
+          
+          **Usage Guidelines:** {{usage_guideline_standards}}
+      - id: governance-process
+        title: Governance & Maintenance
+        template: |
+          **Design System Owner:** {{design_system_owner}}
+          
+          **Review Process:** {{design_system_review_process}}
+          
+          **Change Management:** {{change_management_process}}
+          
+          **Version Control:** {{version_control_strategy}}
+          
+          **Deprecation Policy:** {{deprecation_policy}}
+
+  - id: quality-assurance
+    title: Quality Assurance & Testing
+    instruction: |
+      Define comprehensive testing strategies for design system implementation across all platforms and use cases.
+    elicit: true
+    sections:
+      - id: visual-testing
+        title: Visual Testing Strategy
+        template: |
+          **Visual Regression Testing:** {{visual_regression_strategy}}
+          
+          **Cross-Platform Validation:** {{cross_platform_testing}}
+          
+          **Browser Compatibility:** {{browser_compatibility_testing}}
+          
+          **Device Testing:** {{device_testing_strategy}}
+      - id: accessibility-testing
+        title: Accessibility Testing
+        template: |
+          **Automated Testing Tools:** {{automated_accessibility_tools}}
+          
+          **Manual Testing Procedures:** {{manual_accessibility_procedures}}
+          
+          **User Testing with Disabilities:** {{user_testing_strategy}}
+          
+          **Compliance Validation:** {{compliance_validation_process}}
+      - id: performance-testing
+        title: Performance Testing
+        template: |
+          **Performance Benchmarks:** {{performance_benchmarks}}
+          
+          **Load Time Requirements:** {{load_time_requirements}}
+          
+          **Asset Optimization:** {{asset_optimization_strategy}}
+          
+          **Monitoring Strategy:** {{performance_monitoring}}
+
+  - id: implementation-roadmap
+    title: Implementation Roadmap
+    instruction: |
+      Create a phased implementation plan for rolling out the design system across platforms and teams.
+    elicit: true
+    sections:
+      - id: implementation-phases
+        title: Implementation Phases
+        type: table
+        columns: ["Phase", "Duration", "Deliverables", "Dependencies", "Success Criteria"]
+        rows:
+          - ["Phase 1: Foundation", "{{phase1_duration}}", "{{phase1_deliverables}}", "{{phase1_dependencies}}", "{{phase1_success}}"]
+          - ["Phase 2: Core Components", "{{phase2_duration}}", "{{phase2_deliverables}}", "{{phase2_dependencies}}", "{{phase2_success}}"]
+          - ["Phase 3: Platform Rollout", "{{phase3_duration}}", "{{phase3_deliverables}}", "{{phase3_dependencies}}", "{{phase3_success}}"]
+          - ["Phase 4: Optimization", "{{phase4_duration}}", "{{phase4_deliverables}}", "{{phase4_dependencies}}", "{{phase4_success}}"]
+      - id: team-training
+        title: Team Training & Adoption
+        template: |
+          **Training Strategy:** {{training_strategy}}
+          
+          **Documentation Resources:** {{training_documentation}}
+          
+          **Support Structure:** {{support_structure}}
+          
+          **Adoption Metrics:** {{adoption_metrics}}
+      - id: risk-mitigation
+        title: Risk Assessment & Mitigation
+        template: |
+          **Technical Risks:** {{technical_risks}}
+          
+          **Timeline Risks:** {{timeline_risks}}
+          
+          **Resource Risks:** {{resource_risks}}
+          
+          **Mitigation Strategies:** {{risk_mitigation_strategies}}
+
+  - id: next-steps
+    title: Next Steps & Handoff
+    instruction: |
+      After completing the design system specification:
+      
+      1. Review with stakeholders and technical teams
+      2. Begin theme creation in Figma Visualizer
+      3. Prepare development environment setup
+      4. Plan team training and documentation
+      5. Schedule implementation kickoff
+    sections:
+      - id: immediate-actions
+        title: Immediate Actions
+        type: numbered-list
+        template: "{{action}}"
+        examples:
+          - "Stakeholder review and approval of design system specification"
+          - "Figma environment setup and Visualizer configuration"
+          - "Development environment preparation for theme implementation"
+          - "Team training schedule and resource preparation"
+      - id: design-system-checklist
+        title: Design System Readiness Checklist
+        type: checklist
+        items:
+          - "Brand assets collected and validated"
+          - "Token architecture defined and approved"
+          - "Component library structure documented"
+          - "Accessibility requirements validated"
+          - "Platform implementation strategy confirmed"
+          - "Documentation standards established"
+          - "Quality assurance processes defined"
+          - "Implementation roadmap approved"
+          - "Team training plan prepared"
+          - "Stakeholder sign-off obtained"
+
+  - id: checklist-results
+    title: Checklist Results
+    instruction: Run the create-theme-checklist.md against this specification and document compliance status and any remaining requirements.

@@ -1,0 +1,270 @@
+template:
+  id: expansion-pack-template-v1
+  name: BMad Expansion Pack Template
+  version: 1.0
+  output:
+    format: directory-structure
+    filename: "expansion-packs/{{pack_id}}"
+    title: "{{pack_name}} Expansion Pack"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+
+sections:
+  - id: pack-structure
+    title: Expansion Pack Structure
+    instruction: |
+      Create the complete directory structure and files for a BMad expansion pack.
+      This includes config.yaml, subdirectories, and README.md.
+    sections:
+      - id: config-file
+        title: Configuration File
+        type: yaml-file
+        filename: "config.yaml"
+        instruction: |
+          Generate the config.yaml file for the expansion pack with metadata and configuration.
+        content: |
+          # {{pack_name}} Expansion Pack Configuration
+          pack:
+            id: {{pack_id}}
+            name: "{{pack_name}}"
+            version: "{{pack_version}}"
+            description: "{{pack_description}}"
+            author: "{{pack_author}}"
+            
+          metadata:
+            created: "{{creation_date}}"
+            updated: "{{creation_date}}"
+            bmad_version: "{{bmad_version}}"
+            
+          dependencies:
+            core_version: "{{core_version}}"
+            required_packs: []
+            
+          structure:
+            agents: {{has_agents}}
+            agent-teams: {{has_teams}}
+            checklists: {{has_checklists}}
+            data: {{has_data}}
+            tasks: {{has_tasks}}
+            templates: {{has_templates}}
+            workflows: {{has_workflows}}
+
+      - id: readme-file
+        title: README File
+        type: markdown-file
+        filename: "README.md"
+        instruction: |
+          Generate the README.md file for the expansion pack with description, installation, and usage instructions.
+        content: |
+          # {{pack_name}} Expansion Pack
+
+          {{pack_description}}
+
+          ## Overview
+
+          {{pack_overview}}
+
+          ## Features
+
+          {{pack_features}}
+
+          ## Installation
+
+          This expansion pack is automatically included when you install the BMad Method. To use the agents and resources from this pack:
+
+          1. Ensure BMad Method is installed and configured
+          2. The expansion pack agents will be available in your agent selection
+          3. Use the agents according to their individual documentation
+
+          ## Agents Included
+
+          {{agents_list}}
+
+          ## Agent Teams Included
+
+          {{teams_list}}
+
+          ## Resources Included
+
+          {{resources_list}}
+
+          ## Usage Examples
+
+          {{usage_examples}}
+
+          ## Version History
+
+          - v{{pack_version}} ({{creation_date}}): Initial release
+
+          ## Support
+
+          For support and questions about this expansion pack, please refer to the main BMad Method documentation or contact {{pack_author}}.
+
+      - id: directory-structure
+        title: Directory Structure
+        type: directory-creation
+        instruction: |
+          Create the standard expansion pack directory structure based on user requirements.
+          Only create directories that are needed based on the pack contents.
+
+elicitation:
+  - id: pack_id
+    type: input
+    prompt: "What is the expansion pack ID (e.g., 'my-domain-pack', 'security-tools')?"
+    variable: pack_id
+    required: true
+    validation: "^[a-z][a-z0-9-]*$"
+
+  - id: pack_name
+    type: input
+    prompt: "What is the expansion pack name (e.g., 'My Domain Pack', 'Security Tools')?"
+    variable: pack_name
+    required: true
+
+  - id: pack_version
+    type: input
+    prompt: "What is the initial version (e.g., '1.0.0')?"
+    variable: pack_version
+    required: true
+    default: "1.0.0"
+
+  - id: pack_description
+    type: textarea
+    prompt: "Provide a brief description of what this expansion pack does:"
+    variable: pack_description
+    required: true
+
+  - id: pack_author
+    type: input
+    prompt: "Who is the author/maintainer of this expansion pack?"
+    variable: pack_author
+    required: true
+
+  - id: pack_overview
+    type: textarea
+    prompt: "Provide a detailed overview of the expansion pack's purpose and goals:"
+    variable: pack_overview
+    required: true
+
+  - id: pack_features
+    type: textarea
+    prompt: "What are the key features of this expansion pack (one per line)?"
+    variable: pack_features
+    required: true
+
+  - id: bmad_version
+    type: input
+    prompt: "What BMad Method version is this compatible with (e.g., '2.0')?"
+    variable: bmad_version
+    required: true
+    default: "2.0"
+
+  - id: core_version
+    type: input
+    prompt: "What minimum core version is required (e.g., '2.0.0')?"
+    variable: core_version
+    required: true
+    default: "2.0.0"
+
+  - id: has_agents
+    type: select
+    prompt: "Will this expansion pack include custom agents?"
+    options:
+      - value: "true"
+        label: "Yes - Include agents directory"
+      - value: "false"
+        label: "No - No custom agents"
+    variable: has_agents
+    required: true
+
+  - id: has_teams
+    type: select
+    prompt: "Will this expansion pack include custom agent teams?"
+    options:
+      - value: "true"
+        label: "Yes - Include agent-teams directory"
+      - value: "false"
+        label: "No - No custom teams"
+    variable: has_teams
+    required: true
+
+  - id: has_checklists
+    type: select
+    prompt: "Will this expansion pack include custom checklists?"
+    options:
+      - value: "true"
+        label: "Yes - Include checklists directory"
+      - value: "false"
+        label: "No - No custom checklists"
+    variable: has_checklists
+    required: true
+
+  - id: has_data
+    type: select
+    prompt: "Will this expansion pack include custom data files?"
+    options:
+      - value: "true"
+        label: "Yes - Include data directory"
+      - value: "false"
+        label: "No - No custom data files"
+    variable: has_data
+    required: true
+
+  - id: has_tasks
+    type: select
+    prompt: "Will this expansion pack include custom tasks?"
+    options:
+      - value: "true"
+        label: "Yes - Include tasks directory"
+      - value: "false"
+        label: "No - No custom tasks"
+    variable: has_tasks
+    required: true
+
+  - id: has_templates
+    type: select
+    prompt: "Will this expansion pack include custom templates?"
+    options:
+      - value: "true"
+        label: "Yes - Include templates directory"
+      - value: "false"
+        label: "No - No custom templates"
+    variable: has_templates
+    required: true
+
+  - id: has_workflows
+    type: select
+    prompt: "Will this expansion pack include custom workflows?"
+    options:
+      - value: "true"
+        label: "Yes - Include workflows directory"
+      - value: "false"
+        label: "No - No custom workflows"
+    variable: has_workflows
+    required: true
+
+  - id: agents_list
+    type: textarea
+    prompt: "If including agents, list them with brief descriptions (one per line, optional):"
+    variable: agents_list
+    required: false
+
+  - id: teams_list
+    type: textarea
+    prompt: "If including teams, list them with brief descriptions (one per line, optional):"
+    variable: teams_list
+    required: false
+
+  - id: resources_list
+    type: textarea
+    prompt: "List other resources included (tasks, templates, etc.) with descriptions (one per line, optional):"
+    variable: resources_list
+    required: false
+
+  - id: usage_examples
+    type: textarea
+    prompt: "Provide usage examples or common use cases for this expansion pack:"
+    variable: usage_examples
+    required: true

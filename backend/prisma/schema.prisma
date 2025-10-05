@@ -1,0 +1,130 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  phone         String?
+  avatarUrl     String?  @map("avatar_url") // URL or path to avatar image
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdSessions      Session[]      @relation("SessionCreator")
+  rsvps                RSVP[]
+  notifications        Notification[]
+  addedGuests          Guest[]
+
+  @@map("users")
+}
+
+model Session {
+  id                      String   @id @default(uuid())
+  date                    DateTime
+  time                    String   // Stored as "HH:MM" string (primary court time)
+  venueName               String   @map("venue_name")
+  venueAddress            String?  @map("venue_address")
+  totalCost               Decimal? @map("total_cost") @db.Decimal(10, 2)
+  notes                   String?
+  numberOfCourts          Int      @default(1) @map("number_of_courts")
+  createdById             String   @map("created_by_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator                 User           @relation("SessionCreator", fields: [createdById], references: [id])
+  courts                  Court[]
+  rsvps                   RSVP[]
+  notifications           Notification[]
+
+  @@index([date, time])
+  @@index([createdById])
+  @@map("sessions")
+}
+
+model Court {
+  id                      String   @id @default(uuid())
+  sessionId               String   @map("session_id")
+  courtNumber             Int      @map("court_number")
+  startTime               String   @map("start_time") // "HH:MM"
+  duration                Int      @default(60) // minutes
+  maxPlayers              Int      @default(4) @map("max_players")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session                 Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  rsvps                   RSVP[]
+  guests                  Guest[]
+
+  @@unique([sessionId, courtNumber])
+  @@index([sessionId])
+  @@map("courts")
+}
+
+model Guest {
+  id                      String   @id @default(uuid())
+  courtId                 String   @map("court_id")
+  name                    String
+  addedById               String   @map("added_by_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  // Relations
+  court                   Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  addedBy                 User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@index([addedById])
+  @@map("guests")
+}
+
+model RSVP {
+  id        String   @id @default(uuid())
+  sessionId String   @map("session_id")
+  userId    String   @map("user_id")
+  courtId   String?  @map("court_id") // null = waitlist or "maybe"/"no" status
+  status    String   // yes, no, maybe
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  court     Court?   @relation(fields: [courtId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([courtId])
+  @@map("rsvps")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   // new_session, rsvp_change, booking_update, reminder
+  title     String
+  message   String
+  sessionId String?  @map("session_id")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+

@@ -1,0 +1,95 @@
+name: Threat Model
+description: A comprehensive threat modeling document that identifies potential threats and vulnerabilities in an application using STRIDE methodology with collaborative features.
+elicit: true
+elicit-vars:
+  - name: application_name
+    prompt: "What is the name of the application being modeled?"
+  - name: application_description
+    prompt: "Please provide a brief description of the application."
+  - name: session_date
+    prompt: "What is the date of the threat modeling session? (YYYY-MM-DD)"
+  - name: session_status
+    prompt: "What is the current status? (not started, in progress, completed, review)"
+  - name: contributors
+    prompt: "List all meeting participants with their roles and team names (e.g., John Doe - Security Engineer - Team Spectre)"
+  - name: feature_scope
+    prompt: "Describe the scope of this session: the product/component in question and its functionality."
+  - name: trust_boundaries
+    prompt: "What are the trust boundaries of the application?"
+  - name: data_flow
+    prompt: "Describe the data flow of the application and attach relevant diagrams."
+  - name: components
+    prompt: "What are the main components of the application?"
+template: |
+  # Threat Model for {{application_name}}
+
+  ## 📅 Date
+  {{session_date}}
+
+  ## 🔧 Status
+  {{session_status}}
+
+  ## 👥 Contributors
+  {{contributors}}
+
+  ## 🗺️ Scope
+  {{feature_scope}}
+
+  ## Application Description
+  {{application_description}}
+
+  ## Trust Boundaries
+  {{trust_boundaries}}
+
+  ## ⚙️ Diagrams
+  {{data_flow}}
+
+  **Note**: Prepare diagrams before the Threat Modeling session. This helps to understand how components are working together.
+
+  ## Components
+  {{components}}
+
+  ## 💀 Threat Table
+  
+  Going through the [STRIDE questionnaire](https://backbase.atlassian.net/wiki/spaces/SEC/pages/4343301038/Threat+Modeling+template#Threat-Modelling-Questionnaire) **before** the session helps to fill the table with some threats. The rest can be brainstormed during the session.
+
+  | **Threat** | **STRIDE Type** | **Mitigation Plan** | **Jira Ticket** | **Severity** | **Notes** |
+  |---|---|---|---|---|---|
+  | | | | | | |
+  | | | | | | |
+  | | | | | | |
+  | | | | | | |
+  | | | | | | |
+
+  ## STRIDE Definitions
+
+  * **Spoofing**: Pretending to be something, someone else
+  * **Tampering**: Modifying something on the disk, network, memory, API parameters
+  * **Repudiation**: Claiming that you did not do anything or were not responsible
+  * **Information disclosure**: Providing or leaking information in unauthorised way
+  * **Denial Of Service**: Exhausting the resources needed to provide service or make service unavailable
+  * **Elevation of Privileges**: Acquire higher privileges than required
+
+  ## Threat Modeling Questionnaire Reference
+
+  Before the Threat Modeling session is planned, squads may come up with some known threats on their own and start filling the Threat Table before the session.
+
+  The questionnaire will help teams to formulate threats. See the [detailed STRIDE examples and questions](https://backbase.atlassian.net/wiki/spaces/SEC/pages/3739910229) for comprehensive guidance.
+
+  **How to use it?** The main idea is **not to** answer "yes" or "no" to each question, but rather start a discussion around the questions to kick off the brainstorming process.
+
+  ### Key Areas to Explore:
+  - **Spoofed Identity**: Authentication bypass, credential theft, session hijacking
+  - **Tampering with Input**: API manipulation, file upload abuse, data modification
+  - **Repudiation of Action**: Audit trail gaps, log manipulation, non-repudiation
+  - **Information Disclosure**: Data leakage, verbose errors, unauthorized access
+  - **Denial of Service**: Resource exhaustion, availability attacks, rate limiting
+  - **Elevation of Privileges**: Role escalation, authorization bypass, privilege abuse
+
+  ## ✅ Action Items
+
+  Add action items to close the loop on open questions or discussion topics:
+
+  - [ ] 
+  - [ ] 
+  - [ ]

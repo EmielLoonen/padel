@@ -1,0 +1,17 @@
+bundle:
+  name: Team No UI
+  icon: 🔧
+  description: Team with no UX or UI Planning.
+agents:
+  - bmad-orchestrator
+  - ba
+  - pm
+  - sa
+  - po
+workflows:
+  - greenfield-service.yaml
+  - brownfield-service.yaml
+  - brownfield-architecture.yaml
+  - greenfield-architecture.yaml
+  - brownfield-security.yaml
+  - greenfield-security.yaml

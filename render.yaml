@@ -1,0 +1,57 @@
+# Render Blueprint for Padel Coordinator
+# This file allows you to deploy both frontend and backend with one click
+
+services:
+  # Backend API
+  - type: web
+    name: padel-coordinator-api
+    env: node
+    region: oregon # or frankfurt
+    plan: free # or starter ($7/month)
+    buildCommand: cd backend && npm install && npx prisma generate
+    startCommand: cd backend && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false # You'll add this manually
+      - key: JWT_SECRET
+        generateValue: true # Render will generate a secure secret
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: padel-coordinator-frontend
+          property: host
+          
+  # Frontend Static Site
+  - type: web
+    name: padel-coordinator-frontend
+    env: static
+    region: oregon # or frankfurt
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: padel-coordinator-api
+          property: host
+
+# Database - You'll need to create this separately on Neon.tech
+# and add the DATABASE_URL to the backend service
+

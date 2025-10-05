@@ -1,0 +1,174 @@
+template:
+  id: template-template-v1
+  name: BMad Template Template
+  version: 1.0
+  output:
+    format: yaml
+    filename: "bmad-core/templates/{{template_id}}-tmpl.yaml"
+    title: "{{template_name}} Template"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+
+sections:
+  - id: template-metadata
+    title: Template Metadata
+    instruction: |
+      Generate the template metadata section with id, name, version, and output configuration.
+    content: |
+      template:
+        id: {{template_id}}-v{{template_version}}
+        name: {{template_name}}
+        version: {{template_version}}
+        output:
+          format: {{output_format}}
+          filename: "{{output_filename}}"
+          title: "{{output_title}}"
+
+  - id: workflow-config
+    title: Workflow Configuration
+    instruction: |
+      Define the workflow configuration for the template.
+    content: |
+      workflow:
+        mode: {{workflow_mode}}
+        elicitation: {{elicitation_type}}
+
+  - id: sections-definition
+    title: Sections Definition
+    instruction: |
+      Define the sections that this template will generate. Each section should have:
+      - id: unique identifier
+      - title: human-readable title
+      - instruction: LLM instruction for generating content
+      - type: content type (paragraph, bullet-list, table, etc.)
+      - sections: nested sections if applicable
+    sections:
+      - id: main-sections
+        title: Main Sections
+        type: yaml-structure
+        instruction: |
+          Generate the sections array with all required sections for this template.
+          Follow BMad template patterns and include appropriate instruction text for each section.
+
+  - id: elicitation-definition
+    title: Elicitation Definition
+    instruction: |
+      Define the elicitation questions that will gather user input for this template.
+      Each elicitation item should have:
+      - id: unique identifier matching variables used in template
+      - type: input type (input, textarea, select, etc.)
+      - prompt: question to ask the user
+      - variable: variable name to store the response
+      - required: whether the input is required
+      - validation: validation rules if applicable
+      - options: for select types
+    sections:
+      - id: elicitation-items
+        title: Elicitation Items
+        type: yaml-structure
+        instruction: |
+          Generate the elicitation array with all questions needed to populate this template.
+          Ensure all variables referenced in the template content are covered by elicitation items.
+
+elicitation:
+  - id: template_id
+    type: input
+    prompt: "What is the template ID (e.g., 'prd-tmpl', 'story-tmpl')?"
+    variable: template_id
+    required: true
+    validation: "^[a-z][a-z0-9-]*-tmpl$"
+
+  - id: template_name
+    type: input
+    prompt: "What is the template name (e.g., 'Product Requirements Document', 'User Story')?"
+    variable: template_name
+    required: true
+
+  - id: template_version
+    type: input
+    prompt: "What is the template version (e.g., '1.0', '2.1')?"
+    variable: template_version
+    required: true
+    default: "1.0"
+
+  - id: output_format
+    type: select
+    prompt: "What output format should this template generate?"
+    options:
+      - value: "markdown"
+        label: "Markdown (.md)"
+      - value: "yaml"
+        label: "YAML (.yaml)"
+      - value: "text"
+        label: "Plain text (.txt)"
+    variable: output_format
+    required: true
+
+  - id: output_filename
+    type: input
+    prompt: "What is the output filename pattern (use {{variables}} for dynamic parts)?"
+    variable: output_filename
+    required: true
+
+  - id: output_title
+    type: input
+    prompt: "What is the output title pattern (use {{variables}} for dynamic parts)?"
+    variable: output_title
+    required: true
+
+  - id: workflow_mode
+    type: select
+    prompt: "What workflow mode should this template use?"
+    options:
+      - value: "interactive"
+        label: "Interactive - Requires user input"
+      - value: "automatic"
+        label: "Automatic - No user interaction needed"
+    variable: workflow_mode
+    required: true
+
+  - id: elicitation_type
+    type: select
+    prompt: "What type of elicitation should this template use?"
+    options:
+      - value: "advanced-elicitation"
+        label: "Advanced elicitation with validation"
+      - value: "basic-elicitation"
+        label: "Basic elicitation"
+      - value: "none"
+        label: "No elicitation"
+    variable: elicitation_type
+    required: true
+
+  - id: template_purpose
+    type: textarea
+    prompt: "What is the purpose of this template and what documents will it generate?"
+    variable: template_purpose
+    required: true
+
+  - id: main_sections
+    type: textarea
+    prompt: "What are the main sections this template should generate (one per line with brief description)?"
+    variable: main_sections
+    required: true
+
+  - id: required_variables
+    type: textarea
+    prompt: "What variables/inputs are needed for this template (one per line: variable_name - description)?"
+    variable: required_variables
+    required: true
+
+  - id: template_complexity
+    type: select
+    prompt: "What is the complexity level of this template?"
+    options:
+      - value: "simple"
+        label: "Simple - Few sections, basic structure"
+      - value: "moderate"
+        label: "Moderate - Multiple sections, some nesting"
+      - value: "complex"
+        label: "Complex - Many sections, deep nesting, advanced features"
+    variable: template_complexity
+    required: true

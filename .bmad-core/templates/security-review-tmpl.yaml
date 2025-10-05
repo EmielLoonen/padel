@@ -1,0 +1,252 @@
+name: Security Review Report
+description: A comprehensive security review report documenting findings, vulnerabilities, and remediation recommendations from facilitated security analysis sessions.
+elicit: true
+elicit-vars:
+  - name: system_name
+    prompt: "What is the name of the system/application being reviewed?"
+  - name: system_description
+    prompt: "Please provide a brief description of the system and its purpose."
+  - name: review_date
+    prompt: "What is the date of the security review session? (YYYY-MM-DD)"
+  - name: review_scope
+    prompt: "Describe the scope of the security review (components, modules, or specific areas covered)."
+  - name: review_status
+    prompt: "What is the current status? (in progress, completed, remediation pending, closed)"
+  - name: participants
+    prompt: "List all review participants with their roles and teams (e.g., Jane Smith - Security Engineer - Team Alpha)"
+  - name: review_techniques
+    prompt: "Which security review techniques were used? (e.g., STRIDE, OWASP Top 10, Code Review, Architecture Analysis)"
+  - name: overall_security_posture
+    prompt: "What is the overall security posture assessment? (excellent, good, fair, poor, critical)"
+  - name: critical_findings_count
+    prompt: "How many critical vulnerabilities were identified?"
+  - name: high_findings_count
+    prompt: "How many high-risk vulnerabilities were identified?"
+  - name: medium_findings_count
+    prompt: "How many medium-risk vulnerabilities were identified?"
+  - name: low_findings_count
+    prompt: "How many low-risk vulnerabilities were identified?"
+template: |
+  # Security Review Report for {{system_name}}
+
+  ## 📅 Review Date
+  {{review_date}}
+
+  ## 🔧 Status
+  {{review_status}}
+
+  ## 👥 Review Team
+  {{participants}}
+
+  ## 🗺️ Scope & Description
+  **System:** {{system_name}}
+  
+  **Description:** {{system_description}}
+  
+  **Review Scope:** {{review_scope}}
+
+  ## 🔍 Review Methodology
+  **Techniques Used:** {{review_techniques}}
+
+  ## 📊 Executive Summary
+
+  ### Overall Security Posture: {{overall_security_posture}}
+
+  ### Vulnerability Summary
+  - **Critical:** {{critical_findings_count}} vulnerabilities requiring immediate attention
+  - **High:** {{high_findings_count}} vulnerabilities requiring near-term remediation
+  - **Medium:** {{medium_findings_count}} vulnerabilities for next planning cycle
+  - **Low:** {{low_findings_count}} observations for future consideration
+
+  ### Key Recommendations
+  1. [Priority 1 recommendation - replace with actual finding]
+  2. [Priority 2 recommendation - replace with actual finding]
+  3. [Priority 3 recommendation - replace with actual finding]
+
+  ## 🛡️ Security Findings
+
+  ### Critical Vulnerabilities
+  | **ID** | **Vulnerability** | **Component** | **Attack Vector** | **Impact** | **CVSS** | **Status** |
+  |--------|-------------------|---------------|-------------------|------------|----------|------------|
+  | CRIT-001 | [Vulnerability Title] | [Component] | [Attack Vector] | [Business Impact] | [Score] | Open |
+  | | | | | | | |
+
+  ### High Risk Vulnerabilities
+  | **ID** | **Vulnerability** | **Component** | **Attack Vector** | **Impact** | **CVSS** | **Status** |
+  |--------|-------------------|---------------|-------------------|------------|----------|------------|
+  | HIGH-001 | [Vulnerability Title] | [Component] | [Attack Vector] | [Business Impact] | [Score] | Open |
+  | | | | | | | |
+
+  ### Medium Risk Vulnerabilities
+  | **ID** | **Vulnerability** | **Component** | **Attack Vector** | **Impact** | **CVSS** | **Status** |
+  |--------|-------------------|---------------|-------------------|------------|----------|------------|
+  | MED-001 | [Vulnerability Title] | [Component] | [Attack Vector] | [Business Impact] | [Score] | Open |
+  | | | | | | | |
+
+  ### Low Risk Observations
+  | **ID** | **Observation** | **Component** | **Recommendation** | **Effort** | **Status** |
+  |--------|-----------------|---------------|-------------------|------------|------------|
+  | LOW-001 | [Security Observation] | [Component] | [Improvement Suggestion] | [Low/Medium/High] | Open |
+  | | | | | | |
+
+  ## 🔧 Review Technique Results
+
+  ### STRIDE Threat Modeling
+  *[If STRIDE was used, document threats identified by category]*
+
+  | **STRIDE Category** | **Threats Identified** | **Mitigations** |
+  |---------------------|------------------------|-----------------|
+  | Spoofing | [List threats] | [List mitigations] |
+  | Tampering | [List threats] | [List mitigations] |
+  | Repudiation | [List threats] | [List mitigations] |
+  | Information Disclosure | [List threats] | [List mitigations] |
+  | Denial of Service | [List threats] | [List mitigations] |
+  | Elevation of Privilege | [List threats] | [List mitigations] |
+
+  ### OWASP Top 10 Assessment
+  *[If OWASP Top 10 was used, document findings]*
+
+  | **OWASP Category** | **Status** | **Findings** | **Risk Level** |
+  |--------------------|------------|--------------|----------------|
+  | A01: Broken Access Control | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A02: Cryptographic Failures | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A03: Injection | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A04: Insecure Design | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A05: Security Misconfiguration | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A06: Vulnerable Components | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A07: ID & Auth Failures | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A08: Software & Data Integrity | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A09: Logging & Monitoring | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+  | A10: SSRF | [Compliant/Non-Compliant/N/A] | [Description] | [Risk] |
+
+  ### Code Security Analysis
+  *[If code review was performed, document findings]*
+
+  - **Input Validation:** [Findings]
+  - **Authentication/Authorization:** [Findings]
+  - **Session Management:** [Findings]
+  - **Error Handling:** [Findings]
+  - **Cryptography:** [Findings]
+  - **Data Protection:** [Findings]
+
+  ### Architecture Security Review
+  *[If architecture review was performed, document findings]*
+
+  - **Trust Boundaries:** [Analysis]
+  - **Data Flow Security:** [Analysis]
+  - **Component Security:** [Analysis]
+  - **Network Security:** [Analysis]
+  - **Infrastructure Security:** [Analysis]
+
+  ## 🚨 Risk Assessment
+
+  ### Critical Risk Items (Immediate Action Required)
+  1. **[Vulnerability Name]**
+     - **Risk:** [High/Critical business impact description]
+     - **Likelihood:** [High/Medium/Low]
+     - **Action:** [Specific remediation required]
+     - **Timeline:** [Immediate/Within 24-48 hours]
+
+  ### High Risk Items (Address Within Current Sprint)
+  1. **[Vulnerability Name]**
+     - **Risk:** [Business impact description]
+     - **Likelihood:** [High/Medium/Low]
+     - **Action:** [Specific remediation required]
+     - **Timeline:** [Within 1-2 weeks]
+
+  ### Medium Risk Items (Next Planning Cycle)
+  1. **[Vulnerability Name]**
+     - **Risk:** [Business impact description]
+     - **Likelihood:** [High/Medium/Low]
+     - **Action:** [Specific remediation required]
+     - **Timeline:** [Within 1-3 months]
+
+  ## 🛠️ Remediation Roadmap
+
+  ### Immediate Actions (0-30 days)
+  | **Priority** | **Action** | **Owner** | **Target Date** | **Status** |
+  |--------------|------------|-----------|-----------------|------------|
+  | P0 | [Critical remediation action] | [Team/Person] | [Date] | Not Started |
+  | P1 | [High priority action] | [Team/Person] | [Date] | Not Started |
+
+  ### Short-term Improvements (1-3 months)
+  | **Priority** | **Action** | **Owner** | **Target Date** | **Status** |
+  |--------------|------------|-----------|-----------------|------------|
+  | P2 | [Medium priority action] | [Team/Person] | [Date] | Not Started |
+  | P3 | [Lower priority action] | [Team/Person] | [Date] | Not Started |
+
+  ### Long-term Enhancements (3+ months)
+  | **Priority** | **Action** | **Owner** | **Target Date** | **Status** |
+  |--------------|------------|-----------|-----------------|------------|
+  | P4 | [Strategic security improvement] | [Team/Person] | [Date] | Not Started |
+
+  ## 🔐 Security Controls Assessment
+
+  ### Existing Controls Effectiveness
+  - **Authentication:** [Effective/Partially Effective/Ineffective] - [Comments]
+  - **Authorization:** [Effective/Partially Effective/Ineffective] - [Comments]
+  - **Data Encryption:** [Effective/Partially Effective/Ineffective] - [Comments]
+  - **Input Validation:** [Effective/Partially Effective/Ineffective] - [Comments]
+  - **Logging & Monitoring:** [Effective/Partially Effective/Ineffective] - [Comments]
+  - **Error Handling:** [Effective/Partially Effective/Ineffective] - [Comments]
+
+  ### Recommended Additional Controls
+  1. **[Control Name]**
+     - **Purpose:** [Security objective]
+     - **Implementation:** [How to implement]
+     - **Priority:** [High/Medium/Low]
+
+  ### Compliance Considerations
+  - **GDPR:** [Compliant/Gaps Identified/Not Applicable]
+  - **SOX:** [Compliant/Gaps Identified/Not Applicable]
+  - **ISO 27001:** [Compliant/Gaps Identified/Not Applicable]
+  - **Industry Standards:** [Relevant standards and compliance status]
+
+  ## 📋 Follow-up Actions
+
+  ### Immediate Action Items
+  - [ ] [Critical security fix - Owner - Due Date]
+  - [ ] [Security patch deployment - Owner - Due Date]
+  - [ ] [Access control remediation - Owner - Due Date]
+
+  ### Security Testing Recommendations
+  - [ ] Penetration testing for [specific areas]
+  - [ ] Vulnerability scanning schedule
+  - [ ] Security code review process
+  - [ ] Red team assessment
+
+  ### Monitoring & Detection Improvements
+  - [ ] Enhanced logging for [specific areas]
+  - [ ] Security event monitoring
+  - [ ] Incident response procedures
+  - [ ] Security metrics and KPIs
+
+  ### Training & Awareness
+  - [ ] Security training for development team
+  - [ ] Secure coding guidelines
+  - [ ] Security awareness sessions
+  - [ ] Threat modeling training
+
+  ### Next Review Schedule
+  - **Follow-up Review:** [Date - typically 30-60 days]
+  - **Annual Security Review:** [Date]
+  - **Triggered Reviews:** [Conditions that would trigger additional reviews]
+
+  ## 📚 Security Resources & References
+
+  ### BMAD Security Framework
+  - [STRIDE Methodology](../data/stride.md)
+  - [Security Best Practices](../data/security-best-practices.md)
+  - [OWASP Top 10 Guidelines](../data/owasp-top-10.md)
+  - [Security Principles](../principles/)
+
+  ### External References
+  - [OWASP Application Security Verification Standard](https://owasp.org/www-project-application-security-verification-standard/)
+  - [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+  - [SANS Security Controls](https://www.sans.org/critical-security-controls/)
+
+  ---
+  
+  **Report Generated:** {{review_date}}  
+  **Next Review Due:** [Date based on risk level and findings]  
+  **Document Version:** 1.0

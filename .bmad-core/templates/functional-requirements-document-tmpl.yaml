@@ -1,0 +1,321 @@
+template:
+  id: functional-requirements-template
+  name: Functional Requirements Document (FRD)
+  version: 1.0
+  output:
+    format: markdown
+    filename: docs/frd.md
+    title: "Functional Requirements Document: {{initiative_name}}"
+
+workflow:
+  mode: interactive
+  elicitation: advanced-elicitation
+  custom_elicitation:
+    title: "FRD Elicitation Actions"
+    options:
+      - "Deep dive on business context and problem analysis"
+      - "Explore user stories and acceptance criteria"
+      - "Analyze non-functional requirements in detail"
+      - "Review dependencies and constraints"
+      - "Validate requirements against customer projects"
+      - "Define access control and security requirements"
+      - "Plan product iterations and work packages"
+      - "Assess risks and mitigation strategies"
+      - "What if we changed the scope significantly?"
+      - "Proceed to next section"
+
+sections:
+  - id: document-metadata
+    title: Document Metadata
+    instruction: Capture document status, stakeholders, and key metadata before proceeding with detailed requirements
+    template: |
+      | **Status** | {{status}} |
+      | --- | --- |
+      | **Impact** | {{impact_level}} |
+      | **Driver** | {{driver_name}} |
+      | **Approver** | {{approver_name}} |
+      | **Contributors** | {{contributors_list}} |
+      | **Informed** | {{stakeholders_list}} |
+      | **Due date** | {{due_date}} |
+      | **Customer Requirements (RFFs)** | {{customer_requirements_links}} |
+      | **Work items** | {{work_items_links}} |
+      | **Version** | {{document_version}} |
+
+  - id: business-context
+    title: Business Context
+    instruction: Establish the business foundation for this initiative. Help the user articulate why this initiative exists, what problem it solves, and its strategic value.
+    sections:
+      - id: background
+        title: Background
+        instruction: |
+          Explain why this initiative is needed:
+          - Business drivers motivating this initiative
+          - Strategic alignment with company objectives
+          - Market conditions or competitive pressure
+          - Customer demand or feedback
+      - id: problem-statement
+        title: Problem Statement
+        instruction: |
+          Define the specific problem being solved:
+          - Current pain points or inefficiencies
+          - Impact on customers or business
+          - Why solving this now is important
+          - What happens if we don't solve it
+      - id: business-value
+        title: Business Value
+        instruction: |
+          Quantify expected benefits:
+          - Financial benefits (revenue, cost savings, ROI)
+          - Customer satisfaction improvements
+          - Compliance or risk mitigation value
+          - Strategic positioning advantages
+      - id: market-insights
+        title: Market Insights & Client Feedback
+        instruction: |
+          Provide evidence from market and clients:
+          - Customer requests and feedback
+          - Industry trends supporting this initiative
+          - Competitive landscape considerations
+          - Market research findings
+      - id: market-scope
+        title: Market Scope
+        instruction: Define which markets this initiative targets
+        type: table
+        columns: ["Market focus", "Market area", "Market-specific considerations", "Priority"]
+        template: |
+          | Market focus | Market area | Market-specific considerations | Priority |
+          | --- | --- | --- | --- |
+          | {{market_focus}} | {{market_area}} | {{market_considerations}} | {{priority_level}} |
+
+  - id: objectives
+    title: Objectives
+    instruction: Define clear, measurable objectives for this initiative
+    sections:
+      - id: primary-objective
+        title: Primary Objective
+        instruction: State the main goal this initiative aims to achieve
+      - id: secondary-objectives
+        title: Secondary Objectives
+        instruction: List additional objectives and benefits
+        type: bullet-list
+        template: "- {{secondary_objective}}"
+
+  - id: scope
+    title: Scope
+    instruction: Clearly define what is included, what comes later, and what is explicitly excluded
+    sections:
+      - id: mvp-scope
+        title: MVP (Minimum Viable Product)
+        instruction: |
+          List features and functionalities for the first release:
+          - Core features that deliver primary value
+          - Essential functionality for launch
+          - Minimum requirements to meet objectives
+      - id: post-mvp
+        title: Post-MVP
+        instruction: |
+          List features planned for future releases:
+          - Enhancements and additional features
+          - Nice-to-have functionality
+          - Advanced capabilities
+      - id: out-of-scope
+        title: Out of Scope
+        instruction: |
+          Clearly state what will NOT be delivered:
+          - Features explicitly excluded
+          - Future considerations
+          - Items that might be confused as in-scope
+
+  - id: functional-requirements
+    title: Functional Requirements
+    instruction: Define detailed functional requirements using user stories and acceptance criteria
+    type: table
+    columns: ["Actor(s)", "User Story", "Description", "Acceptance Criteria", "Priority (MoSCoW)", "Iteration", "Mockups"]
+    template: |
+      | Actor(s) | User Story | Description | Acceptance Criteria | Priority (MoSCoW) | Iteration | Mockups |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | {{actor}} | As a {{actor}}, I want to {{goal}}, so that {{reason}} | {{detailed_description}} | {{testable_conditions}} | {{priority}} | {{iteration}} | {{mockup_reference}} |
+
+  - id: non-functional-requirements
+    title: Non-Functional Requirements
+    instruction: Define technical, performance, security, and compliance requirements
+    type: table
+    columns: ["Area", "Actor(s)", "Description", "Acceptance Criteria", "Priority (MoSCoW)", "Iteration"]
+    template: |
+      | Area | Actor(s) | Description | Acceptance Criteria | Priority (MoSCoW) | Iteration |
+      | --- | --- | --- | --- | --- | --- |
+      | {{nfr_area}} | {{actor}} | {{nfr_description}} | {{measurable_conditions}} | {{priority}} | {{iteration}} |
+    sections:
+      - id: nfr-categories
+        title: Non-Functional Requirement Categories
+        instruction: |
+          Cover these key areas:
+          - Performance (response times, throughput)
+          - Security (authentication, authorization, encryption)
+          - Compliance (regulatory requirements, audit)
+          - Scalability (user load, data volume)
+          - Configurations (customization options)
+          - Audit (logging, traceability)
+          - Localization (multi-language, regional)
+
+  - id: assumptions
+    title: Assumptions
+    instruction: List assumptions made during requirement gathering that could impact delivery
+    type: bullet-list
+    template: "- {{assumption}}"
+
+  - id: constraints
+    title: Constraints
+    instruction: Document limitations that must be worked within
+    sections:
+      - id: technical-constraints
+        title: Technical Constraints
+        instruction: Technology, platform, or system limitations
+        type: bullet-list
+        template: "- {{technical_constraint}}"
+      - id: regulatory-constraints
+        title: Regulatory Constraints
+        instruction: Compliance requirements and regulatory limitations
+        type: bullet-list
+        template: "- {{regulatory_constraint}}"
+      - id: resource-constraints
+        title: Resource Constraints
+        instruction: Budget, timeline, or personnel limitations
+        type: bullet-list
+        template: "- {{resource_constraint}}"
+
+  - id: dependencies
+    title: Dependencies
+    instruction: Identify other systems, teams, or initiatives this depends on
+    type: table
+    columns: ["Capability", "Product Manager", "Description of dependency", "Agreement/Comment"]
+    template: |
+      | Capability | Product Manager | Description of dependency | Agreement/Comment |
+      | --- | --- | --- | --- |
+      | {{capability_name}} | {{pm_responsible}} | {{dependency_description}} | {{agreement_status}} |
+
+  - id: acceptance-criteria
+    title: Acceptance Criteria
+    instruction: Define measurable conditions for overall initiative success
+    type: bullet-list
+    template: "- {{success_criteria}}"
+
+  - id: access-control
+    title: Access Control Model
+    instruction: Define security and permission requirements for the initiative
+    sections:
+      - id: new-permissions
+        title: New Permissions Required
+        instruction: List any new roles or permissions that need to be created
+        type: bullet-list
+        template: "- {{new_permission}}: {{permission_description}}"
+      - id: permission-checks
+        title: Permission Checks
+        instruction: Describe which permission checks will be implemented and where they will be enforced
+      - id: use-cases-permissions
+        title: Use Cases with Permission Checks
+        instruction: Define scenarios where permission checks apply
+        type: bullet-list
+        template: "- {{use_case}}: {{permission_required}}"
+
+  - id: service-validation
+    title: Service Validation
+    instruction: Validate requirements against actual customer projects
+    type: table
+    columns: ["Requirement Description", "Customer Project A", "Customer Project B", "Customer Project C"]
+    template: |
+      | Requirement Description | Customer Project A | Customer Project B | Customer Project C |
+      | --- | --- | --- | --- |
+      | {{requirement_summary}} | {{importance_a}} | {{importance_b}} | {{importance_c}} |
+
+  - id: product-iterations
+    title: Product Iterations (Work Packages)
+    instruction: Break down the initiative into deliverable iterations
+    type: table
+    columns: ["Iteration #", "Scope", "Link", "Demo scenario"]
+    template: |
+      | Iteration # | Scope | Link | Demo scenario |
+      | --- | --- | --- | --- |
+      | {{iteration_number}} | {{iteration_scope}} | {{jira_link}} | {{demo_description}} |
+
+  - id: product-catalog
+    title: Product Catalog Entries
+    instruction: |
+      Define Features and Subfeatures for implementation and testing
+      
+      Clear definition allows Engineering Team (especially QA) to assess testability and implement E2E test scenarios. This should be outcome of cooperation between PMs and QAs.
+    type: table
+    columns: ["ID", "Feature", "Sub-feature", "Iteration (Work Packages)"]
+    template: |
+      | ID | Feature | Sub-feature | Iteration (Work Packages) |
+      | --- | --- | --- | --- |
+      | {{catalog_id}} | {{feature_name}} | {{subfeature_name}} | {{iteration_reference}} |
+
+  - id: product-configuration
+    title: Product Configuration Entries
+    instruction: |
+      Define configuration options for Services Team to gather feedback from Financial Institutions
+      
+      Answers "How should the system behave?" and should be outcome of cooperation between PMs and DEVs.
+    type: table
+    columns: ["ID", "Configuration level", "Name", "Property", "Type", "Description", "Default value", "Iteration (Work Packages)"]
+    template: |
+      | ID | Configuration level | Name | Property | Type | Description | Default value | Iteration (Work Packages) |
+      | --- | --- | --- | --- | --- | --- | --- | --- |
+      | {{config_id}} | {{config_level}} | {{config_name}} | {{config_property}} | {{config_type}} | {{config_description}} | {{default_value}} | {{iteration_reference}} |
+
+  - id: modelbank-integration
+    title: ModelBank Integration Entries
+    instruction: |
+      Define Backbase ModelBank Integration Spec / API Catalog entries to be published
+      
+      Reference: https://backbase.io/developers/apis/journey/
+    type: table
+    columns: ["Product Catalog ID", "API Specs", "API Endpoints", "BaaS Integration Service Example"]
+    template: |
+      | Product Catalog ID | API Specs | API Endpoints | BaaS Integration Service Example |
+      | --- | --- | --- | --- |
+      | {{catalog_reference}} | {{api_spec_url}} | {{api_endpoint}} | {{baas_service_name}} |
+
+  - id: risks-mitigation
+    title: Risks & Mitigation
+    instruction: Identify potential risks and their mitigation strategies
+    sections:
+      - id: technical-risks
+        title: Technical Risks
+        type: table
+        columns: ["Risk", "Impact", "Likelihood", "Mitigation Strategy"]
+        template: |
+          | Risk | Impact | Likelihood | Mitigation Strategy |
+          | --- | --- | --- | --- |
+          | {{technical_risk}} | {{impact_level}} | {{likelihood}} | {{mitigation_approach}} |
+      - id: business-risks
+        title: Business Risks
+        type: table
+        columns: ["Risk", "Impact", "Likelihood", "Mitigation Strategy"]
+        template: |
+          | Risk | Impact | Likelihood | Mitigation Strategy |
+          | --- | --- | --- | --- |
+          | {{business_risk}} | {{impact_level}} | {{likelihood}} | {{mitigation_approach}} |
+      - id: regulatory-risks
+        title: Regulatory Risks
+        type: table
+        columns: ["Risk", "Impact", "Likelihood", "Mitigation Strategy"]
+        template: |
+          | Risk | Impact | Likelihood | Mitigation Strategy |
+          | --- | --- | --- | --- |
+          | {{regulatory_risk}} | {{impact_level}} | {{likelihood}} | {{mitigation_approach}} |
+
+  - id: sign-off
+    title: Sign-Off
+    instruction: Formal approval from key stakeholders
+    type: table
+    columns: ["Role", "Name", "Date", "Signature"]
+    template: |
+      | Role | Name | Date | Signature |
+      | --- | --- | --- | --- |
+      | Product Manager | {{pm_name}} | {{pm_date}} | {{pm_signature}} |
+      | Engineering Manager | {{em_name}} | {{em_date}} | {{em_signature}} |
+      | Domain Architect | {{da_name}} | {{da_date}} | {{da_signature}} |
+      | Data Governance | {{dg_name}} | {{dg_date}} | {{dg_signature}} |
+      | Security Engineer | {{se_name}} | {{se_date}} | {{se_signature}} |
