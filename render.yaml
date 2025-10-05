@@ -30,7 +30,6 @@ services:
   - type: web
     name: padel-coordinator-frontend
     env: static
-    region: oregon # or frankfurt
     plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
