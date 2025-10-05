@@ -6,8 +6,6 @@ services:
   - type: web
     name: padel-coordinator-api
     env: node
-    region: oregon # or frankfurt
-    plan: free # or starter ($7/month)
     buildCommand: cd backend && npm install && npx prisma generate
     startCommand: cd backend && npm start
     healthCheckPath: /health
@@ -30,7 +28,6 @@ services:
   - type: web
     name: padel-coordinator-frontend
     env: static
-    plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     headers:
