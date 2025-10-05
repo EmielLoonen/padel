@@ -6,6 +6,7 @@ import SignupPage from './pages/SignupPage';
 import CreateSessionPage from './pages/CreateSessionPage';
 import SessionDetailPage from './pages/SessionDetailPage';
 import SettingsPage from './pages/SettingsPage';
+import PlayerStatsPage from './pages/PlayerStatsPage';
 import NotificationBell from './components/NotificationBell';
 import LoadingSpinner from './components/LoadingSpinner';
 import Avatar from './components/Avatar';
@@ -16,9 +17,11 @@ function App() {
   const { sessions, fetchSessions, isLoading } = useSessionStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [sessionTab, setSessionTab] = useState<'upcoming' | 'past'>('upcoming');
 
   useEffect(() => {
     initializeAuth();
@@ -26,10 +29,23 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      // Reset to upcoming tab on login
+      setSessionTab('upcoming');
       fetchSessions('upcoming');
       setShowSignup(false); // Reset to login page when authenticated
+      // Reset all view states to show dashboard
+      setShowSettings(false);
+      setShowStats(false);
+      setShowCreateForm(false);
+      setSelectedSessionId(null);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSessions(sessionTab);
+    }
+  }, [sessionTab]);
 
   if (!isAuthenticated) {
     if (showSignup) {
@@ -48,6 +64,10 @@ function App() {
     }} />;
   }
 
+  if (showStats) {
+    return <PlayerStatsPage onBack={() => setShowStats(false)} />;
+  }
+
   if (selectedSessionId) {
     return (
       <SessionDetailPage
@@ -55,7 +75,7 @@ function App() {
         sessionId={selectedSessionId}
         onBack={() => {
           setSelectedSessionId(null);
-          fetchSessions('upcoming');
+          fetchSessions(sessionTab);
         }}
       />
     );
@@ -82,28 +102,40 @@ function App() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-8 mb-4 sm:mb-8 border border-gray-800">
-          {/* Mobile: Compact top row */}
-          <div className="flex items-center justify-between gap-2 sm:hidden mb-2">
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <span className="text-2xl">🎾</span>
-              <span>POPKNOTS</span>
-            </h1>
-            <div className="flex items-center gap-2">
-              <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
+          {/* Mobile: Compact layout */}
+          <div className="sm:hidden">
+            {/* Top row: Title and icons */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">🎾</span>
+                <span>POPKNOTS</span>
+              </h1>
+              <div className="flex items-center gap-2">
+                <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="hover:opacity-80 transition-opacity"
+                  title="Settings"
+                >
+                  <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Bottom row: Welcome and Stats button */}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-gray-400">
+                Hey <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
+              </p>
               <button
-                onClick={() => setShowSettings(true)}
-                className="hover:opacity-80 transition-opacity"
-                title="Settings"
+                onClick={() => setShowStats(true)}
+                className="bg-gradient-to-r from-padel-green to-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg flex items-center gap-1"
+                title="Stats"
               >
-                <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
+                📊 Stats
               </button>
             </div>
           </div>
-          
-          {/* Mobile: Welcome message */}
-          <p className="text-xs text-gray-400 sm:hidden">
-            Hey <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
-          </p>
 
           {/* Desktop: Original layout */}
           <div className="hidden sm:flex justify-between items-center gap-4">
@@ -118,6 +150,13 @@ function App() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
+              <button
+                onClick={() => setShowStats(true)}
+                className="bg-gradient-to-r from-padel-green to-emerald-600 text-white py-2.5 px-6 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl font-medium"
+                title="View Stats"
+              >
+                📊 Stats
+              </button>
               <button
                 onClick={() => setShowSettings(true)}
                 className="hover:opacity-80 transition-opacity"
@@ -148,9 +187,33 @@ function App() {
 
         {/* Sessions List */}
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-4 sm:mb-6">
+            <button
+              onClick={() => setSessionTab('upcoming')}
+              className={`flex-1 py-2 sm:py-3 px-4 rounded-lg font-semibold transition-all ${
+                sessionTab === 'upcoming'
+                  ? 'bg-padel-green text-white'
+                  : 'bg-dark-elevated text-gray-400 hover:text-white'
+              }`}
+            >
+              📅 Upcoming
+            </button>
+            <button
+              onClick={() => setSessionTab('past')}
+              className={`flex-1 py-2 sm:py-3 px-4 rounded-lg font-semibold transition-all ${
+                sessionTab === 'past'
+                  ? 'bg-padel-green text-white'
+                  : 'bg-dark-elevated text-gray-400 hover:text-white'
+              }`}
+            >
+              🏆 Past Sessions
+            </button>
+          </div>
+
           <h2 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
-            <span className="text-padel-green">📅</span>
-            Upcoming Sessions
+            <span className="text-padel-green">{sessionTab === 'upcoming' ? '📅' : '🏆'}</span>
+            {sessionTab === 'upcoming' ? 'Upcoming Sessions' : 'Past Sessions'}
           </h2>
 
           {isLoading ? (
@@ -159,9 +222,13 @@ function App() {
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-6xl mb-4">🎾</p>
-              <p className="text-xl font-semibold mb-2 text-white">No sessions yet!</p>
-              <p className="text-sm">Create your first padel session above</p>
+              <p className="text-6xl mb-4">{sessionTab === 'upcoming' ? '🎾' : '🏆'}</p>
+              <p className="text-xl font-semibold mb-2 text-white">
+                {sessionTab === 'upcoming' ? 'No upcoming sessions!' : 'No past sessions yet!'}
+              </p>
+              <p className="text-sm">
+                {sessionTab === 'upcoming' ? 'Create your first padel session above' : 'Past sessions will appear here'}
+              </p>
             </div>
           ) : (
             <div className="grid gap-2 sm:gap-4">
