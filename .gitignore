@@ -51,4 +51,8 @@ prisma/migrations/
 # Uploads
 backend/uploads/
 
+# BMAD
+.bmad-core/
 
+#Cursor
+.cursor/
