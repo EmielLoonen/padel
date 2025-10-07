@@ -194,7 +194,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-4 py-8">
+    <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <button
@@ -205,7 +205,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         </button>
 
         {/* Session Details Card */}
-        <div className="bg-dark-card rounded-2xl shadow-2xl p-8 mb-6 border border-gray-800">
+        <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
           <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
             <div>
               <h1 className="text-4xl font-bold text-white mb-2">{currentSession.venueName}</h1>
@@ -236,7 +236,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
 
           {/* Session Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+            <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
               <p className="text-gray-400 text-sm mb-1">📅 Date & Time</p>
               <p className="text-white font-bold text-lg">
                 {new Date(currentSession.date).toLocaleDateString('en-US', {
@@ -250,20 +250,20 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             </div>
 
             {currentSession.totalCost && (
-              <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+              <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
                 <p className="text-gray-400 text-sm mb-1">💰 Total Cost</p>
                 <p className="text-white font-bold text-lg">€{currentSession.totalCost}</p>
               </div>
             )}
 
-            <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+            <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
               <p className="text-gray-400 text-sm mb-1">🎾 Number of Courts</p>
               <p className="text-white font-bold text-lg">
                 {currentSession.numberOfCourts} {currentSession.numberOfCourts === 1 ? 'Court' : 'Courts'}
               </p>
             </div>
 
-            <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+            <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
               <p className="text-gray-400 text-sm mb-1">👥 Attendance</p>
               <p className="text-white font-bold text-lg">
                 {rsvpSummary?.yes || 0} Coming · {rsvpSummary?.maybe || 0} Maybe · {rsvpSummary?.no || 0} Can't Make It
@@ -273,14 +273,14 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
 
           {/* Notes */}
           {currentSession.notes && (
-            <div className="bg-blue-500/10 border-l-4 border-blue-500 p-4 rounded">
+            <div className="bg-blue-500/10 border-l-4 border-blue-500 p-3 sm:p-4 rounded">
               <p className="text-gray-300 italic">"{currentSession.notes}"</p>
             </div>
           )}
         </div>
 
         {/* RSVP Section */}
-        <div className="bg-dark-card rounded-2xl shadow-2xl p-8 mb-6 border border-gray-800">
+        <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
           <h2 className="text-2xl font-bold text-white mb-4">Your RSVP</h2>
 
           {/* RSVP Status Buttons */}
