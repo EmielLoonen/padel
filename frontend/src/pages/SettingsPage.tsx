@@ -138,7 +138,7 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg p-4 py-8">
+    <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
         <button

@@ -68,7 +68,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-3 sm:p-4 py-4 sm:py-8">
+    <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-4 sm:mb-6">

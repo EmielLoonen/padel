@@ -83,7 +83,7 @@ function App() {
 
   if (showCreateForm) {
     return (
-      <div className="min-h-screen bg-dark-bg p-3 sm:p-4 py-4 sm:py-8">
+      <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={() => setShowCreateForm(false)}
@@ -98,7 +98,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-3 sm:p-4 py-4 sm:py-8">
+    <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-8 mb-4 sm:mb-8 border border-gray-800">
