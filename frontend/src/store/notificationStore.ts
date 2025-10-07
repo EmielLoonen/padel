@@ -92,6 +92,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      throw error; // Re-throw so the component can handle it
     }
   },
 

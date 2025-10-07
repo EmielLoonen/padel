@@ -20,6 +20,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
   } = useNotificationStore();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Fetch initial data
@@ -42,7 +43,19 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      
+      // Don't close if clicking on a button inside the dropdown
+      if (target.closest('button') && dropdownRef.current?.contains(target)) {
+        return;
+      }
+      
+      // Don't close if clicking the bell button itself
+      if (bellButtonRef.current?.contains(target)) {
+        return;
+      }
+      
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         closeDropdown();
       }
     }
@@ -57,9 +70,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
   }, [showDropdown]);
 
   const handleNotificationClick = (notification: any) => {
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
+    // Navigate to session if it exists
     if (notification.sessionId && onNotificationClick) {
       onNotificationClick(notification.sessionId);
       closeDropdown();
@@ -71,7 +82,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
       case 'session_created':
         return '🎾';
       case 'rsvp_update':
-        return '✅';
+        return '👤';
       case 'session_reminder':
         return '⏰';
       case 'session_updated':
@@ -97,9 +108,10 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       {/* Bell Icon Button */}
       <button
+        ref={bellButtonRef}
         onClick={toggleDropdown}
         className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
       >
@@ -127,14 +139,22 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
 
       {/* Dropdown */}
       {showDropdown && (
-        <div className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[70vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
+        <div ref={dropdownRef} className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[70vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Notifications</h3>
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllAsRead}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    markAllAsRead();
+                  }}
                   className="text-xs text-padel-green hover:text-green-700 font-medium"
                 >
                   Mark all read
@@ -155,8 +175,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors ${
                       !notification.read ? 'bg-blue-50' : ''
                     }`}
                   >
@@ -167,7 +186,10 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 min-w-0">
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleNotificationClick(notification)}
+                      >
                         <p className="font-semibold text-gray-800 text-sm">
                           {notification.title}
                         </p>
@@ -179,17 +201,38 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                         </p>
                       </div>
 
-                      {/* Unread Indicator & Delete */}
+                      {/* Actions */}
                       <div className="flex flex-col items-end gap-2">
-                        {!notification.read && (
-                          <div className="w-2 h-2 bg-padel-green rounded-full"></div>
+                        {!notification.read ? (
+                          <button
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              markAsRead(notification.id).catch((error) => {
+                                console.error('Failed to mark as read:', error);
+                                alert('Failed to mark notification as read');
+                              });
+                            }}
+                            className="text-xs text-padel-green hover:text-green-700 font-medium whitespace-nowrap"
+                            title="Mark as read"
+                          >
+                            Mark read
+                          </button>
+                        ) : (
+                          <div className="h-5"></div>
                         )}
                         <button
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
                           className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete notification"
                         >
                           <svg
                             className="w-4 h-4"
