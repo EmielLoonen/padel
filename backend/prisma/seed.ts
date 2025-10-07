@@ -6,6 +6,17 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Only seed test users in development environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    console.log('⚠️  Production environment detected - skipping test user creation');
+    console.log('✨ Seeding skipped for production!');
+    return;
+  }
+
+  console.log('🔧 Development environment - creating test users...');
+
   // Create 8 test users (your padel group)
   const users = [
     { email: 'john@test.com', name: 'John Doe', phone: '+31612345678' },
