@@ -22,6 +22,9 @@ function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionTab, setSessionTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [isPullingToRefresh, setIsPullingToRefresh] = useState(false);
+  const [pullStartY, setPullStartY] = useState(0);
+  const [pullDistance, setPullDistance] = useState(0);
 
   useEffect(() => {
     initializeAuth();
@@ -46,6 +49,37 @@ function App() {
       fetchSessions(sessionTab);
     }
   }, [sessionTab]);
+
+  // Pull-to-refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      setPullStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartY > 0 && window.scrollY === 0) {
+      const currentY = e.touches[0].clientY;
+      const distance = currentY - pullStartY;
+      
+      if (distance > 0 && distance < 150) {
+        setPullDistance(distance);
+        setIsPullingToRefresh(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 80) {
+      // Trigger refresh
+      await fetchSessions(sessionTab);
+    }
+    
+    // Reset state
+    setPullStartY(0);
+    setPullDistance(0);
+    setIsPullingToRefresh(false);
+  };
 
   if (!isAuthenticated) {
     if (showSignup) {
@@ -98,7 +132,30 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
+    <div 
+      className="min-h-screen bg-dark-bg p-2 sm:p-8"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to Refresh Indicator */}
+      {isPullingToRefresh && (
+        <div 
+          className="fixed top-0 left-0 right-0 flex justify-center items-center z-50 transition-opacity"
+          style={{ 
+            opacity: Math.min(pullDistance / 80, 1),
+            transform: `translateY(${Math.min(pullDistance - 20, 60)}px)`
+          }}
+        >
+          <div className="bg-dark-card text-padel-green px-4 py-2 rounded-full shadow-lg border border-padel-green/30 flex items-center gap-2">
+            <div className="animate-spin">↻</div>
+            <span className="text-sm font-medium">
+              {pullDistance > 80 ? 'Release to refresh' : 'Pull to refresh'}
+            </span>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-8 mb-4 sm:mb-8 border border-gray-800">
