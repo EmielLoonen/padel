@@ -76,13 +76,22 @@ export const sessionService = {
   },
 
   async getAllSessions(filters?: { type?: 'upcoming' | 'past' | 'all' }) {
-    const now = new Date();
+    // Get start of today (midnight) for date comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get start of tomorrow (midnight)
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
     let whereClause = {};
 
     if (filters?.type === 'upcoming') {
-      whereClause = { date: { gte: now } };
+      // Sessions from today onwards (includes today)
+      whereClause = { date: { gte: today } };
     } else if (filters?.type === 'past') {
-      whereClause = { date: { lt: now } };
+      // Sessions before today
+      whereClause = { date: { lt: today } };
     }
 
     const sessions = await prisma.session.findMany({

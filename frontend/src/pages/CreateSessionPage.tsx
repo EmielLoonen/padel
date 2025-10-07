@@ -137,10 +137,9 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
           </div>
 
           {/* Court Details */}
-          {numberOfCourts > 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold text-white">Court Times & Durations</h3>
-              {courts.map((court) => (
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-white">Court Times & Durations</h3>
+            {courts.map((court) => (
                 <div
                   key={court.courtNumber}
                   className="p-4 bg-dark-elevated rounded-xl border border-gray-700"
@@ -203,8 +202,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
                   </div>
                 </div>
               ))}
-            </div>
-          )}
+          </div>
 
           {/* Notes */}
           <div>

@@ -197,7 +197,7 @@ function App() {
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
             >
-              📅 Upcoming
+              📅 Booked Sessions
             </button>
             <button
               onClick={() => setSessionTab('past')}
@@ -213,7 +213,7 @@ function App() {
 
           <h2 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
             <span className="text-padel-green">{sessionTab === 'upcoming' ? '📅' : '🏆'}</span>
-            {sessionTab === 'upcoming' ? 'Upcoming Sessions' : 'Past Sessions'}
+            {sessionTab === 'upcoming' ? 'Booked Sessions' : 'Past Sessions'}
           </h2>
 
           {isLoading ? (
@@ -224,7 +224,7 @@ function App() {
             <div className="text-center py-16 text-gray-400">
               <p className="text-6xl mb-4">{sessionTab === 'upcoming' ? '🎾' : '🏆'}</p>
               <p className="text-xl font-semibold mb-2 text-white">
-                {sessionTab === 'upcoming' ? 'No upcoming sessions!' : 'No past sessions yet!'}
+                {sessionTab === 'upcoming' ? 'No booked sessions!' : 'No past sessions yet!'}
               </p>
               <p className="text-sm">
                 {sessionTab === 'upcoming' ? 'Create your first padel session above' : 'Past sessions will appear here'}
@@ -236,14 +236,14 @@ function App() {
                 <div
                   key={session.id}
                   onClick={() => setSelectedSessionId(session.id)}
-                  className="group bg-dark-elevated border border-gray-700 rounded-lg sm:rounded-xl p-3 sm:p-6 hover:border-padel-green transition-all cursor-pointer active:opacity-80"
+                  className="group bg-dark-elevated border border-gray-700 rounded-lg sm:rounded-xl p-3 sm:p-6 hover:border-padel-green transition-all cursor-pointer active:opacity-80 overflow-hidden"
                 >
                   {/* Header - Venue and Date/Time in one line for mobile */}
-                  <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-                    <h3 className="text-base sm:text-2xl font-bold text-white group-hover:text-padel-green transition-colors truncate">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3 overflow-hidden">
+                    <h3 className="text-base sm:text-2xl font-bold text-white group-hover:text-padel-green transition-colors truncate flex-1 min-w-0">
                       {session.venueName}
                     </h3>
-                    <span className="text-xs sm:text-sm text-padel-green font-bold whitespace-nowrap">
+                    <span className="text-xs sm:text-sm text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
                       {session.time}
                     </span>
                   </div>
