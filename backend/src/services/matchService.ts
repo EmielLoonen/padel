@@ -472,6 +472,10 @@ export const matchService = {
 
     // Convert to array and calculate win rates
     const leaderboard = Array.from(playerStatsMap.values())
+      .filter((stats) => {
+        // Exclude the placeholder guest player from leaderboard
+        return stats.userName !== 'Guest Player';
+      })
       .map((stats) => {
         const totalSets = stats.setsWon + stats.setsLost;
         return {

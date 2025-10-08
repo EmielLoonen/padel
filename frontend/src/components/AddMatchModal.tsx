@@ -265,6 +265,20 @@ export default function AddMatchModal({
               </button>
             </div>
             
+            {/* Column Headers */}
+            <div className="flex items-center gap-3 mb-2 px-3">
+              <span className="w-16"></span>
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-20 text-center">
+                  <span className="text-xs font-semibold text-green-700">Team 1</span>
+                </div>
+                <span className="w-4"></span>
+                <div className="w-20 text-center">
+                  <span className="text-xs font-semibold text-blue-700">Team 2</span>
+                </div>
+              </div>
+            </div>
+            
             <div className="space-y-3">
               {sets.map((set, index) => (
                 <div key={index} className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
