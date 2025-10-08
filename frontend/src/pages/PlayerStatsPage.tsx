@@ -11,15 +11,24 @@ interface PlayerStats {
   userName: string;
   userAvatar: string | null;
   totalMatches: number;
+  matchesWon: number;
+  matchesLost: number;
   setsWon: number;
   setsLost: number;
   totalSets: number;
-  winRate: number;
+  gamesWon: number;
+  gamesLost: number;
+  totalGames: number;
+  setWinRate: number;
+  gameWinRate: number;
+  matchWinRate: number;
 }
 
 interface PlayerStatsPageProps {
   onBack: () => void;
 }
+
+type LeaderboardSortBy = 'matches' | 'sets' | 'games';
 
 export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const { user } = useAuthStore();
@@ -27,6 +36,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [allPlayersStats, setAllPlayersStats] = useState<PlayerStats[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
 
   useEffect(() => {
     fetchStats();
@@ -56,6 +66,39 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       setAllPlayersStats(response.data.leaderboard);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
+    }
+  };
+
+  const getSortedLeaderboard = () => {
+    const sorted = [...allPlayersStats];
+    
+    switch (leaderboardSort) {
+      case 'matches':
+        // Sort by match win rate, then by matches won
+        return sorted.sort((a, b) => {
+          if (b.matchWinRate !== a.matchWinRate) {
+            return b.matchWinRate - a.matchWinRate;
+          }
+          return b.matchesWon - a.matchesWon;
+        });
+      case 'sets':
+        // Sort by set win rate, then by sets won
+        return sorted.sort((a, b) => {
+          if (b.setWinRate !== a.setWinRate) {
+            return b.setWinRate - a.setWinRate;
+          }
+          return b.setsWon - a.setsWon;
+        });
+      case 'games':
+        // Sort by game win rate, then by games won
+        return sorted.sort((a, b) => {
+          if (b.gameWinRate !== a.gameWinRate) {
+            return b.gameWinRate - a.gameWinRate;
+          }
+          return b.gamesWon - a.gamesWon;
+        });
+      default:
+        return sorted;
     }
   };
 
@@ -122,35 +165,43 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
               {stats && stats.totalMatches > 0 ? (
                 <>
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                     <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
                       <p className="text-gray-400 text-sm mb-1">Total Matches</p>
                       <p className="text-3xl font-bold text-white">{stats.totalMatches}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-green-500/30">
-                      <p className="text-gray-400 text-sm mb-1">Sets Won</p>
-                      <p className="text-3xl font-bold text-green-400">{stats.setsWon}</p>
+                      <p className="text-gray-400 text-sm mb-1">Matches Won</p>
+                      <p className="text-3xl font-bold text-green-400">{stats.matchesWon}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-red-500/30">
-                      <p className="text-gray-400 text-sm mb-1">Sets Lost</p>
-                      <p className="text-3xl font-bold text-red-400">{stats.setsLost}</p>
+                      <p className="text-gray-400 text-sm mb-1">Matches Lost</p>
+                      <p className="text-3xl font-bold text-red-400">{stats.matchesLost}</p>
+                    </div>
+                    <div className="bg-dark-elevated p-4 rounded-xl border border-green-500/30">
+                      <p className="text-gray-400 text-sm mb-1">Games Won</p>
+                      <p className="text-3xl font-bold text-green-400">{stats.gamesWon}</p>
+                    </div>
+                    <div className="bg-dark-elevated p-4 rounded-xl border border-red-500/30">
+                      <p className="text-gray-400 text-sm mb-1">Games Lost</p>
+                      <p className="text-3xl font-bold text-red-400">{stats.gamesLost}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-padel-green/50">
-                      <p className="text-gray-400 text-sm mb-1">Win Rate</p>
-                      <p className="text-3xl font-bold text-padel-green">{stats.winRate.toFixed(1)}%</p>
+                      <p className="text-gray-400 text-sm mb-1">Game Win Rate</p>
+                      <p className="text-3xl font-bold text-padel-green">{stats.gameWinRate.toFixed(1)}%</p>
                     </div>
                   </div>
 
                   {/* Win Rate Progress Bar */}
                   <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-gray-400 font-medium">Performance</span>
-                      <span className="text-padel-green font-bold">{stats.winRate.toFixed(1)}%</span>
+                      <span className="text-gray-400 font-medium">Game Win Performance</span>
+                      <span className="text-padel-green font-bold">{stats.gameWinRate.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
                       <div
                         className="bg-gradient-to-r from-padel-green to-emerald-500 h-4 rounded-full transition-all duration-500"
-                        style={{ width: `${stats.winRate}%` }}
+                        style={{ width: `${stats.gameWinRate}%` }}
                       />
                     </div>
                     <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -172,14 +223,51 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         ) : (
           // Leaderboard View
           <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 flex items-center gap-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 flex items-center gap-2">
               <span>🏆</span>
               Leaderboard
             </h2>
 
+            {/* Sort Filter */}
+            <div className="mb-6">
+              <p className="text-sm text-gray-400 mb-2">Sort by:</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLeaderboardSort('matches')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                    leaderboardSort === 'matches'
+                      ? 'bg-padel-green text-white'
+                      : 'bg-dark-elevated text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🏅 Matches
+                </button>
+                <button
+                  onClick={() => setLeaderboardSort('sets')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                    leaderboardSort === 'sets'
+                      ? 'bg-padel-green text-white'
+                      : 'bg-dark-elevated text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🎾 Sets
+                </button>
+                <button
+                  onClick={() => setLeaderboardSort('games')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                    leaderboardSort === 'games'
+                      ? 'bg-padel-green text-white'
+                      : 'bg-dark-elevated text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🎯 Games
+                </button>
+              </div>
+            </div>
+
             {allPlayersStats.length > 0 ? (
               <div className="space-y-2 sm:space-y-3">
-                {allPlayersStats.map((player, index) => {
+                {getSortedLeaderboard().map((player, index) => {
                   const isCurrentUser = player.userId === user?.id;
                   const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
                   
@@ -209,34 +297,71 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                             {player.userName}
                             {isCurrentUser && <span className="ml-1 text-xs">(You)</span>}
                           </p>
-                          {/* Mobile: 2 lines */}
+                          {/* Mobile: 2 lines - show stats based on sort */}
                           <div className="sm:hidden text-xs text-gray-400">
                             <p>{player.totalMatches} {player.totalMatches === 1 ? 'match' : 'matches'}</p>
-                            <p>{player.setsWon}W - {player.setsLost}L</p>
+                            {leaderboardSort === 'matches' && <p>{player.matchesWon}W - {player.matchesLost}L</p>}
+                            {leaderboardSort === 'sets' && <p>{player.setsWon}W - {player.setsLost}L</p>}
+                            {leaderboardSort === 'games' && <p>{player.gamesWon}W - {player.gamesLost}L</p>}
                           </div>
-                          {/* Desktop: 1 line */}
+                          {/* Desktop: 1 line - show stats based on sort */}
                           <p className="hidden sm:block text-sm text-gray-400">
-                            {player.totalMatches} matches · {player.setsWon}W-{player.setsLost}L
+                            {player.totalMatches} matches · 
+                            {leaderboardSort === 'matches' && ` ${player.matchesWon}W-${player.matchesLost}L`}
+                            {leaderboardSort === 'sets' && ` ${player.setsWon}W-${player.setsLost}L`}
+                            {leaderboardSort === 'games' && ` ${player.gamesWon}W-${player.gamesLost}L`}
                           </p>
                         </div>
                       </div>
 
                       {/* Stats - Desktop only */}
                       <div className="hidden sm:flex items-center gap-6">
-                        <div className="text-center">
-                          <p className="text-xs text-gray-400">Sets Won</p>
-                          <p className="text-lg font-bold text-green-400">{player.setsWon}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-400">Sets Lost</p>
-                          <p className="text-lg font-bold text-red-400">{player.setsLost}</p>
-                        </div>
+                        {leaderboardSort === 'matches' && (
+                          <>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Matches Won</p>
+                              <p className="text-lg font-bold text-green-400">{player.matchesWon}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Matches Lost</p>
+                              <p className="text-lg font-bold text-red-400">{player.matchesLost}</p>
+                            </div>
+                          </>
+                        )}
+                        {leaderboardSort === 'sets' && (
+                          <>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Sets Won</p>
+                              <p className="text-lg font-bold text-green-400">{player.setsWon}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Sets Lost</p>
+                              <p className="text-lg font-bold text-red-400">{player.setsLost}</p>
+                            </div>
+                          </>
+                        )}
+                        {leaderboardSort === 'games' && (
+                          <>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Games Won</p>
+                              <p className="text-lg font-bold text-green-400">{player.gamesWon}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">Games Lost</p>
+                              <p className="text-lg font-bold text-red-400">{player.gamesLost}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Win Rate */}
                       <div className="text-right flex-shrink-0">
                         <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">Win Rate</p>
-                        <p className="text-base sm:text-xl font-bold text-padel-green">{player.winRate.toFixed(1)}%</p>
+                        <p className="text-base sm:text-xl font-bold text-padel-green">
+                          {leaderboardSort === 'matches' && player.matchWinRate.toFixed(1)}
+                          {leaderboardSort === 'sets' && player.setWinRate.toFixed(1)}
+                          {leaderboardSort === 'games' && player.gameWinRate.toFixed(1)}%
+                        </p>
                       </div>
                     </div>
                   );

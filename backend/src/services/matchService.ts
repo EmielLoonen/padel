@@ -332,6 +332,10 @@ export const matchService = {
 
     let setsWon = 0;
     let setsLost = 0;
+    let matchesWon = 0;
+    let matchesLost = 0;
+    let gamesWon = 0;
+    let gamesLost = 0;
     let totalMatches = 0;
 
     matches.forEach((match) => {
@@ -341,15 +345,36 @@ export const matchService = {
       
       totalMatches++;
       
+      // Count sets won by each team to determine match winner
+      let team1SetsWon = 0;
+      let team2SetsWon = 0;
+      
       // Count each set individually
       sets.forEach((set) => {
+        if (set.team1 > set.team2) {
+          team1SetsWon++;
+        } else if (set.team2 > set.team1) {
+          team2SetsWon++;
+        }
+        
+        // Count sets and games for player stats
         if (isTeam1) {
+          // Count games (the numbers in the score, e.g., 6-4 means 6 games won, 4 games lost)
+          gamesWon += set.team1;
+          gamesLost += set.team2;
+          
+          // Count sets
           if (set.team1 > set.team2) {
             setsWon++;
           } else if (set.team2 > set.team1) {
             setsLost++;
           }
         } else {
+          // Count games
+          gamesWon += set.team2;
+          gamesLost += set.team1;
+          
+          // Count sets
           if (set.team2 > set.team1) {
             setsWon++;
           } else if (set.team1 > set.team2) {
@@ -357,17 +382,42 @@ export const matchService = {
           }
         }
       });
+      
+      // Determine match winner
+      if (isTeam1) {
+        if (team1SetsWon > team2SetsWon) {
+          matchesWon++;
+        } else if (team2SetsWon > team1SetsWon) {
+          matchesLost++;
+        }
+      } else {
+        if (team2SetsWon > team1SetsWon) {
+          matchesWon++;
+        } else if (team1SetsWon > team2SetsWon) {
+          matchesLost++;
+        }
+      }
     });
 
     const totalSets = setsWon + setsLost;
-    const winRate = totalSets > 0 ? (setsWon / totalSets) * 100 : 0;
+    const totalGames = gamesWon + gamesLost;
+    const setWinRate = totalSets > 0 ? (setsWon / totalSets) * 100 : 0;
+    const gameWinRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
+    const matchWinRate = totalMatches > 0 ? (matchesWon / totalMatches) * 100 : 0;
 
     return {
       totalMatches,
+      matchesWon,
+      matchesLost,
       setsWon,
       setsLost,
       totalSets,
-      winRate: Math.round(winRate * 10) / 10, // Round to 1 decimal
+      gamesWon,
+      gamesLost,
+      totalGames,
+      setWinRate: Math.round(setWinRate * 10) / 10, // Round to 1 decimal
+      gameWinRate: Math.round(gameWinRate * 10) / 10,
+      matchWinRate: Math.round(matchWinRate * 10) / 10,
     };
   },
 
@@ -412,12 +462,28 @@ export const matchService = {
       userName: string;
       userAvatar: string | null;
       totalMatches: number;
+      matchesWon: number;
+      matchesLost: number;
       setsWon: number;
       setsLost: number;
+      gamesWon: number;
+      gamesLost: number;
     }>();
 
     allMatches.forEach((match) => {
       const sets = JSON.parse(match.sets) as Set[];
+      
+      // Count sets won by each team to determine match winner
+      let team1SetsWon = 0;
+      let team2SetsWon = 0;
+      
+      sets.forEach((set) => {
+        if (set.team1 > set.team2) {
+          team1SetsWon++;
+        } else if (set.team2 > set.team1) {
+          team2SetsWon++;
+        }
+      });
 
       // Process Team 1 players
       [match.team1Player1, match.team1Player2].forEach((player) => {
@@ -426,14 +492,30 @@ export const matchService = {
           userName: player.name,
           userAvatar: player.avatarUrl,
           totalMatches: 0,
+          matchesWon: 0,
+          matchesLost: 0,
           setsWon: 0,
           setsLost: 0,
+          gamesWon: 0,
+          gamesLost: 0,
         };
 
         existing.totalMatches++;
         
-        // Count each set individually for Team 1
+        // Count match wins/losses
+        if (team1SetsWon > team2SetsWon) {
+          existing.matchesWon++;
+        } else if (team2SetsWon > team1SetsWon) {
+          existing.matchesLost++;
+        }
+        
+        // Count sets and games for Team 1
         sets.forEach((set) => {
+          // Count games
+          existing.gamesWon += set.team1;
+          existing.gamesLost += set.team2;
+          
+          // Count sets
           if (set.team1 > set.team2) {
             existing.setsWon++;
           } else if (set.team2 > set.team1) {
@@ -451,14 +533,30 @@ export const matchService = {
           userName: player.name,
           userAvatar: player.avatarUrl,
           totalMatches: 0,
+          matchesWon: 0,
+          matchesLost: 0,
           setsWon: 0,
           setsLost: 0,
+          gamesWon: 0,
+          gamesLost: 0,
         };
 
         existing.totalMatches++;
         
-        // Count each set individually for Team 2
+        // Count match wins/losses
+        if (team2SetsWon > team1SetsWon) {
+          existing.matchesWon++;
+        } else if (team1SetsWon > team2SetsWon) {
+          existing.matchesLost++;
+        }
+        
+        // Count sets and games for Team 2
         sets.forEach((set) => {
+          // Count games
+          existing.gamesWon += set.team2;
+          existing.gamesLost += set.team1;
+          
+          // Count sets
           if (set.team2 > set.team1) {
             existing.setsWon++;
           } else if (set.team1 > set.team2) {
@@ -478,16 +576,24 @@ export const matchService = {
       })
       .map((stats) => {
         const totalSets = stats.setsWon + stats.setsLost;
+        const totalGames = stats.gamesWon + stats.gamesLost;
+        const setWinRate = totalSets > 0 ? (stats.setsWon / totalSets) * 100 : 0;
+        const gameWinRate = totalGames > 0 ? (stats.gamesWon / totalGames) * 100 : 0;
+        const matchWinRate = stats.totalMatches > 0 ? (stats.matchesWon / stats.totalMatches) * 100 : 0;
+        
         return {
           ...stats,
           totalSets,
-          winRate: totalSets > 0 ? (stats.setsWon / totalSets) * 100 : 0,
+          totalGames,
+          setWinRate: Math.round(setWinRate * 10) / 10,
+          gameWinRate: Math.round(gameWinRate * 10) / 10,
+          matchWinRate: Math.round(matchWinRate * 10) / 10,
         };
       })
       .sort((a, b) => {
-        // Sort by win rate first
-        if (b.winRate !== a.winRate) {
-          return b.winRate - a.winRate;
+        // Sort by set win rate first (default)
+        if (b.setWinRate !== a.setWinRate) {
+          return b.setWinRate - a.setWinRate;
         }
         // If win rates are equal, sort by total sets played
         return b.totalSets - a.totalSets;
