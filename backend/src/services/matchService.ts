@@ -23,15 +23,50 @@ interface UpdateMatchData {
 
 export const matchService = {
   async createMatch(data: CreateMatchData) {
-    // Validate that all 4 players are unique
-    const playerIds = [
+    // Helper function to convert guest IDs to a placeholder user ID
+    const convertGuestToPlaceholder = async (playerId: string): Promise<string> => {
+      // Check if this ID belongs to a guest
+      const guest = await prisma.guest.findUnique({ where: { id: playerId } });
+      if (guest) {
+        // Get or create a "Guest Player" placeholder user
+        let guestUser = await prisma.user.findUnique({ 
+          where: { email: 'guest@placeholder.local' } 
+        });
+        
+        if (!guestUser) {
+          // Create placeholder guest user (should only happen once)
+          const bcrypt = require('bcryptjs');
+          const passwordHash = await bcrypt.hash('no-login', 10);
+          guestUser = await prisma.user.create({
+            data: {
+              email: 'guest@placeholder.local',
+              name: 'Guest Player',
+              phone: '',
+              passwordHash,
+            },
+          });
+        }
+        
+        return guestUser.id;
+      }
+      return playerId; // Not a guest, return original ID
+    };
+
+    // Convert any guest IDs to placeholder user ID
+    const team1Player1Id = await convertGuestToPlaceholder(data.team1Player1Id);
+    const team1Player2Id = await convertGuestToPlaceholder(data.team1Player2Id);
+    const team2Player1Id = await convertGuestToPlaceholder(data.team2Player1Id);
+    const team2Player2Id = await convertGuestToPlaceholder(data.team2Player2Id);
+
+    // Validate that all 4 player positions are unique (but guests can share the placeholder)
+    const originalIds = [
       data.team1Player1Id,
       data.team1Player2Id,
       data.team2Player1Id,
       data.team2Player2Id,
     ];
-    const uniquePlayerIds = new Set(playerIds);
-    if (uniquePlayerIds.size !== 4) {
+    const uniqueOriginalIds = new Set(originalIds);
+    if (uniqueOriginalIds.size !== 4) {
       throw new Error('All 4 players must be unique');
     }
 
@@ -39,10 +74,10 @@ export const matchService = {
     const match = await prisma.match.create({
       data: {
         courtId: data.courtId,
-        team1Player1Id: data.team1Player1Id,
-        team1Player2Id: data.team1Player2Id,
-        team2Player1Id: data.team2Player1Id,
-        team2Player2Id: data.team2Player2Id,
+        team1Player1Id,
+        team1Player2Id,
+        team2Player1Id,
+        team2Player2Id,
         sets: JSON.stringify(data.sets),
         createdById: data.createdById,
       },

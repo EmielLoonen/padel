@@ -630,7 +630,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               // Get guest players on this court
               const guestPlayers = court.guests?.map((guest) => ({
                 id: guest.id,
-                name: guest.name,
+                name: `${guest.name} (Guest)`,
               })) || [];
               
               return [...courtPlayers, ...guestPlayers];

@@ -131,6 +131,12 @@ export default function AddMatchModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
+          {players.length < 4 && (
+            <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-lg">
+              ⚠️ This court needs at least 4 players to record a match.
+            </div>
+          )}
+          
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
               {error}
