@@ -351,10 +351,15 @@ export const matchService = {
       
       // Count each set individually
       sets.forEach((set) => {
-        if (set.team1 > set.team2) {
-          team1SetsWon++;
-        } else if (set.team2 > set.team1) {
-          team2SetsWon++;
+        // A set is only valid if at least one player reached 6 games
+        const isValidSet = set.team1 >= 6 || set.team2 >= 6;
+        
+        if (isValidSet) {
+          if (set.team1 > set.team2) {
+            team1SetsWon++;
+          } else if (set.team2 > set.team1) {
+            team2SetsWon++;
+          }
         }
         
         // Count sets and games for player stats
@@ -363,38 +368,44 @@ export const matchService = {
           gamesWon += set.team1;
           gamesLost += set.team2;
           
-          // Count sets
-          if (set.team1 > set.team2) {
-            setsWon++;
-          } else if (set.team2 > set.team1) {
-            setsLost++;
+          // Count sets (only if valid)
+          if (isValidSet) {
+            if (set.team1 > set.team2) {
+              setsWon++;
+            } else if (set.team2 > set.team1) {
+              setsLost++;
+            }
           }
         } else {
           // Count games
           gamesWon += set.team2;
           gamesLost += set.team1;
           
-          // Count sets
-          if (set.team2 > set.team1) {
-            setsWon++;
-          } else if (set.team1 > set.team2) {
-            setsLost++;
+          // Count sets (only if valid)
+          if (isValidSet) {
+            if (set.team2 > set.team1) {
+              setsWon++;
+            } else if (set.team1 > set.team2) {
+              setsLost++;
+            }
           }
         }
       });
       
-      // Determine match winner
-      if (isTeam1) {
-        if (team1SetsWon > team2SetsWon) {
-          matchesWon++;
-        } else if (team2SetsWon > team1SetsWon) {
-          matchesLost++;
-        }
-      } else {
-        if (team2SetsWon > team1SetsWon) {
-          matchesWon++;
-        } else if (team1SetsWon > team2SetsWon) {
-          matchesLost++;
+      // Determine match winner (only if there were valid sets)
+      if (team1SetsWon > 0 || team2SetsWon > 0) {
+        if (isTeam1) {
+          if (team1SetsWon > team2SetsWon) {
+            matchesWon++;
+          } else if (team2SetsWon > team1SetsWon) {
+            matchesLost++;
+          }
+        } else {
+          if (team2SetsWon > team1SetsWon) {
+            matchesWon++;
+          } else if (team1SetsWon > team2SetsWon) {
+            matchesLost++;
+          }
         }
       }
     });
@@ -478,10 +489,15 @@ export const matchService = {
       let team2SetsWon = 0;
       
       sets.forEach((set) => {
-        if (set.team1 > set.team2) {
-          team1SetsWon++;
-        } else if (set.team2 > set.team1) {
-          team2SetsWon++;
+        // A set is only valid if at least one player reached 6 games
+        const isValidSet = set.team1 >= 6 || set.team2 >= 6;
+        
+        if (isValidSet) {
+          if (set.team1 > set.team2) {
+            team1SetsWon++;
+          } else if (set.team2 > set.team1) {
+            team2SetsWon++;
+          }
         }
       });
 
@@ -502,11 +518,13 @@ export const matchService = {
 
         existing.totalMatches++;
         
-        // Count match wins/losses
-        if (team1SetsWon > team2SetsWon) {
-          existing.matchesWon++;
-        } else if (team2SetsWon > team1SetsWon) {
-          existing.matchesLost++;
+        // Count match wins/losses (only if there were valid sets)
+        if (team1SetsWon > 0 || team2SetsWon > 0) {
+          if (team1SetsWon > team2SetsWon) {
+            existing.matchesWon++;
+          } else if (team2SetsWon > team1SetsWon) {
+            existing.matchesLost++;
+          }
         }
         
         // Count sets and games for Team 1
@@ -515,11 +533,14 @@ export const matchService = {
           existing.gamesWon += set.team1;
           existing.gamesLost += set.team2;
           
-          // Count sets
-          if (set.team1 > set.team2) {
-            existing.setsWon++;
-          } else if (set.team2 > set.team1) {
-            existing.setsLost++;
+          // Count sets (only if valid)
+          const isValidSet = set.team1 >= 6 || set.team2 >= 6;
+          if (isValidSet) {
+            if (set.team1 > set.team2) {
+              existing.setsWon++;
+            } else if (set.team2 > set.team1) {
+              existing.setsLost++;
+            }
           }
         });
 
@@ -543,11 +564,13 @@ export const matchService = {
 
         existing.totalMatches++;
         
-        // Count match wins/losses
-        if (team2SetsWon > team1SetsWon) {
-          existing.matchesWon++;
-        } else if (team1SetsWon > team2SetsWon) {
-          existing.matchesLost++;
+        // Count match wins/losses (only if there were valid sets)
+        if (team1SetsWon > 0 || team2SetsWon > 0) {
+          if (team2SetsWon > team1SetsWon) {
+            existing.matchesWon++;
+          } else if (team1SetsWon > team2SetsWon) {
+            existing.matchesLost++;
+          }
         }
         
         // Count sets and games for Team 2
@@ -556,11 +579,14 @@ export const matchService = {
           existing.gamesWon += set.team2;
           existing.gamesLost += set.team1;
           
-          // Count sets
-          if (set.team2 > set.team1) {
-            existing.setsWon++;
-          } else if (set.team1 > set.team2) {
-            existing.setsLost++;
+          // Count sets (only if valid)
+          const isValidSet = set.team1 >= 6 || set.team2 >= 6;
+          if (isValidSet) {
+            if (set.team2 > set.team1) {
+              existing.setsWon++;
+            } else if (set.team1 > set.team2) {
+              existing.setsLost++;
+            }
           }
         });
 
