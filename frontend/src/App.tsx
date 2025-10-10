@@ -64,7 +64,7 @@ function App() {
       const currentY = e.touches[0].clientY;
       const distance = currentY - pullStartY;
       
-      if (distance > 0 && distance < 150) {
+      if (distance > 0 && distance < 120) {
         setPullDistance(distance);
         setIsPullingToRefresh(true);
       }
@@ -72,7 +72,7 @@ function App() {
   };
 
   const handleTouchEnd = async () => {
-    if (pullDistance > 80) {
+    if (pullDistance > 60) {
       // Show loading indicator
       setIsPullingToRefresh(true);
       
@@ -160,14 +160,14 @@ function App() {
         <div 
           className="fixed top-0 left-0 right-0 flex justify-center items-center z-50 transition-opacity"
           style={{ 
-            opacity: Math.min(pullDistance / 80, 1),
-            transform: `translateY(${Math.min(pullDistance - 20, 60)}px)`
+            opacity: Math.min(pullDistance / 60, 1),
+            transform: `translateY(${Math.min(pullDistance - 10, 50)}px)`
           }}
         >
           <div className="bg-dark-card text-padel-green px-4 py-2 rounded-full shadow-lg border border-padel-green/30 flex items-center gap-2">
             <div className="animate-spin">↻</div>
             <span className="text-sm font-medium">
-              {pullDistance > 80 ? 'Release to refresh' : 'Pull to refresh'}
+              {pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh'}
             </span>
           </div>
         </div>
