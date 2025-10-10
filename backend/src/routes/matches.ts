@@ -173,4 +173,15 @@ router.get('/stats/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// Get match history for a user
+router.get('/history/:userId', async (req: Request, res: Response) => {
+  try {
+    const matches = await matchService.getMatchHistoryForUser(req.params.userId);
+    res.json({ matches });
+  } catch (error) {
+    console.error('Get match history error:', error);
+    res.status(500).json({ error: 'Failed to fetch match history' });
+  }
+});
+
 export default router;

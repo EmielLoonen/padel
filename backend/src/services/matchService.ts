@@ -637,4 +637,90 @@ export const matchService = {
 
     return leaderboard;
   },
+
+  async getMatchHistoryForUser(userId: string) {
+    const matches = await prisma.match.findMany({
+      where: {
+        OR: [
+          { team1Player1Id: userId },
+          { team1Player2Id: userId },
+          { team2Player1Id: userId },
+          { team2Player2Id: userId },
+        ],
+      },
+      include: {
+        court: {
+          include: {
+            session: true,
+          },
+        },
+        team1Player1: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        team1Player2: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        team2Player1: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        team2Player2: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return matches.map((match) => {
+      const sets = JSON.parse(match.sets) as Set[];
+      
+      // Calculate who won
+      let team1SetsWon = 0;
+      let team2SetsWon = 0;
+      sets.forEach((set) => {
+        if (set.team1 >= 6 || set.team2 >= 6) {
+          if (set.team1 > set.team2) team1SetsWon++;
+          else if (set.team2 > set.team1) team2SetsWon++;
+        }
+      });
+
+      const team1Won = team1SetsWon > team2SetsWon;
+      const isTeam1 = match.team1Player1Id === userId || match.team1Player2Id === userId;
+      const playerWon = (isTeam1 && team1Won) || (!isTeam1 && !team1Won);
+
+      return {
+        id: match.id,
+        date: match.court.session.date,
+        sessionId: match.court.session.id,
+        venueName: match.court.session.venueName,
+        courtNumber: match.court.courtNumber,
+        sets,
+        team1Player1: match.team1Player1,
+        team1Player2: match.team1Player2,
+        team2Player1: match.team2Player1,
+        team2Player2: match.team2Player2,
+        team1SetsWon,
+        team2SetsWon,
+        playerWon,
+        isTeam1,
+      };
+    });
+  },
 };

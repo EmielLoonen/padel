@@ -30,17 +30,38 @@ interface PlayerStatsPageProps {
 
 type LeaderboardSortBy = 'matches' | 'sets' | 'games';
 
+interface MatchHistory {
+  id: string;
+  date: string;
+  sessionId: string;
+  venueName: string;
+  courtNumber: number;
+  sets: { team1: number; team2: number }[];
+  team1Player1: { id: string; name: string; avatarUrl: string | null };
+  team1Player2: { id: string; name: string; avatarUrl: string | null };
+  team2Player1: { id: string; name: string; avatarUrl: string | null };
+  team2Player2: { id: string; name: string; avatarUrl: string | null };
+  team1SetsWon: number;
+  team2SetsWon: number;
+  playerWon: boolean;
+  isTeam1: boolean;
+}
+
+type ViewType = 'stats' | 'leaderboard' | 'history';
+
 export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [allPlayersStats, setAllPlayersStats] = useState<PlayerStats[]>([]);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewType>('stats');
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
+  const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
 
   useEffect(() => {
     fetchStats();
     fetchLeaderboard();
+    fetchMatchHistory();
   }, []);
 
   const fetchStats = async () => {
@@ -54,6 +75,18 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       console.error('Failed to fetch stats:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchMatchHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/matches/history/${user?.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMatchHistory(response.data.matches);
+    } catch (error) {
+      console.error('Failed to fetch match history:', error);
     }
   };
 
@@ -127,9 +160,9 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 mb-4 sm:mb-6 border border-gray-800">
           <div className="flex gap-2 mb-4">
             <button
-              onClick={() => setShowLeaderboard(false)}
+              onClick={() => setCurrentView('stats')}
               className={`flex-1 py-2 sm:py-3 px-4 rounded-lg font-semibold transition-all ${
-                !showLeaderboard
+                currentView === 'stats'
                   ? 'bg-padel-green text-white'
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
@@ -137,19 +170,29 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
               📊 My Stats
             </button>
             <button
-              onClick={() => setShowLeaderboard(true)}
+              onClick={() => setCurrentView('leaderboard')}
               className={`flex-1 py-2 sm:py-3 px-4 rounded-lg font-semibold transition-all ${
-                showLeaderboard
+                currentView === 'leaderboard'
                   ? 'bg-padel-green text-white'
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
             >
               🏆 Leaderboard
             </button>
+            <button
+              onClick={() => setCurrentView('history')}
+              className={`flex-1 py-2 sm:py-3 px-4 rounded-lg font-semibold transition-all ${
+                currentView === 'history'
+                  ? 'bg-padel-green text-white'
+                  : 'bg-dark-elevated text-gray-400 hover:text-white'
+              }`}
+            >
+              📜 History
+            </button>
           </div>
         </div>
 
-        {!showLeaderboard ? (
+        {currentView === 'stats' ? (
           // My Stats View
           <div className="space-y-4 sm:space-y-6">
             {/* Player Info Card */}
@@ -220,7 +263,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
               )}
             </div>
           </div>
-        ) : (
+        ) : currentView === 'leaderboard' ? (
           // Leaderboard View
           <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 flex items-center gap-2">
@@ -372,6 +415,109 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                 <p className="text-6xl mb-4">🏆</p>
                 <p className="text-xl font-semibold mb-2 text-white">No data yet!</p>
                 <p className="text-sm">Play some matches to see the leaderboard</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          // Match History View
+          <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 flex items-center gap-2">
+              <span>📜</span>
+              Match History
+            </h2>
+
+            {matchHistory.length > 0 ? (
+              <div className="space-y-3">
+                {matchHistory.map((match) => (
+                  <div
+                    key={match.id}
+                    className={`p-4 rounded-lg border-2 ${
+                      match.playerWon
+                        ? 'bg-green-900/20 border-green-600/50'
+                        : 'bg-red-900/20 border-red-600/50'
+                    }`}
+                  >
+                    {/* Date & Venue */}
+                    <div className="flex justify-between items-start mb-3 text-sm">
+                      <div>
+                        <p className="text-gray-400">
+                          {new Date(match.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </p>
+                        <p className="text-gray-500 text-xs">{match.venueName} - Court {match.courtNumber}</p>
+                      </div>
+                      <div className={`text-lg font-bold ${match.playerWon ? 'text-green-500' : 'text-red-500'}`}>
+                        {match.playerWon ? 'W' : 'L'}
+                      </div>
+                    </div>
+
+                    {/* Teams */}
+                    <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center text-sm">
+                      {/* Team 1 */}
+                      <div className={`${match.isTeam1 ? 'font-semibold text-white' : 'text-gray-400'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Avatar
+                            src={match.team1Player1.avatarUrl}
+                            name={match.team1Player1.name || 'Unknown'}
+                            size="sm"
+                          />
+                          <span className="truncate">{match.team1Player1.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Avatar
+                            src={match.team1Player2.avatarUrl}
+                            name={match.team1Player2.name || 'Unknown'}
+                            size="sm"
+                          />
+                          <span className="truncate">{match.team1Player2.name}</span>
+                        </div>
+                      </div>
+
+                      {/* Score */}
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {match.team1SetsWon} - {match.team2SetsWon}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {match.sets.map((set, idx) => (
+                            <span key={idx} className="mr-2">
+                              {set.team1}-{set.team2}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Team 2 */}
+                      <div className={`text-right ${!match.isTeam1 ? 'font-semibold text-white' : 'text-gray-400'}`}>
+                        <div className="flex items-center gap-2 justify-end mb-1">
+                          <span className="truncate">{match.team2Player1.name}</span>
+                          <Avatar
+                            src={match.team2Player1.avatarUrl}
+                            name={match.team2Player1.name || 'Unknown'}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="truncate">{match.team2Player2.name}</span>
+                          <Avatar
+                            src={match.team2Player2.avatarUrl}
+                            name={match.team2Player2.name || 'Unknown'}
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-6xl mb-4">🎾</p>
+                <p className="text-xl font-semibold mb-2 text-white">No matches yet!</p>
+                <p className="text-sm">Play some matches to see your history</p>
               </div>
             )}
           </div>
