@@ -55,4 +55,4 @@ backend/uploads/
 .bmad-core/
 
 #Cursor
-.cursor/
+.cursor/*.env.local
