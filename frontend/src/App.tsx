@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useSessionStore } from './store/sessionStore';
+import { useNotificationStore } from './store/notificationStore';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import CreateSessionPage from './pages/CreateSessionPage';
@@ -15,6 +16,7 @@ import './App.css';
 function App() {
   const { isAuthenticated, user, logout, initializeAuth } = useAuthStore();
   const { sessions, fetchSessions, isLoading } = useSessionStore();
+  const { fetchNotifications } = useNotificationStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -71,8 +73,23 @@ function App() {
 
   const handleTouchEnd = async () => {
     if (pullDistance > 80) {
-      // Trigger refresh
-      await fetchSessions(sessionTab);
+      // Show loading indicator
+      setIsPullingToRefresh(true);
+      
+      // Full app refresh - reload all data
+      try {
+        await Promise.all([
+          fetchSessions(sessionTab),
+          fetchNotifications(),
+          // Refresh user data by re-initializing auth
+          initializeAuth()
+        ]);
+      } catch (error) {
+        console.error('Refresh error:', error);
+      }
+      
+      // Small delay to show the refresh happened
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     // Reset state

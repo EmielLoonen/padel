@@ -3,6 +3,11 @@
   padding: 0;
 }
 
+/* Disable browser default pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
