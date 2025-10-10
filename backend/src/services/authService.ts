@@ -47,6 +47,7 @@ export const authService = {
         name: true,
         phone: true,
         avatarUrl: true,
+        isAdmin: true,
         createdAt: true,
       },
     });
@@ -88,6 +89,7 @@ export const authService = {
         name: user.name,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
+        isAdmin: user.isAdmin,
       },
       token,
     };
@@ -102,6 +104,7 @@ export const authService = {
         name: true,
         phone: true,
         avatarUrl: true,
+        isAdmin: true,
         createdAt: true,
       },
     });

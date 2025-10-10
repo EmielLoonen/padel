@@ -202,7 +202,8 @@ function App() {
                 <span className="truncate">POPKNOTS</span>
               </h1>
               <p className="text-lg text-gray-400">
-                Welcome, <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
+                Welcome, <span className="font-semibold text-padel-green">{user?.name}</span>
+                {user?.isAdmin && <span className="ml-2 text-yellow-500" title="Admin">🛡️</span>}! 👋
               </p>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">

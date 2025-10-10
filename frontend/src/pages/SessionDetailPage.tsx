@@ -179,7 +179,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
-  const isCreator = currentSession?.creator.id === user?.id;
+  const isCreator = currentSession?.creator.id === user?.id || user?.isAdmin;
 
   if (isLoading || !currentSession) {
     return (
@@ -471,7 +471,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                   });
                   const team1Won = team1SetsWon > team2SetsWon;
                   
-                  const isCreator = match.createdById === user?.id;
+                  const isCreator = match.createdById === user?.id || user?.isAdmin;
                   
                   return (
                     <div key={match.id} className="bg-dark-elevated p-4 rounded-xl border border-gray-700">

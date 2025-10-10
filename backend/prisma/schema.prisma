@@ -17,6 +17,7 @@ model User {
   name          String
   phone         String?
   avatarUrl     String?  @map("avatar_url") // URL or path to avatar image
+  isAdmin       Boolean  @default(false) @map("is_admin")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

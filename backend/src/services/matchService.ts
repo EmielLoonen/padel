@@ -242,8 +242,13 @@ export const matchService = {
       throw new Error('Match not found');
     }
 
-    // Only the creator can update the match
-    if (match.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    // Only the creator or admin can update the match
+    if (match.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the match creator can update this match');
     }
 
@@ -298,8 +303,13 @@ export const matchService = {
       throw new Error('Match not found');
     }
 
-    // Only the creator can delete the match
-    if (match.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    // Only the creator or admin can delete the match
+    if (match.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the match creator can delete this match');
     }
 

@@ -230,7 +230,7 @@ export const sessionService = {
   },
 
   async updateSession(sessionId: string, userId: string, data: UpdateSessionData) {
-    // Check if user is the creator
+    // Check if user is the creator or admin
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
       include: {
@@ -242,7 +242,12 @@ export const sessionService = {
       throw new Error('Session not found');
     }
 
-    if (session.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (session.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the session creator can update this session');
     }
 
@@ -286,7 +291,7 @@ export const sessionService = {
   },
 
   async deleteSession(sessionId: string, userId: string) {
-    // Check if user is the creator
+    // Check if user is the creator or admin
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
     });
@@ -295,7 +300,12 @@ export const sessionService = {
       throw new Error('Session not found');
     }
 
-    if (session.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (session.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the session creator can delete this session');
     }
 

@@ -23,8 +23,13 @@ export const courtService = {
       throw new Error('Court not found');
     }
 
-    // Check if user is the session creator
-    if (court.session.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    // Check if user is the session creator or admin
+    if (court.session.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the session creator can update courts');
     }
 
@@ -56,8 +61,13 @@ export const courtService = {
       throw new Error('Court not found');
     }
 
-    // Check if user is the session creator
-    if (court.session.createdById !== userId) {
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    // Check if user is the session creator or admin
+    if (court.session.createdById !== userId && !requestingUser?.isAdmin) {
       throw new Error('Only the session creator can delete courts');
     }
 
