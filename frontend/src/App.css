@@ -6,6 +6,11 @@
 /* Disable browser default pull-to-refresh on mobile */
 body {
   overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+html {
+  overscroll-behavior-y: contain;
 }
 
 .logo {

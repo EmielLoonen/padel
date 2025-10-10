@@ -54,13 +54,16 @@ function App() {
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.scrollY === 0) {
+    // Check if at top of page (iOS compatible)
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (scrollTop === 0) {
       setPullStartY(e.touches[0].clientY);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (pullStartY > 0 && window.scrollY === 0) {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (pullStartY > 0 && scrollTop === 0) {
       const currentY = e.touches[0].clientY;
       const distance = currentY - pullStartY;
       

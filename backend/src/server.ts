@@ -18,9 +18,22 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
-console.log(`🌐 CORS enabled for origin: ${corsOrigin}`);
+// Allow both localhost and local network access for mobile testing (dev only)
+const allowedOrigins = [corsOrigin];
+// In development, also allow local network access for mobile testing
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://192.168.2.21:5173');
+}
+console.log(`🌐 CORS enabled for origins:`, allowedOrigins);
 app.use(cors({
-  origin: corsOrigin,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
