@@ -10,9 +10,6 @@ interface PlayerStats {
   userId: string;
   userName: string;
   userAvatar: string | null;
-  totalMatches: number;
-  matchesWon: number;
-  matchesLost: number;
   setsWon: number;
   setsLost: number;
   totalSets: number;
@@ -21,14 +18,13 @@ interface PlayerStats {
   totalGames: number;
   setWinRate: number;
   gameWinRate: number;
-  matchWinRate: number;
 }
 
 interface PlayerStatsPageProps {
   onBack: () => void;
 }
 
-type LeaderboardSortBy = 'matches' | 'sets' | 'games';
+type LeaderboardSortBy = 'sets' | 'games';
 
 interface MatchHistory {
   id: string;
@@ -67,7 +63,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/matches/stats/${user?.id}`, {
+      const response = await axios.get(`${API_URL}/api/sets/stats/${user?.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStats(response.data.stats);
@@ -81,19 +77,19 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const fetchMatchHistory = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/matches/history/${user?.id}`, {
+      const response = await axios.get(`${API_URL}/api/sets/history/${user?.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatchHistory(response.data.matches);
+      setMatchHistory(response.data.sets);
     } catch (error) {
-      console.error('Failed to fetch match history:', error);
+      console.error('Failed to fetch set history:', error);
     }
   };
 
   const fetchLeaderboard = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/matches/leaderboard`, {
+      const response = await axios.get(`${API_URL}/api/sets/leaderboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAllPlayersStats(response.data.leaderboard);
@@ -106,14 +102,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     const sorted = [...allPlayersStats];
     
     switch (leaderboardSort) {
-      case 'matches':
-        // Sort by match win rate, then by matches won
-        return sorted.sort((a, b) => {
-          if (b.matchWinRate !== a.matchWinRate) {
-            return b.matchWinRate - a.matchWinRate;
-          }
-          return b.matchesWon - a.matchesWon;
-        });
       case 'sets':
         // Sort by set win rate, then by sets won
         return sorted.sort((a, b) => {
@@ -205,21 +193,21 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                 </div>
               </div>
 
-              {stats && stats.totalMatches > 0 ? (
+              {stats && stats.totalSets > 0 ? (
                 <>
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                     <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
-                      <p className="text-gray-400 text-sm mb-1">Total Matches</p>
-                      <p className="text-3xl font-bold text-white">{stats.totalMatches}</p>
+                      <p className="text-gray-400 text-sm mb-1">Total Sets</p>
+                      <p className="text-3xl font-bold text-white">{stats.totalSets}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-green-500/30">
-                      <p className="text-gray-400 text-sm mb-1">Matches Won</p>
-                      <p className="text-3xl font-bold text-green-400">{stats.matchesWon}</p>
+                      <p className="text-gray-400 text-sm mb-1">Sets Won</p>
+                      <p className="text-3xl font-bold text-green-400">{stats.setsWon}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-red-500/30">
-                      <p className="text-gray-400 text-sm mb-1">Matches Lost</p>
-                      <p className="text-3xl font-bold text-red-400">{stats.matchesLost}</p>
+                      <p className="text-gray-400 text-sm mb-1">Sets Lost</p>
+                      <p className="text-3xl font-bold text-red-400">{stats.setsLost}</p>
                     </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-green-500/30">
                       <p className="text-gray-400 text-sm mb-1">Games Won</p>
@@ -275,16 +263,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             <div className="mb-6">
               <p className="text-sm text-gray-400 mb-2">Sort by:</p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setLeaderboardSort('matches')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-                    leaderboardSort === 'matches'
-                      ? 'bg-padel-green text-white'
-                      : 'bg-dark-elevated text-gray-400 hover:text-white'
-                  }`}
-                >
-                  🏅 Matches
-                </button>
                 <button
                   onClick={() => setLeaderboardSort('sets')}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
@@ -342,15 +320,13 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           </p>
                           {/* Mobile: 2 lines - show stats based on sort */}
                           <div className="sm:hidden text-xs text-gray-400">
-                            <p>{player.totalMatches} {player.totalMatches === 1 ? 'match' : 'matches'}</p>
-                            {leaderboardSort === 'matches' && <p>{player.matchesWon}W - {player.matchesLost}L</p>}
+                            <p>{player.totalSets} {player.totalSets === 1 ? 'set' : 'sets'}</p>
                             {leaderboardSort === 'sets' && <p>{player.setsWon}W - {player.setsLost}L</p>}
                             {leaderboardSort === 'games' && <p>{player.gamesWon}W - {player.gamesLost}L</p>}
                           </div>
                           {/* Desktop: 1 line - show stats based on sort */}
                           <p className="hidden sm:block text-sm text-gray-400">
-                            {player.totalMatches} matches · 
-                            {leaderboardSort === 'matches' && ` ${player.matchesWon}W-${player.matchesLost}L`}
+                            {player.totalSets} sets · 
                             {leaderboardSort === 'sets' && ` ${player.setsWon}W-${player.setsLost}L`}
                             {leaderboardSort === 'games' && ` ${player.gamesWon}W-${player.gamesLost}L`}
                           </p>
@@ -359,18 +335,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
                       {/* Stats - Desktop only */}
                       <div className="hidden sm:flex items-center gap-6">
-                        {leaderboardSort === 'matches' && (
-                          <>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400">Matches Won</p>
-                              <p className="text-lg font-bold text-green-400">{player.matchesWon}</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-400">Matches Lost</p>
-                              <p className="text-lg font-bold text-red-400">{player.matchesLost}</p>
-                            </div>
-                          </>
-                        )}
                         {leaderboardSort === 'sets' && (
                           <>
                             <div className="text-center">
@@ -401,7 +365,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <div className="text-right flex-shrink-0">
                         <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">Win Rate</p>
                         <p className="text-base sm:text-xl font-bold text-padel-green">
-                          {leaderboardSort === 'matches' && player.matchWinRate.toFixed(1)}
                           {leaderboardSort === 'sets' && player.setWinRate.toFixed(1)}
                           {leaderboardSort === 'games' && player.gameWinRate.toFixed(1)}%
                         </p>
@@ -419,96 +382,66 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             )}
           </div>
         ) : (
-          // Match History View
+          // Set History View
           <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 flex items-center gap-2">
               <span>📜</span>
-              Match History
+              Set History
             </h2>
 
             {matchHistory.length > 0 ? (
               <div className="space-y-3">
-                {matchHistory.map((match) => (
+                {matchHistory.map((set: any) => (
                   <div
-                    key={match.id}
+                    key={set.id}
                     className={`p-4 rounded-lg border-2 ${
-                      match.playerWon
+                      set.playerWon
                         ? 'bg-green-900/20 border-green-600/50'
-                        : 'bg-red-900/20 border-red-600/50'
+                        : 'bg-gray-800/50 border-gray-700'
                     }`}
                   >
                     {/* Date & Venue */}
                     <div className="flex justify-between items-start mb-3 text-sm">
                       <div>
                         <p className="text-gray-400">
-                          {new Date(match.date).toLocaleDateString('en-US', {
+                          {new Date(set.date).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
                         </p>
-                        <p className="text-gray-500 text-xs">{match.venueName} - Court {match.courtNumber}</p>
+                        <p className="text-gray-500 text-xs">{set.venueName} - Court {set.courtNumber} - Set {set.setNumber}</p>
                       </div>
-                      <div className={`text-lg font-bold ${match.playerWon ? 'text-green-500' : 'text-red-500'}`}>
-                        {match.playerWon ? 'W' : 'L'}
+                      <div className={`text-lg font-bold ${set.playerWon ? 'text-green-500' : 'text-gray-400'}`}>
+                        {set.playerWon ? 'W' : ''}
                       </div>
                     </div>
 
-                    {/* Teams */}
-                    <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center text-sm">
-                      {/* Team 1 */}
-                      <div className={`${match.isTeam1 ? 'font-semibold text-white' : 'text-gray-400'}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Avatar
-                            src={match.team1Player1.avatarUrl}
-                            name={match.team1Player1.name || 'Unknown'}
-                            size="sm"
-                          />
-                          <span className="truncate">{match.team1Player1.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Avatar
-                            src={match.team1Player2.avatarUrl}
-                            name={match.team1Player2.name || 'Unknown'}
-                            size="sm"
-                          />
-                          <span className="truncate">{match.team1Player2.name}</span>
-                        </div>
-                      </div>
-
-                      {/* Score */}
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-white">
-                          {match.team1SetsWon} - {match.team2SetsWon}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {match.sets.map((set, idx) => (
-                            <span key={idx} className="mr-2">
-                              {set.team1}-{set.team2}
+                    {/* Players & Scores */}
+                    <div className="flex flex-wrap gap-2">
+                      {set.scores.map((score: any) => {
+                        const isMaxScore = score.gamesWon === set.maxScore;
+                        return (
+                          <div
+                            key={score.userId}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                              isMaxScore && score.gamesWon >= 6
+                                ? 'bg-green-500/20 border border-green-500'
+                                : 'bg-gray-800 border border-gray-700'
+                            }`}
+                          >
+                            <Avatar
+                              src={score.user.avatarUrl}
+                              name={score.user.name || 'Unknown'}
+                              size="sm"
+                            />
+                            <span className="text-xs sm:text-sm text-white">{score.user.name}</span>
+                            <span className="text-sm font-bold text-padel-green ml-1">
+                              {score.gamesWon}
                             </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Team 2 */}
-                      <div className={`text-right ${!match.isTeam1 ? 'font-semibold text-white' : 'text-gray-400'}`}>
-                        <div className="flex items-center gap-2 justify-end mb-1">
-                          <span className="truncate">{match.team2Player1.name}</span>
-                          <Avatar
-                            src={match.team2Player1.avatarUrl}
-                            name={match.team2Player1.name || 'Unknown'}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 justify-end">
-                          <span className="truncate">{match.team2Player2.name}</span>
-                          <Avatar
-                            src={match.team2Player2.avatarUrl}
-                            name={match.team2Player2.name || 'Unknown'}
-                            size="sm"
-                          />
-                        </div>
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -516,8 +449,8 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             ) : (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-6xl mb-4">🎾</p>
-                <p className="text-xl font-semibold mb-2 text-white">No matches yet!</p>
-                <p className="text-sm">Play some matches to see your history</p>
+                <p className="text-xl font-semibold mb-2 text-white">No sets played yet!</p>
+                <p className="text-sm">Play some sets to see your history</p>
               </div>
             )}
           </div>

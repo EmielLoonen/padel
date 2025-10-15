@@ -94,6 +94,9 @@ export const sessionService = {
       whereClause = { date: { lt: today } };
     }
 
+    // For past sessions, sort descending (newest first). For upcoming/all, sort ascending (oldest first)
+    const sortOrder = filters?.type === 'past' ? 'desc' : 'asc';
+
     const sessions = await prisma.session.findMany({
       where: whereClause,
       include: {
@@ -142,7 +145,7 @@ export const sessionService = {
           },
         },
       },
-      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+      orderBy: [{ date: sortOrder }, { time: sortOrder }],
     });
 
     // Add RSVP summary for each session

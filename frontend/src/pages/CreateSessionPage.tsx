@@ -71,7 +71,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-dark-card rounded-2xl shadow-2xl p-8 border border-gray-800">
+      <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">
         <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
           <span className="text-4xl">🎾</span>
           Create New Session
@@ -147,7 +147,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-padel-green">Court {court.courtNumber}</h4>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Court #</label>
                       <input

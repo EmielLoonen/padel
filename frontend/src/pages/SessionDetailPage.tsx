@@ -7,8 +7,7 @@ import CourtSelector from '../components/CourtSelector';
 import EditSessionModal from '../components/EditSessionModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddGuestModal from '../components/AddGuestModal';
-import AddMatchModal from '../components/AddMatchModal';
-import EditMatchModal from '../components/EditMatchModal';
+import AddSetModal from '../components/AddSetModal';
 import Avatar from '../components/Avatar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -27,46 +26,44 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddGuestModal, setShowAddGuestModal] = useState(false);
   const [selectedCourtForGuest, setSelectedCourtForGuest] = useState<{ id: string; number: number } | null>(null);
-  const [showAddMatchModal, setShowAddMatchModal] = useState(false);
-  const [selectedCourtForMatch, setSelectedCourtForMatch] = useState<{ id: string; number: number } | null>(null);
-  const [showEditMatchModal, setShowEditMatchModal] = useState(false);
-  const [selectedMatchForEdit, setSelectedMatchForEdit] = useState<any>(null);
-  const [matches, setMatches] = useState<any[]>([]);
+  const [showAddSetModal, setShowAddSetModal] = useState(false);
+  const [selectedCourtForSet, setSelectedCourtForSet] = useState<{ id: string; number: number } | null>(null);
+  const [sets, setSets] = useState<any[]>([]);
   const [rsvpStatus, setRSVPStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSessionById(sessionId);
     fetchRSVPs(sessionId);
-    fetchMatches();
+    fetchSets();
   }, [sessionId]);
 
-  const fetchMatches = async () => {
+  const fetchSets = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/matches/session/${sessionId}`, {
+      const response = await axios.get(`${API_URL}/api/sets/session/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatches(response.data.matches);
+      setSets(response.data.sets);
     } catch (error) {
-      console.error('Failed to fetch matches:', error);
+      console.error('Failed to fetch sets:', error);
     }
   };
 
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!window.confirm('Are you sure you want to delete this match?')) {
+  const handleDeleteSet = async (setId: string) => {
+    if (!window.confirm('Are you sure you want to delete this set?')) {
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/matches/${matchId}`, {
+      await axios.delete(`${API_URL}/api/sets/${setId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      fetchMatches();
+      fetchSets();
     } catch (error) {
-      console.error('Failed to delete match:', error);
-      alert('Failed to delete match');
+      console.error('Failed to delete set:', error);
+      alert('Failed to delete set');
     }
   };
 
@@ -458,128 +455,96 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               </h2>
             </div>
 
-            {/* Match History */}
-            {matches.length > 0 ? (
+            {/* Set Results */}
+            {sets.length > 0 ? (
               <div className="space-y-4 mb-6">
-                {matches.map((match) => {
-                  const sets = JSON.parse(match.sets);
-                  let team1SetsWon = 0;
-                  let team2SetsWon = 0;
-                  sets.forEach((set: any) => {
-                    if (set.team1 > set.team2) team1SetsWon++;
-                    else if (set.team2 > set.team1) team2SetsWon++;
-                  });
-                  const team1Won = team1SetsWon > team2SetsWon;
-                  
-                  const isCreator = match.createdById === user?.id || user?.isAdmin;
-                  
+                {/* Group sets by court */}
+                {courtsInfo.map((court) => {
+                  const courtSets = sets.filter((set) => set.courtId === court.id);
+                  if (courtSets.length === 0) return null;
+
                   return (
-                    <div key={match.id} className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+                    <div key={court.id} className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm text-gray-400">Court {match.court.courtNumber}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">
-                            {new Date(match.createdAt).toLocaleDateString()}
-                          </span>
-                          {isCreator && (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedMatchForEdit(match);
-                                  setShowEditMatchModal(true);
-                                }}
-                                className="text-padel-green hover:text-green-600 p-1 text-sm"
-                                title="Edit match"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => handleDeleteMatch(match.id)}
-                                className="text-red-500 hover:text-red-600 p-1 text-sm"
-                                title="Delete match"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-sm sm:text-base font-semibold text-padel-green">Court {court.courtNumber}</span>
                       </div>
                       
-                      {/* Mobile: Vertical layout, Desktop: 3-column grid */}
-                      <div className="flex flex-col sm:grid sm:grid-cols-3 gap-3 sm:gap-4 sm:items-center">
-                        {/* Team 1 */}
-                        <div className={`p-3 rounded-lg ${team1Won ? 'bg-green-500/20 border-2 border-green-500' : 'bg-gray-800 border border-gray-700'}`}>
-                          <p className="text-xs text-gray-400 mb-2 sm:hidden">Team 1 {team1Won && '(Winner)'}</p>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Avatar src={match.team1Player1.avatarUrl} name={match.team1Player1.name} size="sm" />
-                              <span className="text-xs sm:text-sm text-white truncate">{match.team1Player1.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Avatar src={match.team1Player2.avatarUrl} name={match.team1Player2.name} size="sm" />
-                              <span className="text-xs sm:text-sm text-white truncate">{match.team1Player2.name}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Sets */}
-                        <div className="text-center bg-dark-bg p-3 rounded-lg sm:bg-transparent sm:p-0">
-                          <div className="text-2xl sm:text-2xl font-bold text-white mb-2">
-                            {team1SetsWon} - {team2SetsWon}
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            {sets.map((set: any, idx: number) => (
-                              <div key={idx} className="text-xs sm:text-sm text-gray-400">
-                                Set {idx + 1}: <span className="text-white">{set.team1} - {set.team2}</span>
+                      {courtSets.map((set) => {
+                        const isCreator = set.createdById === user?.id || user?.isAdmin;
+                        const sortedScores = [...set.scores].sort((a: any, b: any) => b.gamesWon - a.gamesWon);
+                        const maxScore = sortedScores[0]?.gamesWon || 0;
+                        
+                        return (
+                          <div key={set.id} className="mb-3 last:mb-0 p-2 sm:p-3 bg-dark-bg rounded-lg border border-gray-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs sm:text-sm font-semibold text-gray-400">Set {set.setNumber}</span>
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {new Date(set.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                                {isCreator && (
+                                  <button
+                                    onClick={() => handleDeleteSet(set.id)}
+                                    className="text-red-500 hover:text-red-600 p-1 text-sm"
+                                    title="Delete set"
+                                  >
+                                    🗑️
+                                  </button>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Team 2 */}
-                        <div className={`p-3 rounded-lg ${!team1Won ? 'bg-green-500/20 border-2 border-green-500' : 'bg-gray-800 border border-gray-700'}`}>
-                          <p className="text-xs text-gray-400 mb-2 sm:hidden">
-                            Team 2 {!team1Won && '(Winner)'}
-                          </p>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Avatar src={match.team2Player1.avatarUrl} name={match.team2Player1.name} size="sm" />
-                              <span className="text-xs sm:text-sm text-white truncate">{match.team2Player1.name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Avatar src={match.team2Player2.avatarUrl} name={match.team2Player2.name} size="sm" />
-                              <span className="text-xs sm:text-sm text-white truncate">{match.team2Player2.name}</span>
+                            
+                            <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
+                              {sortedScores.map((score: any) => {
+                                const isWinner = score.gamesWon === maxScore && score.gamesWon >= 6;
+                                return (
+                                  <div
+                                    key={score.userId}
+                                    className={`flex items-center justify-between sm:justify-start gap-2 px-2 sm:px-3 py-2 rounded-lg ${
+                                      isWinner
+                                        ? 'bg-green-500/20 border border-green-500'
+                                        : 'bg-gray-800 border border-gray-700'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <Avatar src={score.user.avatarUrl} name={score.user.name} size="sm" />
+                                      <span className="text-xs sm:text-sm text-white truncate">{score.user.name}</span>
+                                    </div>
+                                    <span className="text-base sm:text-lg font-bold text-padel-green flex-shrink-0">
+                                      {score.gamesWon}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-gray-400 italic mb-6">No matches recorded yet</p>
+              <p className="text-gray-400 italic mb-6">No set results recorded yet</p>
             )}
 
-            {/* Add Match Buttons for each court (only for courts without matches) */}
-            {courtsInfo.filter((court) => !matches.some((match) => match.court.id === court.id)).length > 0 && (
+            {/* Add Set Buttons for each court */}
+            {courtsInfo.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm text-gray-400 mb-2">Record a match:</p>
+                <p className="text-sm text-gray-400 mb-2">Record set results:</p>
                 <div className="flex flex-wrap gap-2">
-                  {courtsInfo
-                    .filter((court) => !matches.some((match) => match.court.id === court.id))
-                    .map((court) => (
-                      <button
-                        key={court.id}
-                        onClick={() => {
-                          setSelectedCourtForMatch({ id: court.id, number: court.courtNumber });
-                          setShowAddMatchModal(true);
-                        }}
-                        className="bg-gradient-to-r from-padel-green to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all font-medium"
-                      >
-                        + Court {court.courtNumber}
-                      </button>
-                    ))}
+                  {courtsInfo.map((court) => (
+                    <button
+                      key={court.id}
+                      onClick={() => {
+                        setSelectedCourtForSet({ id: court.id, number: court.courtNumber });
+                        setShowAddSetModal(true);
+                      }}
+                      className="bg-gradient-to-r from-padel-green to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all font-medium"
+                    >
+                      + Court {court.courtNumber}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -611,14 +576,14 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           />
         )}
 
-        {/* Add Match Modal */}
-        {showAddMatchModal && selectedCourtForMatch && courtsInfo && (
-          <AddMatchModal
-            courtId={selectedCourtForMatch.id}
-            courtNumber={selectedCourtForMatch.number}
+        {/* Add Set Modal */}
+        {showAddSetModal && selectedCourtForSet && courtsInfo && (
+          <AddSetModal
+            courtId={selectedCourtForSet.id}
+            courtNumber={selectedCourtForSet.number}
             players={(() => {
               // Find the court
-              const court = courtsInfo.find((c) => c.id === selectedCourtForMatch.id);
+              const court = courtsInfo.find((c) => c.id === selectedCourtForSet.id);
               if (!court) return [];
               
               // Get registered players on this court
@@ -636,33 +601,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               return [...courtPlayers, ...guestPlayers];
             })()}
             onSuccess={() => {
-              setShowAddMatchModal(false);
-              setSelectedCourtForMatch(null);
-              fetchMatches();
+              setShowAddSetModal(false);
+              setSelectedCourtForSet(null);
+              fetchSets();
               fetchSessionById(sessionId);
               fetchRSVPs(sessionId);
             }}
             onClose={() => {
-              setShowAddMatchModal(false);
-              setSelectedCourtForMatch(null);
-            }}
-          />
-        )}
-
-        {/* Edit Match Modal */}
-        {showEditMatchModal && selectedMatchForEdit && (
-          <EditMatchModal
-            matchId={selectedMatchForEdit.id}
-            courtNumber={selectedMatchForEdit.court.courtNumber}
-            initialSets={JSON.parse(selectedMatchForEdit.sets)}
-            onSuccess={() => {
-              setShowEditMatchModal(false);
-              setSelectedMatchForEdit(null);
-              fetchMatches();
-            }}
-            onClose={() => {
-              setShowEditMatchModal(false);
-              setSelectedMatchForEdit(null);
+              setShowAddSetModal(false);
+              setSelectedCourtForSet(null);
             }}
           />
         )}
