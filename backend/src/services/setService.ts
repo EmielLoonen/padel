@@ -263,10 +263,13 @@ export const setService = {
       // Find the highest score in this set (winner)
       const maxScore = Math.max(...allScores.map((s) => s.gamesWon));
 
-      // Calculate games lost (sum of all other players' scores)
+      // For games lost, find the highest opponent score (not sum of all opponents)
+      // Assumes typical 2v2: you + partner have same score vs opponents with same score
       const otherScores = allScores.filter((s) => s.userId !== userId);
-      const gamesLostThisSet = otherScores.reduce((sum, s) => sum + s.gamesWon, 0);
-      gamesLost += gamesLostThisSet;
+      const maxOpponentScore = otherScores.length > 0 
+        ? Math.max(...otherScores.map((s) => s.gamesWon))
+        : 0;
+      gamesLost += maxOpponentScore;
 
       // Determine if user won this set
       // A set is won if the user has the highest score AND reached at least 6 games
@@ -347,10 +350,12 @@ export const setService = {
       // Find max score in this set
       const maxScore = Math.max(...score.set.scores.map((s) => s.gamesWon));
 
-      // Calculate games lost
+      // For games lost, find the highest opponent score (not sum of all opponents)
       const otherScores = score.set.scores.filter((s) => s.userId !== userId);
-      const gamesLostThisSet = otherScores.reduce((sum, s) => sum + s.gamesWon, 0);
-      existing.gamesLost += gamesLostThisSet;
+      const maxOpponentScore = otherScores.length > 0 
+        ? Math.max(...otherScores.map((s) => s.gamesWon))
+        : 0;
+      existing.gamesLost += maxOpponentScore;
 
       // Determine if won this set
       if (score.gamesWon === maxScore && score.gamesWon >= 6) {
