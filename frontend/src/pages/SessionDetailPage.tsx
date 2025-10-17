@@ -31,12 +31,62 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [sets, setSets] = useState<any[]>([]);
   const [rsvpStatus, setRSVPStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
+  const [playerStats, setPlayerStats] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSessionById(sessionId);
     fetchRSVPs(sessionId);
     fetchSets();
+    fetchPlayerStats();
   }, [sessionId]);
+
+  const fetchPlayerStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/sets/leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPlayerStats(response.data.leaderboard);
+    } catch (error) {
+      console.error('Failed to fetch player stats:', error);
+    }
+  };
+
+  const calculateBalancedTeams = (court: any) => {
+    const allPlayers = [
+      ...(court.rsvps?.map((rsvp: any) => ({ id: rsvp.user.id, name: rsvp.user.name, isGuest: false })) || []),
+      ...(court.guests?.map((guest: any) => ({ id: guest.id, name: guest.name, isGuest: true })) || []),
+    ];
+
+    if (allPlayers.length !== 4) return null;
+
+    // Get stats for each player
+    const playersWithStats = allPlayers.map((player) => {
+      const stats = playerStats.find((s) => s.userId === player.id);
+      return {
+        ...player,
+        setWinRate: stats?.setWinRate || 0,
+        totalSets: stats?.totalSets || 0,
+      };
+    });
+
+    // Sort by win rate (guests and players with no stats go to bottom)
+    const sortedPlayers = [...playersWithStats].sort((a, b) => {
+      if (a.isGuest && b.isGuest) return 0;
+      if (a.isGuest) return 1;
+      if (b.isGuest) return -1;
+      if (a.totalSets === 0 && b.totalSets === 0) return 0;
+      if (a.totalSets === 0) return 1;
+      if (b.totalSets === 0) return -1;
+      return b.setWinRate - a.setWinRate;
+    });
+
+    // Best + Worst vs Middle two
+    return {
+      team1: [sortedPlayers[0], sortedPlayers[3]],
+      team2: [sortedPlayers[1], sortedPlayers[2]],
+    };
+  };
 
   const fetchSets = async () => {
     try {
@@ -438,6 +488,57 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                     {!court.rsvps?.length && !court.guests?.length && (
                       <p className="text-gray-500 italic text-sm">No players yet</p>
                     )}
+
+                    {/* Smart Balance Suggestion - Only show if exactly 4 players */}
+                    {(() => {
+                      const totalPlayers = (court.rsvps?.length || 0) + (court.guests?.length || 0);
+                      if (totalPlayers !== 4) return null;
+                      
+                      const balancedTeams = calculateBalancedTeams(court);
+                      if (!balancedTeams) return null;
+
+                      return (
+                        <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-xl">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">🎯</span>
+                            <p className="text-sm font-bold text-purple-300">Smart Balance Suggestion</p>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            {/* Team 1 */}
+                            <div className="bg-dark-card p-2 rounded-lg border border-gray-700">
+                              <p className="text-xs text-gray-400 mb-1">Team 1</p>
+                              {balancedTeams.team1.map((player: any) => (
+                                <div key={player.id} className="flex items-center justify-between text-xs">
+                                  <span className="text-white">{player.name}</span>
+                                  {player.totalSets > 0 && (
+                                    <span className="text-gray-500">
+                                      {player.setWinRate.toFixed(0)}% ({player.totalSets} sets)
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {/* Team 2 */}
+                            <div className="bg-dark-card p-2 rounded-lg border border-gray-700">
+                              <p className="text-xs text-gray-400 mb-1">Team 2</p>
+                              {balancedTeams.team2.map((player: any) => (
+                                <div key={player.id} className="flex items-center justify-between text-xs">
+                                  <span className="text-white">{player.name}</span>
+                                  {player.totalSets > 0 && (
+                                    <span className="text-gray-500">
+                                      {player.setWinRate.toFixed(0)}% ({player.totalSets} sets)
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2 italic">
+                            Based on historical set win rates
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
