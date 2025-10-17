@@ -64,20 +64,78 @@ export default function AddSetModal({
           : set
       )
     );
+    // Clear error when user starts editing
+    if (error) setError(null);
+  };
+
+  // Helper function to get validation hint for a set
+  const getSetValidationHint = (set: SetRow): string | null => {
+    const scoredPlayers = Object.entries(set.scores)
+      .filter(([, score]) => score !== null && score !== undefined && score >= 0)
+      .map(([playerId, score]) => ({ playerId, score: score as number }));
+
+    if (scoredPlayers.length < 2) return null;
+    if (scoredPlayers.length < 4) return null; // Allow non-4-player games
+
+    // Group by score
+    const scoreGroups = new Map<number, number>();
+    scoredPlayers.forEach(({ score }) => {
+      scoreGroups.set(score, (scoreGroups.get(score) || 0) + 1);
+    });
+
+    // Check if we have proper 2v2 format
+    if (scoredPlayers.length === 4 && scoreGroups.size === 2) {
+      const teamSizes = Array.from(scoreGroups.values());
+      if (teamSizes.every((size) => size === 2)) {
+        return '✓ Valid 2v2 teams';
+      }
+    }
+
+    return '⚠️ Teammates should have matching scores';
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate: each set must have at least 2 players with scores
+    // Validate each set
     for (const set of sets) {
-      const scoredPlayers = Object.values(set.scores).filter(
-        (score) => score !== null && score >= 0
-      );
+      const scoredPlayers = Object.entries(set.scores)
+        .filter(([, score]) => score !== null && score !== undefined && score >= 0)
+        .map(([playerId, score]) => ({ playerId, score: score as number }));
+
+      // Must have at least 2 players with scores
       if (scoredPlayers.length < 2) {
         setError(`Set ${set.setNumber} must have at least 2 players with scores`);
         return;
+      }
+
+      // Group players by score to find teams
+      const scoreGroups = new Map<number, string[]>();
+      scoredPlayers.forEach(({ playerId, score }) => {
+        if (!scoreGroups.has(score)) {
+          scoreGroups.set(score, []);
+        }
+        scoreGroups.get(score)!.push(playerId);
+      });
+
+      // For 2v2 or team games, we should have exactly 2 different scores (one per team)
+      if (scoredPlayers.length >= 4 && scoreGroups.size !== 2) {
+        setError(
+          `Set ${set.setNumber}: In a 4-player game, there should be 2 teams with matching scores (e.g., 6-6 vs 4-4). Please ensure teammates have the same score.`
+        );
+        return;
+      }
+
+      // If we have 4 players, each team should have exactly 2 players
+      if (scoredPlayers.length === 4 && scoreGroups.size === 2) {
+        const teamSizes = Array.from(scoreGroups.values()).map((team) => team.length);
+        if (!teamSizes.every((size) => size === 2)) {
+          setError(
+            `Set ${set.setNumber}: Each team should have 2 players with the same score (2v2 format).`
+          );
+          return;
+        }
       }
     }
 
@@ -184,32 +242,52 @@ export default function AddSetModal({
                   </tr>
                 </thead>
                 <tbody className="bg-dark-card">
-                  {sets.map((set) => (
-                    <tr key={set.setNumber} className="border-t border-gray-700">
-                      <td className="px-2 sm:px-3 py-2 text-sm font-semibold text-padel-green border-r border-gray-700 sticky left-0 bg-dark-card z-10 shadow-md">
-                        {set.setNumber}
-                      </td>
-                      {players.map((player) => (
-                        <td
-                          key={player.id}
-                          className="px-1 sm:px-2 py-2 border-r border-gray-700 last:border-r-0"
-                        >
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={set.scores[player.id] ?? ''}
-                            onChange={(e) =>
-                              updateScore(set.setNumber, player.id, e.target.value)
-                            }
-                            className="w-full px-1 sm:px-2 py-1.5 sm:py-1 bg-dark-elevated border border-gray-600 text-white rounded text-center focus:outline-none focus:ring-1 focus:ring-padel-green text-sm sm:text-base"
-                            placeholder="-"
-                            inputMode="numeric"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {sets.map((set) => {
+                    const validationHint = getSetValidationHint(set);
+                    return (
+                      <>
+                        <tr key={set.setNumber} className="border-t border-gray-700">
+                          <td className="px-2 sm:px-3 py-2 text-sm font-semibold text-padel-green border-r border-gray-700 sticky left-0 bg-dark-card z-10 shadow-md">
+                            {set.setNumber}
+                          </td>
+                          {players.map((player) => (
+                            <td
+                              key={player.id}
+                              className="px-1 sm:px-2 py-2 border-r border-gray-700 last:border-r-0"
+                            >
+                              <input
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={set.scores[player.id] ?? ''}
+                                onChange={(e) =>
+                                  updateScore(set.setNumber, player.id, e.target.value)
+                                }
+                                className="w-full px-1 sm:px-2 py-1.5 sm:py-1 bg-dark-elevated border border-gray-600 text-white rounded text-center focus:outline-none focus:ring-1 focus:ring-padel-green text-sm sm:text-base"
+                                placeholder="-"
+                                inputMode="numeric"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                        {validationHint && (
+                          <tr key={`hint-${set.setNumber}`}>
+                            <td colSpan={players.length + 1} className="px-2 py-1 text-xs text-center">
+                              <span
+                                className={
+                                  validationHint.startsWith('✓')
+                                    ? 'text-green-400'
+                                    : 'text-yellow-400'
+                                }
+                              >
+                                {validationHint}
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
