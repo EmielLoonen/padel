@@ -390,58 +390,81 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             </h2>
 
             {matchHistory.length > 0 ? (
-              <div className="space-y-3">
-                {matchHistory.map((set: any) => (
-                  <div
-                    key={set.id}
-                    className={`p-4 rounded-lg border-2 ${
-                      set.playerWon
-                        ? 'bg-green-900/20 border-green-600/50'
-                        : 'bg-gray-800/50 border-gray-700'
-                    }`}
-                  >
-                    {/* Date & Venue */}
-                    <div className="flex justify-between items-start mb-3 text-sm">
-                      <div>
-                        <p className="text-gray-400">
-                          {new Date(set.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </p>
-                        <p className="text-gray-500 text-xs">{set.venueName} - Court {set.courtNumber} - Set {set.setNumber}</p>
-                      </div>
-                      <div className={`text-lg font-bold ${set.playerWon ? 'text-green-500' : 'text-gray-400'}`}>
-                        {set.playerWon ? 'W' : ''}
-                      </div>
+              <div className="space-y-6">
+                {/* Group sets by date */}
+                {Object.entries(
+                  matchHistory.reduce((groups: any, set: any) => {
+                    const dateKey = new Date(set.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    });
+                    if (!groups[dateKey]) {
+                      groups[dateKey] = [];
+                    }
+                    groups[dateKey].push(set);
+                    return groups;
+                  }, {})
+                ).map(([date, sets]: [string, any]) => (
+                  <div key={date}>
+                    {/* Date Header */}
+                    <div className="sticky top-0 bg-dark-elevated/90 backdrop-blur-sm border-l-4 border-padel-green px-4 py-2 mb-3 rounded-r-lg">
+                      <p className="text-sm font-bold text-padel-green flex items-center gap-2">
+                        <span>📅</span>
+                        {date}
+                        <span className="text-xs text-gray-400 font-normal">({sets.length} {sets.length === 1 ? 'set' : 'sets'})</span>
+                      </p>
                     </div>
 
-                    {/* Players & Scores */}
-                    <div className="flex flex-wrap gap-2">
-                      {set.scores.map((score: any) => {
-                        const isMaxScore = score.gamesWon === set.maxScore;
-                        return (
-                          <div
-                            key={score.userId}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                              isMaxScore && score.gamesWon >= 6
-                                ? 'bg-green-500/20 border border-green-500'
-                                : 'bg-gray-800 border border-gray-700'
-                            }`}
-                          >
-                            <Avatar
-                              src={score.user.avatarUrl}
-                              name={score.user.name || 'Unknown'}
-                              size="sm"
-                            />
-                            <span className="text-xs sm:text-sm text-white">{score.user.name}</span>
-                            <span className="text-sm font-bold text-padel-green ml-1">
-                              {score.gamesWon}
-                            </span>
+                    {/* Sets for this date */}
+                    <div className="space-y-3 ml-4">
+                      {sets.map((set: any) => (
+                        <div
+                          key={set.id}
+                          className={`p-4 rounded-lg border-2 ${
+                            set.playerWon
+                              ? 'bg-green-900/20 border-green-600/50'
+                              : 'bg-gray-800/50 border-gray-700'
+                          }`}
+                        >
+                          {/* Venue Info */}
+                          <div className="flex justify-between items-start mb-3 text-sm">
+                            <div>
+                              <p className="text-gray-500 text-xs">{set.venueName} - Court {set.courtNumber} - Set {set.setNumber}</p>
+                            </div>
+                            <div className={`text-lg font-bold ${set.playerWon ? 'text-green-500' : 'text-gray-400'}`}>
+                              {set.playerWon ? 'W' : ''}
+                            </div>
                           </div>
-                        );
-                      })}
+
+                          {/* Players & Scores */}
+                          <div className="flex flex-wrap gap-2">
+                            {set.scores.map((score: any) => {
+                              const isMaxScore = score.gamesWon === set.maxScore;
+                              return (
+                                <div
+                                  key={score.userId}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                                    isMaxScore && score.gamesWon >= 6
+                                      ? 'bg-green-500/20 border border-green-500'
+                                      : 'bg-gray-800 border border-gray-700'
+                                  }`}
+                                >
+                                  <Avatar
+                                    src={score.user.avatarUrl}
+                                    name={score.user.name || 'Unknown'}
+                                    size="sm"
+                                  />
+                                  <span className="text-xs sm:text-sm text-white">{score.user.name}</span>
+                                  <span className="text-sm font-bold text-padel-green ml-1">
+                                    {score.gamesWon}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

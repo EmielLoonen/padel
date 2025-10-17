@@ -8,6 +8,7 @@ import EditSessionModal from '../components/EditSessionModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddGuestModal from '../components/AddGuestModal';
 import AddSetModal from '../components/AddSetModal';
+import EditSetModal from '../components/EditSetModal';
 import Avatar from '../components/Avatar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -29,6 +30,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [showAddSetModal, setShowAddSetModal] = useState(false);
   const [selectedCourtForSet, setSelectedCourtForSet] = useState<{ id: string; number: number } | null>(null);
   const [sets, setSets] = useState<any[]>([]);
+  const [showEditSetModal, setShowEditSetModal] = useState(false);
+  const [selectedSetForEdit, setSelectedSetForEdit] = useState<any>(null);
   const [rsvpStatus, setRSVPStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<any[]>([]);
@@ -584,13 +587,35 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                                   {new Date(set.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
                                 {isCreator && (
-                                  <button
-                                    onClick={() => handleDeleteSet(set.id)}
-                                    className="text-red-500 hover:text-red-600 p-1 text-sm"
-                                    title="Delete set"
-                                  >
-                                    🗑️
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedSetForEdit({
+                                          id: set.id,
+                                          courtId: court.id,
+                                          courtNumber: court.courtNumber,
+                                          setNumber: set.setNumber,
+                                          scores: set.scores.map((s: any) => ({
+                                            userId: s.userId,
+                                            name: s.user.name,
+                                            gamesWon: s.gamesWon,
+                                          })),
+                                        });
+                                        setShowEditSetModal(true);
+                                      }}
+                                      className="text-blue-500 hover:text-blue-600 p-1 text-sm"
+                                      title="Edit set"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSet(set.id)}
+                                      className="text-red-500 hover:text-red-600 p-1 text-sm"
+                                      title="Delete set"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -713,6 +738,26 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             onClose={() => {
               setShowAddSetModal(false);
               setSelectedCourtForSet(null);
+            }}
+          />
+        )}
+
+        {/* Edit Set Modal */}
+        {showEditSetModal && selectedSetForEdit && (
+          <EditSetModal
+            setId={selectedSetForEdit.id}
+            courtId={selectedSetForEdit.courtId}
+            courtNumber={selectedSetForEdit.courtNumber}
+            setNumber={selectedSetForEdit.setNumber}
+            currentScores={selectedSetForEdit.scores}
+            onSuccess={() => {
+              setShowEditSetModal(false);
+              setSelectedSetForEdit(null);
+              fetchSets();
+            }}
+            onClose={() => {
+              setShowEditSetModal(false);
+              setSelectedSetForEdit(null);
             }}
           />
         )}
