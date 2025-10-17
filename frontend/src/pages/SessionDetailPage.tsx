@@ -528,23 +528,25 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               <p className="text-gray-400 italic mb-6">No set results recorded yet</p>
             )}
 
-            {/* Add Set Buttons for each court */}
-            {courtsInfo.length > 0 && (
+            {/* Add Set Buttons for each court (only for courts without sets) */}
+            {courtsInfo.filter((court) => !sets.some((set) => set.courtId === court.id)).length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm text-gray-400 mb-2">Record set results:</p>
                 <div className="flex flex-wrap gap-2">
-                  {courtsInfo.map((court) => (
-                    <button
-                      key={court.id}
-                      onClick={() => {
-                        setSelectedCourtForSet({ id: court.id, number: court.courtNumber });
-                        setShowAddSetModal(true);
-                      }}
-                      className="bg-gradient-to-r from-padel-green to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all font-medium"
-                    >
-                      + Court {court.courtNumber}
-                    </button>
-                  ))}
+                  {courtsInfo
+                    .filter((court) => !sets.some((set) => set.courtId === court.id))
+                    .map((court) => (
+                      <button
+                        key={court.id}
+                        onClick={() => {
+                          setSelectedCourtForSet({ id: court.id, number: court.courtNumber });
+                          setShowAddSetModal(true);
+                        }}
+                        className="bg-gradient-to-r from-padel-green to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all font-medium"
+                      >
+                        + Court {court.courtNumber}
+                      </button>
+                    ))}
                 </div>
               </div>
             )}
