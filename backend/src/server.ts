@@ -9,6 +9,7 @@ import courtRoutes from './routes/courts';
 import userRoutes from './routes/users';
 import guestRoutes from './routes/guests';
 import setRoutes from './routes/sets';
+import passwordResetRoutes from './routes/passwordReset';
 
 // Load environment variables
 dotenv.config();
@@ -54,6 +55,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/courts', courtRoutes);
 app.use('/api/guests', guestRoutes);
 app.use('/api/sets', setRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
 
 // Start server
 app.listen(PORT, () => {

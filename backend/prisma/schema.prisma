@@ -11,15 +11,17 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  name          String
-  phone         String?
-  avatarUrl     String?  @map("avatar_url") // URL or path to avatar image
-  isAdmin       Boolean  @default(false) @map("is_admin")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  passwordHash         String    @map("password_hash")
+  name                 String
+  phone                String?
+  avatarUrl            String?   @map("avatar_url") // URL or path to avatar image
+  isAdmin              Boolean   @default(false) @map("is_admin")
+  resetToken           String?   @map("reset_token")
+  resetTokenExpiry     DateTime? @map("reset_token_expiry")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   // Relations
   createdSessions      Session[]      @relation("SessionCreator")

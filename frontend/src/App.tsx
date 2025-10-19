@@ -4,6 +4,8 @@ import { useSessionStore } from './store/sessionStore';
 import { useNotificationStore } from './store/notificationStore';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import CreateSessionPage from './pages/CreateSessionPage';
 import SessionDetailPage from './pages/SessionDetailPage';
 import SettingsPage from './pages/SettingsPage';
@@ -21,6 +23,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionTab, setSessionTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -30,6 +35,16 @@ function App() {
 
   useEffect(() => {
     initializeAuth();
+    
+    // Check for reset token in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+      setShowResetPassword(true);
+      // Clear token from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [refreshKey]);
 
   useEffect(() => {
@@ -102,10 +117,34 @@ function App() {
   };
 
   if (!isAuthenticated) {
+    if (showResetPassword && resetToken) {
+      return (
+        <ResetPasswordPage
+          token={resetToken}
+          onSuccess={() => {
+            setShowResetPassword(false);
+            setResetToken(null);
+            alert('Password reset successfully! Please login with your new password.');
+          }}
+          onBack={() => {
+            setShowResetPassword(false);
+            setResetToken(null);
+          }}
+        />
+      );
+    }
+    if (showForgotPassword) {
+      return <ForgotPasswordPage onBack={() => setShowForgotPassword(false)} />;
+    }
     if (showSignup) {
       return <SignupPage onBackToLogin={() => setShowSignup(false)} />;
     }
-    return <LoginPage onShowSignup={() => setShowSignup(true)} />;
+    return (
+      <LoginPage
+        onShowSignup={() => setShowSignup(true)}
+        onShowForgotPassword={() => setShowForgotPassword(true)}
+      />
+    );
   }
 
   if (showSettings) {
@@ -443,6 +482,30 @@ function App() {
                                     name={rsvp.user.name} 
                                     size="sm"
                                     className="opacity-60"
+                                  />
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Can't Make It - Compact */}
+                      {session.rsvps && session.rsvps.filter(r => r.status === 'no').length > 0 && (
+                        <div className="bg-[#1a1a1a] rounded p-2 border border-red-500/30">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-xs font-bold text-red-400">❌ Can't Make It</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {session.rsvps
+                              .filter(r => r.status === 'no')
+                              .map(rsvp => (
+                                <div key={rsvp.id} title={rsvp.user.name}>
+                                  <Avatar 
+                                    src={rsvp.user.avatarUrl} 
+                                    name={rsvp.user.name} 
+                                    size="sm"
+                                    className="opacity-40 grayscale"
                                   />
                                 </div>
                               ))
