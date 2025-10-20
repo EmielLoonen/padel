@@ -3,10 +3,9 @@ import { useAuthStore } from '../store/authStore';
 
 interface LoginPageProps {
   onShowSignup?: () => void;
-  onShowForgotPassword?: () => void;
 }
 
-export default function LoginPage({ onShowSignup, onShowForgotPassword }: LoginPageProps) {
+export default function LoginPage({ onShowSignup }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading, error } = useAuthStore();
@@ -57,20 +56,9 @@ export default function LoginPage({ onShowSignup, onShowForgotPassword }: LoginP
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-300">
-                Password
-              </label>
-              {onShowForgotPassword && (
-                <button
-                  type="button"
-                  onClick={onShowForgotPassword}
-                  className="text-xs text-padel-green hover:text-emerald-400 transition-colors"
-                >
-                  Forgot password?
-                </button>
-              )}
-            </div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-300 mb-2">
+              Password
+            </label>
             <input
               id="password"
               type="password"

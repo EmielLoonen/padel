@@ -7,9 +7,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface SettingsPageProps {
   onBack: () => void;
+  onShowAdmin?: () => void;
 }
 
-export default function SettingsPage({ onBack }: SettingsPageProps) {
+export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps) {
   const { user, setUser, logout } = useAuthStore();
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -351,6 +352,19 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
               </button>
             </form>
           </div>
+
+          {/* Admin Panel Button (Admin Only) */}
+          {user?.isAdmin && onShowAdmin && (
+            <div className="border-t border-gray-700 pt-6">
+              <button
+                onClick={onShowAdmin}
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-4 px-6 rounded-xl hover:from-yellow-600 hover:to-orange-600 transition-all font-bold text-lg shadow-2xl hover:shadow-yellow-500/50 hover:scale-[1.02] transform flex items-center justify-center gap-2"
+              >
+                <span>🛡️</span>
+                Admin Panel
+              </button>
+            </div>
+          )}
 
           {/* Logout Button */}
           <div className="border-t border-gray-700 pt-6">

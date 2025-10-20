@@ -4,12 +4,11 @@ import { useSessionStore } from './store/sessionStore';
 import { useNotificationStore } from './store/notificationStore';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
 import CreateSessionPage from './pages/CreateSessionPage';
 import SessionDetailPage from './pages/SessionDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import PlayerStatsPage from './pages/PlayerStatsPage';
+import AdminPage from './pages/AdminPage';
 import NotificationBell from './components/NotificationBell';
 import LoadingSpinner from './components/LoadingSpinner';
 import Avatar from './components/Avatar';
@@ -22,10 +21,8 @@ function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resetToken, setResetToken] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionTab, setSessionTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -35,16 +32,6 @@ function App() {
 
   useEffect(() => {
     initializeAuth();
-    
-    // Check for reset token in URL
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token) {
-      setResetToken(token);
-      setShowResetPassword(true);
-      // Clear token from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
   }, [refreshKey]);
 
   useEffect(() => {
@@ -117,44 +104,32 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    if (showResetPassword && resetToken) {
-      return (
-        <ResetPasswordPage
-          token={resetToken}
-          onSuccess={() => {
-            setShowResetPassword(false);
-            setResetToken(null);
-            alert('Password reset successfully! Please login with your new password.');
-          }}
-          onBack={() => {
-            setShowResetPassword(false);
-            setResetToken(null);
-          }}
-        />
-      );
-    }
-    if (showForgotPassword) {
-      return <ForgotPasswordPage onBack={() => setShowForgotPassword(false)} />;
-    }
     if (showSignup) {
       return <SignupPage onBackToLogin={() => setShowSignup(false)} />;
     }
-    return (
-      <LoginPage
-        onShowSignup={() => setShowSignup(true)}
-        onShowForgotPassword={() => setShowForgotPassword(true)}
-      />
-    );
+    return <LoginPage onShowSignup={() => setShowSignup(true)} />;
+  }
+
+  if (showAdmin) {
+    return <AdminPage onBack={() => setShowAdmin(false)} />;
   }
 
   if (showSettings) {
-    return <SettingsPage onBack={() => {
-      setShowSettings(false);
-      // Trigger user data refresh by updating the key
-      setRefreshKey(prev => prev + 1);
-      // Also refresh sessions to update avatars in session cards
-      fetchSessions('upcoming');
-    }} />;
+    return (
+      <SettingsPage
+        onBack={() => {
+          setShowSettings(false);
+          // Trigger user data refresh by updating the key
+          setRefreshKey(prev => prev + 1);
+          // Also refresh sessions to update avatars in session cards
+          fetchSessions('upcoming');
+        }}
+        onShowAdmin={() => {
+          setShowSettings(false);
+          setShowAdmin(true);
+        }}
+      />
+    );
   }
 
   if (showStats) {
