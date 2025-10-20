@@ -20,7 +20,7 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ onBack }: AdminPageProps) {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -36,7 +36,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${user?.token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(response.data.users);
     } catch (err: any) {
@@ -66,7 +66,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
           newPassword,
         },
         {
-          headers: { Authorization: `Bearer ${user?.token}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
