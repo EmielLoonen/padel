@@ -414,6 +414,11 @@ export const setService = {
     }>();
 
     allScores.forEach((score) => {
+      // Skip guest players - leaderboard is only for registered users
+      if (!score.userId || !score.user) {
+        return;
+      }
+
       const userId = score.userId;
       const userName = score.user.name;
       const userAvatar = score.user.avatarUrl;
