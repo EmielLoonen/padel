@@ -1,14 +1,81 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore';
 
 interface LoginPageProps {
   onShowSignup?: () => void;
 }
 
+const loadingScreens = [
+  {
+    emoji: '🍌',
+    title: 'Waking up the banana farm...',
+    subtitle: 'The database is stretching 🥱',
+    animation: 'dance',
+    isCommercial: false
+  },
+  {
+    emoji: '🍸',
+    title: 'Campari Negroni',
+    subtitle: 'Negroni Love!! ❤️',
+    animation: 'wiggle',
+    isCommercial: true
+  },
+  {
+    emoji: '☕',
+    title: 'Brewing fresh queries...',
+    subtitle: 'The database needs its morning coffee',
+    animation: 'steam',
+    isCommercial: false
+  },
+  {
+    emoji: '💋',
+    title: 'Purol',
+    subtitle: 'Keeping Mark\'s lips smooth & soft for 20 years',
+    animation: 'bounce',
+    isCommercial: true
+  },
+  {
+    emoji: '🏃',
+    title: 'Running to the server...',
+    subtitle: 'It\'s quite far away, be patient',
+    animation: 'run',
+    isCommercial: false
+  },
+  {
+    emoji: '🍺',
+    title: 'Walhalla Craft Beer',
+    subtitle: 'Where legends are brewed!',
+    animation: 'steam',
+    isCommercial: true
+  },
+  {
+    emoji: '🎾',
+    title: 'Warming up the padel courts...',
+    subtitle: 'Making sure everything is ready for you',
+    animation: 'bounce',
+    isCommercial: false
+  }
+];
+
 export default function LoginPage({ onShowSignup }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [currentScreen, setCurrentScreen] = useState(0);
   const { login, isLoading, error } = useAuthStore();
+
+  // Rotate through loading screens every 10 seconds
+  useEffect(() => {
+    if (!isLoading) {
+      setCurrentScreen(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentScreen((prev) => (prev + 1) % loadingScreens.length);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -19,6 +86,107 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
       // Error handled by store
     }
   };
+
+  // Show rotating loading screens while loading
+  if (isLoading) {
+    const screen = loadingScreens[currentScreen];
+    
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
+        <div className="text-center">
+          <style>{`
+            @keyframes wiggle {
+              0%, 100% { transform: rotate(-15deg); }
+              50% { transform: rotate(15deg); }
+            }
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            @keyframes dance {
+              animation: wiggle 0.5s ease-in-out infinite, spin 2s linear infinite;
+            }
+            @keyframes steam {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-20px); }
+            }
+            @keyframes run {
+              0%, 100% { transform: translateX(-20px); }
+              50% { transform: translateX(20px); }
+            }
+            @keyframes rocket {
+              0% { transform: translateY(0px) rotate(0deg); }
+              25% { transform: translateY(-10px) rotate(-5deg); }
+              75% { transform: translateY(-10px) rotate(5deg); }
+              100% { transform: translateY(0px) rotate(0deg); }
+            }
+            .dance {
+              animation: wiggle 0.5s ease-in-out infinite, spin 2s linear infinite;
+              display: inline-block;
+            }
+            .steam {
+              animation: steam 1.5s ease-in-out infinite;
+              display: inline-block;
+            }
+            .run {
+              animation: run 1s ease-in-out infinite;
+              display: inline-block;
+            }
+            .rocket {
+              animation: rocket 1s ease-in-out infinite;
+              display: inline-block;
+            }
+            .bounce {
+              animation: bounce 1s infinite;
+              display: inline-block;
+            }
+            .wiggle {
+              animation: wiggle 0.5s ease-in-out infinite;
+              display: inline-block;
+            }
+            .fade-in {
+              animation: fadeIn 0.5s ease-in;
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; transform: scale(0.9); }
+              to { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+          {screen.isCommercial && (
+            <p className="text-xs text-gray-500 mb-2 fade-in italic">
+              ✨ A word from our sponsors ✨
+            </p>
+          )}
+          <div className={`${screen.animation} text-8xl sm:text-9xl mb-6 fade-in`}>
+            {screen.emoji}
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-padel-green mb-2 fade-in">
+            {screen.title}
+          </p>
+          <p className="text-sm sm:text-base text-gray-400 fade-in">
+            {screen.subtitle}
+          </p>
+          <div className="mt-6 flex justify-center gap-2">
+            {loadingScreens.map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentScreen
+                    ? 'bg-padel-green w-6'
+                    : 'bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="mt-4 flex justify-center gap-2">
+            <div className="w-2 h-2 bg-padel-green rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-padel-green rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-padel-green rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
