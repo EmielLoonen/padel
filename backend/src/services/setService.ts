@@ -25,6 +25,39 @@ export const setService = {
       throw new Error('At least one player score is required');
     }
 
+    // For each playerId, check if it's a user or a guest
+    const scoreDataWithPlayerType = await Promise.all(
+      data.scores.map(async (score) => {
+        // First check if it's a user
+        const user = await prisma.user.findUnique({
+          where: { id: score.userId },
+        });
+        
+        if (user) {
+          return {
+            userId: score.userId,
+            guestId: null,
+            gamesWon: score.gamesWon,
+          };
+        }
+        
+        // If not a user, check if it's a guest
+        const guest = await prisma.guest.findUnique({
+          where: { id: score.userId },
+        });
+        
+        if (guest) {
+          return {
+            userId: null,
+            guestId: score.userId,
+            gamesWon: score.gamesWon,
+          };
+        }
+        
+        throw new Error(`Player with ID ${score.userId} not found as user or guest`);
+      })
+    );
+
     // Create the set with all scores in a transaction
     const set = await prisma.set.create({
       data: {
@@ -32,10 +65,7 @@ export const setService = {
         setNumber: data.setNumber,
         createdById: data.createdById,
         scores: {
-          create: data.scores.map((score) => ({
-            userId: score.userId,
-            gamesWon: score.gamesWon,
-          })),
+          create: scoreDataWithPlayerType,
         },
       },
       include: {
@@ -51,6 +81,12 @@ export const setService = {
                 id: true,
                 name: true,
                 avatarUrl: true,
+              },
+            },
+            guest: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -83,6 +119,12 @@ export const setService = {
                 id: true,
                 name: true,
                 avatarUrl: true,
+              },
+            },
+            guest: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -122,6 +164,12 @@ export const setService = {
                 id: true,
                 name: true,
                 avatarUrl: true,
+              },
+            },
+            guest: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -164,6 +212,41 @@ export const setService = {
 
     // If scores are being updated, delete old scores and create new ones
     if (data.scores) {
+      // For each playerId, check if it's a user or a guest
+      const scoreDataWithPlayerType = await Promise.all(
+        data.scores.map(async (score) => {
+          // First check if it's a user
+          const user = await prisma.user.findUnique({
+            where: { id: score.userId },
+          });
+          
+          if (user) {
+            return {
+              setId,
+              userId: score.userId,
+              guestId: null,
+              gamesWon: score.gamesWon,
+            };
+          }
+          
+          // If not a user, check if it's a guest
+          const guest = await prisma.guest.findUnique({
+            where: { id: score.userId },
+          });
+          
+          if (guest) {
+            return {
+              setId,
+              userId: null,
+              guestId: score.userId,
+              gamesWon: score.gamesWon,
+            };
+          }
+          
+          throw new Error(`Player with ID ${score.userId} not found as user or guest`);
+        })
+      );
+
       await prisma.$transaction([
         // Delete existing scores
         prisma.setScore.deleteMany({
@@ -171,11 +254,7 @@ export const setService = {
         }),
         // Create new scores
         prisma.setScore.createMany({
-          data: data.scores.map((score) => ({
-            setId,
-            userId: score.userId,
-            gamesWon: score.gamesWon,
-          })),
+          data: scoreDataWithPlayerType,
         }),
       ]);
     }
@@ -192,6 +271,12 @@ export const setService = {
                 id: true,
                 name: true,
                 avatarUrl: true,
+              },
+            },
+            guest: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -419,6 +504,12 @@ export const setService = {
                 id: true,
                 name: true,
                 avatarUrl: true,
+              },
+            },
+            guest: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },

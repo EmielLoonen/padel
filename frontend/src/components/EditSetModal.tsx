@@ -43,7 +43,11 @@ export default function EditSetModal({
     // Initialize with the current set
     const initialScores: { [playerId: string]: number | null } = {};
     currentScores.forEach((player) => {
-      initialScores[player.userId] = player.gamesWon;
+      // Support both users and guests - userId might be from user or guest
+      const playerId = player.userId || (player as any).guestId;
+      if (playerId) {
+        initialScores[playerId] = player.gamesWon;
+      }
     });
     setSets([{ setNumber, scores: initialScores, isExisting: true, setId }]);
   }, [currentScores, setNumber, setId]);
@@ -69,7 +73,11 @@ export default function EditSetModal({
     const newSetNumber = Math.max(...sets.map((s) => s.setNumber)) + 1;
     const emptyScores: { [playerId: string]: number | null } = {};
     currentScores.forEach((player) => {
-      emptyScores[player.userId] = null;
+      // Support both users and guests
+      const playerId = player.userId || (player as any).guestId;
+      if (playerId) {
+        emptyScores[playerId] = null;
+      }
     });
     setSets([...sets, { setNumber: newSetNumber, scores: emptyScores, isExisting: false }]);
   };
@@ -246,16 +254,19 @@ export default function EditSetModal({
                     <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-300 border-r border-gray-700 sticky left-0 bg-dark-elevated z-10 shadow-md">
                       Set
                     </th>
-                    {currentScores.map((player) => (
-                      <th
-                        key={player.userId}
-                        className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-gray-300 border-r border-gray-700 last:border-r-0 min-w-[70px] sm:min-w-[80px]"
-                      >
-                        <div className="truncate max-w-[60px] sm:max-w-none mx-auto" title={player.name}>
-                          {player.name.split(' ')[0]}
-                        </div>
-                      </th>
-                    ))}
+                    {currentScores.map((player) => {
+                      const playerId = player.userId || (player as any).guestId;
+                      return (
+                        <th
+                          key={playerId}
+                          className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-gray-300 border-r border-gray-700 last:border-r-0 min-w-[70px] sm:min-w-[80px]"
+                        >
+                          <div className="truncate max-w-[60px] sm:max-w-none mx-auto" title={player.name}>
+                            {player.name.split(' ')[0]}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="bg-dark-card">
@@ -267,25 +278,28 @@ export default function EditSetModal({
                           <td className="px-2 sm:px-3 py-2 text-sm font-semibold text-padel-green border-r border-gray-700 sticky left-0 bg-dark-card z-10 shadow-md">
                             {set.setNumber}
                           </td>
-                          {currentScores.map((player) => (
-                            <td
-                              key={player.userId}
-                              className="px-1 sm:px-2 py-2 border-r border-gray-700 last:border-r-0"
-                            >
-                              <input
-                                type="number"
-                                min="0"
-                                max="20"
-                                value={set.scores[player.userId] ?? ''}
-                                onChange={(e) =>
-                                  updateScore(setIdx, player.userId, e.target.value)
-                                }
-                                className="w-full px-1 sm:px-2 py-1.5 sm:py-1 bg-dark-elevated border border-gray-600 text-white rounded text-center focus:outline-none focus:ring-1 focus:ring-padel-green text-sm sm:text-base"
-                                placeholder="-"
-                                inputMode="numeric"
-                              />
-                            </td>
-                          ))}
+                          {currentScores.map((player) => {
+                            const playerId = player.userId || (player as any).guestId;
+                            return (
+                              <td
+                                key={playerId}
+                                className="px-1 sm:px-2 py-2 border-r border-gray-700 last:border-r-0"
+                              >
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  value={set.scores[playerId] ?? ''}
+                                  onChange={(e) =>
+                                    updateScore(setIdx, playerId, e.target.value)
+                                  }
+                                  className="w-full px-1 sm:px-2 py-1.5 sm:py-1 bg-dark-elevated border border-gray-600 text-white rounded text-center focus:outline-none focus:ring-1 focus:ring-padel-green text-sm sm:text-base"
+                                  placeholder="-"
+                                  inputMode="numeric"
+                                />
+                              </td>
+                            );
+                          })}
                         </tr>
                         {validationHint && (
                           <tr key={`hint-${setIdx}`}>

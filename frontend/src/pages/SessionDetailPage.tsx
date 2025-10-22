@@ -596,8 +596,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                                           courtNumber: court.courtNumber,
                                           setNumber: set.setNumber,
                                           scores: set.scores.map((s: any) => ({
-                                            userId: s.userId,
-                                            name: s.user.name,
+                                            userId: s.userId || s.guestId,
+                                            guestId: s.guestId,
+                                            name: s.user?.name || s.guest?.name || 'Unknown',
                                             gamesWon: s.gamesWon,
                                           })),
                                         });
@@ -623,9 +624,13 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                             <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                               {sortedScores.map((score: any) => {
                                 const isWinner = score.gamesWon === maxScore && score.gamesWon >= 6;
+                                // Support both users and guests
+                                const playerName = score.user?.name || score.guest?.name || 'Unknown';
+                                const playerAvatar = score.user?.avatarUrl || null;
+                                const playerId = score.userId || score.guestId;
                                 return (
                                   <div
-                                    key={score.userId}
+                                    key={playerId}
                                     className={`flex items-center justify-between sm:justify-start gap-2 px-2 sm:px-3 py-2 rounded-lg ${
                                       isWinner
                                         ? 'bg-green-500/20 border border-green-500'
@@ -633,8 +638,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                                     }`}
                                   >
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <Avatar src={score.user.avatarUrl} name={score.user.name} size="sm" />
-                                      <span className="text-xs sm:text-sm text-white truncate">{score.user.name}</span>
+                                      <Avatar src={playerAvatar} name={playerName} size="sm" />
+                                      <span className="text-xs sm:text-sm text-white truncate">{playerName}</span>
                                     </div>
                                     <span className="text-base sm:text-lg font-bold text-padel-green flex-shrink-0">
                                       {score.gamesWon}

@@ -441,9 +441,13 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           <div className="flex flex-wrap gap-2">
                             {set.scores.map((score: any) => {
                               const isMaxScore = score.gamesWon === set.maxScore;
+                              // Support both users and guests
+                              const playerName = score.user?.name || score.guest?.name || 'Unknown';
+                              const playerAvatar = score.user?.avatarUrl || null;
+                              const playerId = score.userId || score.guestId;
                               return (
                                 <div
-                                  key={score.userId}
+                                  key={playerId}
                                   className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                                     isMaxScore && score.gamesWon >= 6
                                       ? 'bg-green-500/20 border border-green-500'
@@ -451,11 +455,11 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                   }`}
                                 >
                                   <Avatar
-                                    src={score.user.avatarUrl}
-                                    name={score.user.name || 'Unknown'}
+                                    src={playerAvatar}
+                                    name={playerName}
                                     size="sm"
                                   />
-                                  <span className="text-xs sm:text-sm text-white">{score.user.name}</span>
+                                  <span className="text-xs sm:text-sm text-white">{playerName}</span>
                                   <span className="text-sm font-bold text-padel-green ml-1">
                                     {score.gamesWon}
                                   </span>

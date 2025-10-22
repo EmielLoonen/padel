@@ -80,15 +80,16 @@ model Court {
 }
 
 model Guest {
-  id                      String   @id @default(uuid())
-  courtId                 String   @map("court_id")
+  id                      String     @id @default(uuid())
+  courtId                 String     @map("court_id")
   name                    String
-  addedById               String   @map("added_by_id")
-  createdAt               DateTime @default(now()) @map("created_at")
+  addedById               String     @map("added_by_id")
+  createdAt               DateTime   @default(now()) @map("created_at")
 
   // Relations
-  court                   Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  addedBy                 User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+  court                   Court      @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  addedBy                 User       @relation(fields: [addedById], references: [id], onDelete: Cascade)
+  setScores               SetScore[] // Guest can have scores in sets
 
   @@index([courtId])
   @@index([addedById])
@@ -156,17 +157,19 @@ model Set {
 model SetScore {
   id                String   @id @default(uuid())
   setId             String   @map("set_id")
-  userId            String   @map("user_id")
+  userId            String?  @map("user_id")     // Optional - for registered players
+  guestId           String?  @map("guest_id")    // Optional - for guest players
   gamesWon          Int      @map("games_won")
   createdAt         DateTime @default(now()) @map("created_at")
 
   // Relations
   set               Set      @relation(fields: [setId], references: [id], onDelete: Cascade)
-  user              User     @relation(fields: [userId], references: [id])
+  user              User?    @relation(fields: [userId], references: [id])
+  guest             Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
-  @@unique([setId, userId]) // Each user can only have one score per set
   @@index([setId])
   @@index([userId])
+  @@index([guestId])
   @@map("set_scores")
 }
 
