@@ -30,7 +30,7 @@ const loadingScreens = [
   {
     emoji: '💋',
     title: 'Purol',
-    subtitle: 'Keeping Mark\'s lips smooth & soft for 20 years',
+    subtitle: 'Keeping Mark\'s lips smooth & soft for the last 20 years',
     animation: 'bounce',
     isCommercial: true
   },
