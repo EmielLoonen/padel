@@ -68,20 +68,20 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       const stats = playerStats.find((s) => s.userId === player.id);
       return {
         ...player,
-        setWinRate: stats?.setWinRate || 0,
-        totalSets: stats?.totalSets || 0,
+        gameWinRate: stats?.gameWinRate || 0,
+        totalGames: stats?.totalGames || 0,
       };
     });
 
-    // Sort by win rate (guests and players with no stats go to bottom)
+    // Sort by game win rate (guests and players with no stats go to bottom)
     const sortedPlayers = [...playersWithStats].sort((a, b) => {
       if (a.isGuest && b.isGuest) return 0;
       if (a.isGuest) return 1;
       if (b.isGuest) return -1;
-      if (a.totalSets === 0 && b.totalSets === 0) return 0;
-      if (a.totalSets === 0) return 1;
-      if (b.totalSets === 0) return -1;
-      return b.setWinRate - a.setWinRate;
+      if (a.totalGames === 0 && b.totalGames === 0) return 0;
+      if (a.totalGames === 0) return 1;
+      if (b.totalGames === 0) return -1;
+      return b.gameWinRate - a.gameWinRate;
     });
 
     // Best + Worst vs Middle two
@@ -513,9 +513,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                               {balancedTeams.team1.map((player: any) => (
                                 <div key={player.id} className="flex items-center justify-between text-xs">
                                   <span className="text-white">{player.name}</span>
-                                  {player.totalSets > 0 && (
+                                  {player.totalGames > 0 && (
                                     <span className="text-gray-500">
-                                      {player.setWinRate.toFixed(0)}% ({player.totalSets} sets)
+                                      {player.gameWinRate.toFixed(0)}% ({player.totalGames} games)
                                     </span>
                                   )}
                                 </div>
@@ -527,9 +527,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                               {balancedTeams.team2.map((player: any) => (
                                 <div key={player.id} className="flex items-center justify-between text-xs">
                                   <span className="text-white">{player.name}</span>
-                                  {player.totalSets > 0 && (
+                                  {player.totalGames > 0 && (
                                     <span className="text-gray-500">
-                                      {player.setWinRate.toFixed(0)}% ({player.totalSets} sets)
+                                      {player.gameWinRate.toFixed(0)}% ({player.totalGames} games)
                                     </span>
                                   )}
                                 </div>
@@ -537,7 +537,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                             </div>
                           </div>
                           <p className="text-xs text-gray-400 mt-2 italic">
-                            Based on historical set win rates
+                            Based on historical game win rates
                           </p>
                         </div>
                       );
