@@ -45,6 +45,7 @@ interface Session {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string;
   };
   courts?: Court[];
   rsvps?: Array<{
@@ -55,6 +56,15 @@ interface Session {
       id: string;
       name: string;
       avatarUrl?: string;
+    };
+  }>;
+  guests?: Array<{
+    id: string;
+    name: string;
+    status: 'yes' | 'no' | 'maybe';
+    addedBy: {
+      id: string;
+      name: string;
     };
   }>;
   rsvpSummary?: {
@@ -218,6 +228,7 @@ interface RSVP {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string;
   };
 }
 
