@@ -58,11 +58,7 @@ export const guestService = {
     const guest = await prisma.guest.findUnique({
       where: { id: guestId },
       include: {
-        court: {
-          include: {
-            session: true,
-          },
-        },
+        session: true,
       },
     });
 
@@ -71,7 +67,7 @@ export const guestService = {
     }
 
     // Only the person who added the guest or the session creator can remove them
-    if (guest.addedById !== userId && guest.court.session.createdById !== userId) {
+    if (guest.addedById !== userId && guest.session.createdById !== userId) {
       throw new Error('Only the person who added the guest or the session creator can remove them');
     }
 
