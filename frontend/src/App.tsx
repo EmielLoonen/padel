@@ -364,7 +364,7 @@ function App() {
                     <div className="space-y-1.5 sm:space-y-2">
                       {session.courts.map((court) => {
                         const courtRSVPs = court.rsvps?.filter(r => r.status === 'yes') || [];
-                        const courtGuests = court.guests || [];
+                        const courtGuests = court.guests?.filter((g: any) => g.status === 'yes') || [];
                         const totalPlayers = courtRSVPs.length + courtGuests.length;
                         const spotsLeft = court.maxPlayers - totalPlayers;
                         
@@ -401,7 +401,7 @@ function App() {
                                     />
                                   </div>
                                 ))}
-                                {courtGuests.map(guest => (
+                                {courtGuests.map((guest: any) => (
                                   <div key={guest.id} title={`${guest.name} (Guest)`}>
                                     <Avatar 
                                       src={null} 
@@ -442,15 +442,16 @@ function App() {
                       )}
                       
                       {/* Maybes - Compact */}
-                      {session.rsvps && session.rsvps.filter(r => r.status === 'maybe').length > 0 && (
-                        <div className="bg-[#1a1a1a] rounded p-2 border border-gray-700">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-xs font-bold text-gray-400">🤔 Maybe</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {session.rsvps
-                              .filter(r => r.status === 'maybe')
-                              .map(rsvp => (
+                      {(() => {
+                        const maybeRSVPs = session.rsvps?.filter(r => r.status === 'maybe') || [];
+                        const maybeGuests = session.guests?.filter((g: any) => g.status === 'maybe') || [];
+                        return (maybeRSVPs.length > 0 || maybeGuests.length > 0) && (
+                          <div className="bg-[#1a1a1a] rounded p-2 border border-gray-700">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs font-bold text-gray-400">🤔 Maybe</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {maybeRSVPs.map(rsvp => (
                                 <div key={rsvp.id} title={rsvp.user.name}>
                                   <Avatar 
                                     src={rsvp.user.avatarUrl} 
@@ -459,22 +460,33 @@ function App() {
                                     className="opacity-60"
                                   />
                                 </div>
-                              ))
-                            }
+                              ))}
+                              {maybeGuests.map((guest: any) => (
+                                <div key={guest.id} title={`${guest.name} (Guest)`}>
+                                  <Avatar 
+                                    src={null} 
+                                    name={guest.name} 
+                                    size="sm"
+                                    className="opacity-60 ring-2 ring-blue-500/30"
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       
                       {/* Can't Make It - Compact */}
-                      {session.rsvps && session.rsvps.filter(r => r.status === 'no').length > 0 && (
-                        <div className="bg-[#1a1a1a] rounded p-2 border border-red-500/30">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-xs font-bold text-red-400">❌ Can't Make It</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {session.rsvps
-                              .filter(r => r.status === 'no')
-                              .map(rsvp => (
+                      {(() => {
+                        const noRSVPs = session.rsvps?.filter(r => r.status === 'no') || [];
+                        const noGuests = session.guests?.filter((g: any) => g.status === 'no') || [];
+                        return (noRSVPs.length > 0 || noGuests.length > 0) && (
+                          <div className="bg-[#1a1a1a] rounded p-2 border border-red-500/30">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs font-bold text-red-400">❌ Can't Make It</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {noRSVPs.map(rsvp => (
                                 <div key={rsvp.id} title={rsvp.user.name}>
                                   <Avatar 
                                     src={rsvp.user.avatarUrl} 
@@ -483,11 +495,21 @@ function App() {
                                     className="opacity-40 grayscale"
                                   />
                                 </div>
-                              ))
-                            }
+                              ))}
+                              {noGuests.map((guest: any) => (
+                                <div key={guest.id} title={`${guest.name} (Guest)`}>
+                                  <Avatar 
+                                    src={null} 
+                                    name={guest.name} 
+                                    size="sm"
+                                    className="opacity-40 grayscale ring-2 ring-blue-500/30"
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
                   

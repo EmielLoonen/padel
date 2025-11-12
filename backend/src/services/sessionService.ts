@@ -133,6 +133,16 @@ export const sessionService = {
             },
           },
         },
+        guests: {
+          include: {
+            addedBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
         rsvps: {
           include: {
             user: {
@@ -150,10 +160,11 @@ export const sessionService = {
 
     // Add RSVP summary for each session
     return sessions.map((session) => {
+      // Include both registered user RSVPs and guest players in the summary
       const rsvpSummary = {
-        yes: session.rsvps.filter((r) => r.status === 'yes').length,
-        no: session.rsvps.filter((r) => r.status === 'no').length,
-        maybe: session.rsvps.filter((r) => r.status === 'maybe').length,
+        yes: session.rsvps.filter((r) => r.status === 'yes').length + session.guests.filter((g) => g.status === 'yes').length,
+        no: session.rsvps.filter((r) => r.status === 'no').length + session.guests.filter((g) => g.status === 'no').length,
+        maybe: session.rsvps.filter((r) => r.status === 'maybe').length + session.guests.filter((g) => g.status === 'maybe').length,
         noResponse: 0, // Would need to calculate based on total group size
       };
 
@@ -205,6 +216,19 @@ export const sessionService = {
           },
           orderBy: {
             courtNumber: 'asc',
+          },
+        },
+        guests: {
+          include: {
+            addedBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
         rsvps: {

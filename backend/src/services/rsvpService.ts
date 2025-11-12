@@ -140,11 +140,22 @@ export const rsvpService = {
             },
           },
         },
+        guests: {
+          include: {
+            addedBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
     const courtsInfo = session?.courts.map((court) => {
-      const totalPlayers = court.rsvps.length + court.guests.length;
+      const yesGuests = court.guests.filter((g) => g.status === 'yes');
+      const totalPlayers = court.rsvps.length + yesGuests.length;
       return {
         ...court,
         availableSpots: court.maxPlayers - totalPlayers,
@@ -152,10 +163,13 @@ export const rsvpService = {
       };
     });
 
+    // Get all guests from session (not just from courts, as maybe/no guests might not have courtId)
+    const allGuests = session?.guests || [];
+    
     const summary = {
-      yes: rsvps.filter((r) => r.status === 'yes').length,
-      no: rsvps.filter((r) => r.status === 'no').length,
-      maybe: rsvps.filter((r) => r.status === 'maybe').length,
+      yes: rsvps.filter((r) => r.status === 'yes').length + allGuests.filter((g) => g.status === 'yes').length,
+      no: rsvps.filter((r) => r.status === 'no').length + allGuests.filter((g) => g.status === 'no').length,
+      maybe: rsvps.filter((r) => r.status === 'maybe').length + allGuests.filter((g) => g.status === 'maybe').length,
     };
 
     return { rsvps, summary, courtsInfo };

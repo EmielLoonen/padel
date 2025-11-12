@@ -58,7 +58,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const calculateBalancedTeams = (court: any) => {
     const allPlayers = [
       ...(court.rsvps?.map((rsvp: any) => ({ id: rsvp.user.id, name: rsvp.user.name, isGuest: false })) || []),
-      ...(court.guests?.map((guest: any) => ({ id: guest.id, name: guest.name, isGuest: true })) || []),
+      ...(court.guests?.filter((guest: any) => guest.status === 'yes').map((guest: any) => ({ id: guest.id, name: guest.name, isGuest: true })) || []),
     ];
 
     if (allPlayers.length !== 4) return null;
@@ -192,11 +192,11 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
-  const handleAddGuest = async (courtId: string, name: string) => {
+  const handleAddGuest = async (sessionId: string, courtId: string | null, name: string, status: string) => {
     const token = localStorage.getItem('token');
     await axios.post(
-      `${API_URL}/api/guests/court/${courtId}`,
-      { name },
+      `${API_URL}/api/guests/session/${sessionId}`,
+      { name, status, courtId },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     // Refresh session and RSVP data
@@ -419,18 +419,16 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         </p>
                         <p className="text-xs text-gray-500">spots</p>
                       </div>
-                      {(court.availableSpots ?? 0) > 0 && (
-                        <button
-                          onClick={() => {
-                            setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
-                            setShowAddGuestModal(true);
-                          }}
-                          className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                          title="Add guest player"
-                        >
-                          + Guest
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
+                          setShowAddGuestModal(true);
+                        }}
+                        className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                        title="Add guest player"
+                      >
+                        + Guest
+                      </button>
                     </div>
                   </div>
 
@@ -457,13 +455,13 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       </div>
                     )}
                     
-                    {/* Guest players */}
-                    {court.guests && court.guests.length > 0 && (
+                    {/* Guest players (only "yes" status) */}
+                    {court.guests && court.guests.filter((g: any) => g.status === 'yes').length > 0 && (
                       <div>
                         <p className="text-xs text-gray-500 mb-2 font-semibold">Guest Players</p>
                         {/* Mobile: Always vertical, Desktop: Wrap */}
                         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
-                          {court.guests.map((guest) => (
+                          {court.guests.filter((g: any) => g.status === 'yes').map((guest: any) => (
                             <div
                               key={guest.id}
                               className="flex items-center gap-2 bg-blue-500/20 px-2 py-1.5 rounded-lg border border-blue-500/30 group"
@@ -488,13 +486,13 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       </div>
                     )}
                     
-                    {!court.rsvps?.length && !court.guests?.length && (
+                    {!court.rsvps?.length && !court.guests?.filter((g: any) => g.status === 'yes').length && (
                       <p className="text-gray-500 italic text-sm">No players yet</p>
                     )}
 
                     {/* Smart Balance Suggestion - Only show if exactly 4 players */}
                     {(() => {
-                      const totalPlayers = (court.rsvps?.length || 0) + (court.guests?.length || 0);
+                      const totalPlayers = (court.rsvps?.length || 0) + (court.guests?.filter((g: any) => g.status === 'yes').length || 0);
                       if (totalPlayers !== 4) return null;
                       
                       const balancedTeams = calculateBalancedTeams(court);
@@ -548,6 +546,100 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             </div>
           </div>
         )}
+
+        {/* Maybe/No RSVPs & Guests Section */}
+        {(() => {
+          const maybeRSVPs = rsvps?.filter((r) => r.status === 'maybe') || [];
+          const maybeGuests = currentSession?.guests?.filter((g: any) => g.status === 'maybe') || [];
+          const noRSVPs = rsvps?.filter((r) => r.status === 'no') || [];
+          const noGuests = currentSession?.guests?.filter((g: any) => g.status === 'no') || [];
+          const hasMaybes = maybeRSVPs.length > 0 || maybeGuests.length > 0;
+          const hasNos = noRSVPs.length > 0 || noGuests.length > 0;
+          
+          return (hasMaybes || hasNos) && (
+            <div className="bg-dark-card rounded-2xl shadow-2xl p-6 border border-gray-800 mb-6">
+              <h2 className="text-xl font-bold text-white mb-4">Maybe & Can't Make It</h2>
+              
+              {/* Maybe */}
+              {hasMaybes && (
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-yellow-400 mb-2">🤔 Maybe ({maybeRSVPs.length + maybeGuests.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Registered Players */}
+                    {maybeRSVPs.map((rsvp) => (
+                      <div
+                        key={rsvp.id}
+                        className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1.5 rounded-lg border border-yellow-500/30"
+                      >
+                        <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
+                        <span className="text-sm font-medium text-yellow-300">{rsvp.user.name}</span>
+                      </div>
+                    ))}
+                    {/* Guests */}
+                    {maybeGuests.map((guest: any) => (
+                      <div
+                        key={guest.id}
+                        className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1.5 rounded-lg border border-yellow-500/30 group"
+                      >
+                        <Avatar src={null} name={guest.name} size="sm" />
+                        <span className="text-sm font-medium text-yellow-300">{guest.name}</span>
+                        <span className="text-xs text-gray-500">(Guest)</span>
+                        {(guest.addedBy.id === user?.id || isCreator) && (
+                          <button
+                            onClick={() => handleRemoveGuest(guest.id)}
+                            className="ml-1 text-red-500 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove guest"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Can't Make It */}
+              {hasNos && (
+                <div>
+                  <p className="text-sm font-semibold text-red-400 mb-2">❌ Can't Make It ({noRSVPs.length + noGuests.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Registered Players */}
+                    {noRSVPs.map((rsvp) => (
+                      <div
+                        key={rsvp.id}
+                        className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30"
+                      >
+                        <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
+                        <span className="text-sm font-medium text-red-300">{rsvp.user.name}</span>
+                      </div>
+                    ))}
+                    {/* Guests */}
+                    {noGuests.map((guest: any) => (
+                      <div
+                        key={guest.id}
+                        className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30 group"
+                      >
+                        <Avatar src={null} name={guest.name} size="sm" />
+                        <span className="text-sm font-medium text-red-300">{guest.name}</span>
+                        <span className="text-xs text-gray-500">(Guest)</span>
+                        {(guest.addedBy.id === user?.id || isCreator) && (
+                          <button
+                            onClick={() => handleRemoveGuest(guest.id)}
+                            className="ml-1 text-red-500 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove guest"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Match Results Section - Only show after session date */}
         {currentSession && new Date(currentSession.date) < new Date() && courtsInfo && (
@@ -699,8 +791,13 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         {/* Add Guest Modal */}
         {showAddGuestModal && selectedCourtForGuest && (
           <AddGuestModal
+            sessionId={sessionId}
             courtId={selectedCourtForGuest.id}
             courtNumber={selectedCourtForGuest.number}
+            courtIsFull={(() => {
+              const court = courtsInfo?.find((c) => c.id === selectedCourtForGuest.id);
+              return (court?.availableSpots ?? 0) === 0;
+            })()}
             onAdd={handleAddGuest}
             onClose={() => {
               setShowAddGuestModal(false);
@@ -725,8 +822,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 name: rsvp.user.name,
               })) || [];
               
-              // Get guest players on this court
-              const guestPlayers = court.guests?.map((guest) => ({
+              // Get guest players on this court (only "yes" status)
+              const guestPlayers = court.guests?.filter((g: any) => g.status === 'yes').map((guest: any) => ({
                 id: guest.id,
                 name: `${guest.name} (Guest)`,
               })) || [];

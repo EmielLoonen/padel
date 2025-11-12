@@ -51,6 +51,7 @@ model Session {
   creator                 User           @relation("SessionCreator", fields: [createdById], references: [id])
   courts                  Court[]
   rsvps                   RSVP[]
+  guests                  Guest[]
   notifications           Notification[]
 
   @@index([date, time])
@@ -81,16 +82,21 @@ model Court {
 
 model Guest {
   id                      String     @id @default(uuid())
-  courtId                 String     @map("court_id")
+  sessionId               String     @map("session_id")
+  courtId                 String?    @map("court_id") // null = waitlist or "maybe"/"no" status
   name                    String
+  status                  String     @default("yes") // yes, no, maybe
   addedById               String     @map("added_by_id")
   createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  court                   Court      @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  session                 Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  court                   Court?     @relation(fields: [courtId], references: [id], onDelete: SetNull)
   addedBy                 User       @relation(fields: [addedById], references: [id], onDelete: Cascade)
   setScores               SetScore[] // Guest can have scores in sets
 
+  @@index([sessionId])
   @@index([courtId])
   @@index([addedById])
   @@map("guests")
