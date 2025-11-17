@@ -434,7 +434,6 @@ export const setService = {
         gamesLost: 0,
       };
 
-      existing.totalSets++;
       existing.gamesWon += score.gamesWon;
 
       // Find max score in this set
@@ -447,11 +446,17 @@ export const setService = {
         : 0;
       existing.gamesLost += maxOpponentScore;
 
-      // Determine if won this set
-      if (score.gamesWon === maxScore && score.gamesWon >= 6) {
-        existing.setsWon++;
-      } else if (maxScore >= 6) {
-        existing.setsLost++;
+      // Only count sets that are complete (maxScore >= 6)
+      // This ensures totalSets = setsWon + setsLost
+      if (maxScore >= 6) {
+        existing.totalSets++;
+        
+        // Determine if won this set
+        if (score.gamesWon === maxScore) {
+          existing.setsWon++;
+        } else {
+          existing.setsLost++;
+        }
       }
 
       playerStatsMap.set(userId, existing);
