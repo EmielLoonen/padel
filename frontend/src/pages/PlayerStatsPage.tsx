@@ -13,6 +13,7 @@ interface PlayerStats {
   setsWon: number;
   setsLost: number;
   totalSets: number;
+  totalSetsIncludingIncomplete?: number;
   gamesWon: number;
   gamesLost: number;
   totalGames: number;
@@ -320,13 +321,22 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           </p>
                           {/* Mobile: 2 lines - show stats based on sort */}
                           <div className="sm:hidden text-xs text-gray-400">
-                            <p>{player.totalSets} {player.totalSets === 1 ? 'set' : 'sets'}</p>
+                            <p>
+                              {player.totalSets} {player.totalSets === 1 ? 'set' : 'sets'}
+                              {player.totalSetsIncludingIncomplete > player.totalSets && (
+                                <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
+                              )}
+                            </p>
                             {leaderboardSort === 'sets' && <p>{player.setsWon}W - {player.setsLost}L</p>}
                             {leaderboardSort === 'games' && <p>{player.gamesWon}W - {player.gamesLost}L</p>}
                           </div>
                           {/* Desktop: 1 line - show stats based on sort */}
                           <p className="hidden sm:block text-sm text-gray-400">
-                            {player.totalSets} sets · 
+                            {player.totalSets} sets
+                            {player.totalSetsIncludingIncomplete > player.totalSets && (
+                              <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
+                            )}
+                            {' ·'}
                             {leaderboardSort === 'sets' && ` ${player.setsWon}W-${player.setsLost}L`}
                             {leaderboardSort === 'games' && ` ${player.gamesWon}W-${player.gamesLost}L`}
                           </p>

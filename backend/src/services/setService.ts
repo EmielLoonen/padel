@@ -407,6 +407,7 @@ export const setService = {
       userName: string;
       userAvatar: string | null;
       totalSets: number;
+      totalSetsIncludingIncomplete: number;
       setsWon: number;
       setsLost: number;
       gamesWon: number;
@@ -428,12 +429,16 @@ export const setService = {
         userName,
         userAvatar,
         totalSets: 0,
+        totalSetsIncludingIncomplete: 0,
         setsWon: 0,
         setsLost: 0,
         gamesWon: 0,
         gamesLost: 0,
       };
 
+      // Count all sets (including incomplete ones)
+      existing.totalSetsIncludingIncomplete++;
+      
       existing.gamesWon += score.gamesWon;
 
       // Find max score in this set
