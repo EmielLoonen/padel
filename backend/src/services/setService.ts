@@ -412,6 +412,7 @@ export const setService = {
       setsLost: number;
       gamesWon: number;
       gamesLost: number;
+      processedSets: Set<string>; // Track unique sets processed for this player
     }>();
 
     allScores.forEach((score) => {
@@ -423,6 +424,7 @@ export const setService = {
       const userId = score.userId;
       const userName = score.user.name;
       const userAvatar = score.user.avatarUrl;
+      const setId = score.setId;
 
       const existing = playerStatsMap.get(userId) || {
         userId,
@@ -434,33 +436,41 @@ export const setService = {
         setsLost: 0,
         gamesWon: 0,
         gamesLost: 0,
+        processedSets: new Set<string>(),
       };
 
-      // Count all sets (including incomplete ones)
-      existing.totalSetsIncludingIncomplete++;
+      // Track unique sets per player to avoid double-counting
+      const isNewSet = !existing.processedSets.has(setId);
       
-      existing.gamesWon += score.gamesWon;
+      if (isNewSet) {
+        // Find max score in this set
+        const maxScore = Math.max(...score.set.scores.map((s) => s.gamesWon));
 
-      // Find max score in this set
-      const maxScore = Math.max(...score.set.scores.map((s) => s.gamesWon));
+        // Count games won for this player in this set (only once per set)
+        existing.gamesWon += score.gamesWon;
 
-      // For games lost, find the highest opponent score (not sum of all opponents)
-      const otherScores = score.set.scores.filter((s) => s.userId !== userId);
-      const maxOpponentScore = otherScores.length > 0 
-        ? Math.max(...otherScores.map((s) => s.gamesWon))
-        : 0;
-      existing.gamesLost += maxOpponentScore;
-
-      // Only count sets that are complete (maxScore >= 6)
-      // This ensures totalSets = setsWon + setsLost
-      if (maxScore >= 6) {
-        existing.totalSets++;
+        // For games lost, find the highest opponent score (not sum of all opponents)
+        const otherScores = score.set.scores.filter((s) => s.userId !== userId);
+        const maxOpponentScore = otherScores.length > 0 
+          ? Math.max(...otherScores.map((s) => s.gamesWon))
+          : 0;
+        existing.gamesLost += maxOpponentScore;
         
-        // Determine if won this set
-        if (score.gamesWon === maxScore) {
-          existing.setsWon++;
-        } else {
-          existing.setsLost++;
+        existing.processedSets.add(setId);
+        // Count all sets (including incomplete ones) - only once per set
+        existing.totalSetsIncludingIncomplete++;
+
+        // Only count sets that are complete (maxScore >= 6)
+        // This ensures totalSets = setsWon + setsLost
+        if (maxScore >= 6) {
+          existing.totalSets++;
+          
+          // Determine if won this set
+          if (score.gamesWon === maxScore) {
+            existing.setsWon++;
+          } else {
+            existing.setsLost++;
+          }
         }
       }
 
@@ -478,8 +488,9 @@ export const setService = {
         const setWinRate = stats.totalSets > 0 ? (stats.setsWon / stats.totalSets) * 100 : 0;
         const gameWinRate = totalGames > 0 ? (stats.gamesWon / totalGames) * 100 : 0;
 
+        const { processedSets, ...playerStats } = stats;
         return {
-          ...stats,
+          ...playerStats,
           totalGames,
           setWinRate: Math.round(setWinRate * 10) / 10,
           gameWinRate: Math.round(gameWinRate * 10) / 10,
