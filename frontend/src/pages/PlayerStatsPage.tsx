@@ -323,7 +323,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           <div className="sm:hidden text-xs text-gray-400">
                             <p>
                               {player.totalSets} {player.totalSets === 1 ? 'set' : 'sets'}
-                              {player.totalSetsIncludingIncomplete > player.totalSets && (
+                              {player.totalSetsIncludingIncomplete && player.totalSetsIncludingIncomplete > player.totalSets && (
                                 <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
                               )}
                             </p>
@@ -333,7 +333,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           {/* Desktop: 1 line - show stats based on sort */}
                           <p className="hidden sm:block text-sm text-gray-400">
                             {player.totalSets} sets
-                            {player.totalSetsIncludingIncomplete > player.totalSets && (
+                            {player.totalSetsIncludingIncomplete && player.totalSetsIncludingIncomplete > player.totalSets && (
                               <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
                             )}
                             {' ·'}
