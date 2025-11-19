@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Avatar from '../components/Avatar';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -173,7 +173,15 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
       let cumulativeWon = 0;
       let cumulativeLost = 0;
-      const data: Array<{ session: string; gamesWon: number; gamesLost: number; sessionNumber: number }> = [];
+      const data: Array<{ 
+        session: string; 
+        gamesWon: number; 
+        gamesLost: number; 
+        netChange: number; // gamesWon - gamesLost for this session
+        cumulativeNet: number; // cumulative net difference
+        startValue: number; // starting cumulative net value
+        sessionNumber: number;
+      }> = [];
 
       sessions.forEach(([, sets], sessionIndex) => {
         let sessionWon = 0;
@@ -209,8 +217,12 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
         // Only add session if player participated
         if (sessionWon > 0 || sessionLost > 0) {
+          const netChange = sessionWon - sessionLost;
+          const startValue = cumulativeWon - cumulativeLost;
+          
           cumulativeWon += sessionWon;
           cumulativeLost += sessionLost;
+          const cumulativeNet = cumulativeWon - cumulativeLost;
 
           // Format session label
           const firstSet = sets[0];
@@ -225,8 +237,11 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
           data.push({
             session: sessionLabel,
-            gamesWon: cumulativeWon,
-            gamesLost: cumulativeLost,
+            gamesWon: sessionWon,
+            gamesLost: sessionLost,
+            netChange,
+            cumulativeNet,
+            startValue,
             sessionNumber: sessionIndex + 1,
           });
         }
@@ -386,9 +401,9 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                           </button>
                         </div>
                       </div>
-                      <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                      <div className="w-full" style={{ height: '300px', minHeight: '300px' }}>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                             <XAxis 
                               dataKey="session" 
@@ -407,27 +422,43 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 color: '#F3F4F6',
                               }}
                               labelStyle={{ color: '#9CA3AF' }}
+                              formatter={(value: number, name: string, props: any) => {
+                                if (name === 'startValue') {
+                                  return [value, 'Starting Net'];
+                                } else if (name === 'netChange') {
+                                  const sign = value >= 0 ? '+' : '';
+                                  return [`${sign}${value}`, 'Net Change (this session)'];
+                                } else if (name === 'cumulativeNet') {
+                                  return [value, 'Total Net'];
+                                }
+                                return [value, name];
+                              }}
                             />
                             <Legend 
                               wrapperStyle={{ color: '#9CA3AF', fontSize: '14px' }}
                             />
-                            <Line 
-                              type="monotone" 
-                              dataKey="gamesWon" 
-                              stroke="#10B981" 
-                              strokeWidth={2}
-                              dot={{ fill: '#10B981', r: 4 }}
-                              name="Games Won"
+                            {/* Waterfall chart: starting value (baseline) */}
+                            <Bar 
+                              dataKey="startValue" 
+                              stackId="net"
+                              fill="transparent"
+                              stroke="#6B7280"
+                              strokeDasharray="2 2"
+                              name="Starting Net"
                             />
-                            <Line 
-                              type="monotone" 
-                              dataKey="gamesLost" 
-                              stroke="#EF4444" 
-                              strokeWidth={2}
-                              dot={{ fill: '#EF4444', r: 4 }}
-                              name="Games Lost"
-                            />
-                          </LineChart>
+                            {/* Waterfall chart: incremental change */}
+                            <Bar 
+                              dataKey="netChange" 
+                              stackId="net"
+                              fill="#10B981"
+                              name="Net Change"
+                            >
+                              {trendData.map((entry, index) => {
+                                const color = entry.netChange >= 0 ? '#10B981' : '#EF4444';
+                                return <Cell key={`net-cell-${index}`} fill={color} />;
+                              })}
+                            </Bar>
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
