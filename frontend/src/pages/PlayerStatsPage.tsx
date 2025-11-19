@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Avatar from '../components/Avatar';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -147,7 +147,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
   // Process match history to create trend data grouped by session
   const trendData = useMemo(() => {
-    if (!matchHistory || matchHistory.length === 0 || !user?.id) return [];
+    if (!matchHistory || matchHistory.length === 0 || !user?.id || !stats) return [];
 
     try {
       // Sort by date (oldest first) first to group sessions properly
@@ -174,15 +174,58 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         return dateA - dateB;
       });
 
-      // Filter to last 5 sessions if needed
+      // Filter to last 5 sessions if needed (before calculating baseline)
+      const allSessions = [...sessions];
       if (trendFilter === 'last5Sessions') {
         sessions = sessions.slice(-5);
       }
 
       if (sessions.length === 0) return [];
 
-      let cumulativeWon = 0;
-      let cumulativeLost = 0;
+      // Calculate total games from sessions that WILL be shown in the graph
+      let totalWonFromShownSessions = 0;
+      let totalLostFromShownSessions = 0;
+      sessions.forEach(([, sets]) => {
+        sets.forEach((set) => {
+          if (!set.scores || !Array.isArray(set.scores) || set.scores.length === 0) {
+            return;
+          }
+          const playerScore = set.scores.find((s: any) => s.userId === user.id);
+          if (playerScore && typeof playerScore.gamesWon === 'number') {
+            totalWonFromShownSessions += playerScore.gamesWon;
+            
+            // Group players by score to identify teams
+            const scoreGroups = new Map<number, Array<{ userId?: string; guestId?: string }>>();
+            set.scores.forEach((s: any) => {
+              const score = s.gamesWon;
+              if (!scoreGroups.has(score)) {
+                scoreGroups.set(score, []);
+              }
+              scoreGroups.get(score)!.push({ userId: s.userId, guestId: s.guestId });
+            });
+            
+            const playerTeamScore = playerScore.gamesWon;
+            let maxOpponentScore = 0;
+            scoreGroups.forEach((_, score) => {
+              if (score !== playerTeamScore) {
+                maxOpponentScore = Math.max(maxOpponentScore, score);
+              }
+            });
+            if (maxOpponentScore > 0) {
+              totalLostFromShownSessions += maxOpponentScore;
+            }
+          }
+        });
+      });
+
+      // Calculate starting baseline: total stats minus what will be shown
+      // This ensures the final cumulative value matches the total stats
+      const baselineWon = (stats.gamesWon || 0) - totalWonFromShownSessions;
+      const baselineLost = (stats.gamesLost || 0) - totalLostFromShownSessions;
+
+      // Start cumulative values from baseline (to account for sessions not shown)
+      let cumulativeWon = baselineWon;
+      let cumulativeLost = baselineLost;
       const data: Array<{ 
         session: string; 
         gamesWon: number; 
@@ -444,7 +487,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       </div>
                       <div className="w-full" style={{ height: '300px', minHeight: '300px' }}>
                         <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                          <ComposedChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                             <XAxis 
                               dataKey="session" 
@@ -455,6 +498,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               height={60}
                             />
                             <YAxis stroke="#9CA3AF" style={{ fontSize: '12px' }} />
+                            <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="3 3" strokeWidth={1} />
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: '#1F2937',
@@ -464,27 +508,27 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               }}
                               labelStyle={{ color: '#9CA3AF' }}
                               formatter={(value: number, name: string) => {
-                                if (name === 'startValue') {
-                                  return [value, 'Starting Net'];
+                                if (name === 'cumulativeNet') {
+                                  const sign = value >= 0 ? '+' : '';
+                                  return [`${sign}${value}`, 'Cumulative Net'];
                                 } else if (name === 'netChange') {
                                   const sign = value >= 0 ? '+' : '';
                                   return [`${sign}${value}`, 'Net Change (this session)'];
-                                } else if (name === 'cumulativeNet') {
-                                  return [value, 'Total Net'];
                                 }
                                 return [value, name];
                               }}
                             />
-                            {/* Waterfall chart: starting value (baseline) */}
+                            {/* Baseline bar (dotted line, shows starting position) */}
                             <Bar 
                               dataKey="startValue" 
                               stackId="net"
                               fill="transparent"
                               stroke="#6B7280"
-                              strokeDasharray="2 2"
-                              name="Starting Net"
+                              strokeWidth={1}
+                              strokeDasharray="3 3"
+                              name="Baseline"
                             />
-                            {/* Waterfall chart: incremental change */}
+                            {/* Net change bars (incremental per session, positioned cumulatively) */}
                             <Bar 
                               dataKey="netChange" 
                               stackId="net"
@@ -496,7 +540,18 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 return <Cell key={`net-cell-${index}`} fill={color} />;
                               })}
                             </Bar>
-                          </BarChart>
+                            {/* Dotted line connecting cumulative points */}
+                            <Line 
+                              type="monotone"
+                              dataKey="cumulativeNet"
+                              stroke="#6B7280"
+                              strokeWidth={1.5}
+                              strokeDasharray="3 3"
+                              dot={false}
+                              activeDot={false}
+                              name="Cumulative Trend"
+                            />
+                          </ComposedChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
