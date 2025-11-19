@@ -175,7 +175,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       });
 
       // Filter to last 5 sessions if needed (before calculating baseline)
-      const allSessions = [...sessions];
       if (trendFilter === 'last5Sessions') {
         sessions = sessions.slice(-5);
       }
