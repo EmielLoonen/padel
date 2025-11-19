@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Avatar from '../components/Avatar';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -33,15 +34,24 @@ interface MatchHistory {
   sessionId: string;
   venueName: string;
   courtNumber: number;
-  sets: { team1: number; team2: number }[];
-  team1Player1: { id: string; name: string; avatarUrl: string | null };
-  team1Player2: { id: string; name: string; avatarUrl: string | null };
-  team2Player1: { id: string; name: string; avatarUrl: string | null };
-  team2Player2: { id: string; name: string; avatarUrl: string | null };
-  team1SetsWon: number;
-  team2SetsWon: number;
-  playerWon: boolean;
-  isTeam1: boolean;
+  setNumber?: number;
+  scores?: Array<{
+    userId?: string;
+    guestId?: string;
+    gamesWon: number;
+    user?: { id: string; name: string; avatarUrl: string | null };
+    guest?: { id: string; name: string };
+  }>;
+  maxScore?: number;
+  playerWon?: boolean;
+  sets?: { team1: number; team2: number }[];
+  team1Player1?: { id: string; name: string; avatarUrl: string | null };
+  team1Player2?: { id: string; name: string; avatarUrl: string | null };
+  team2Player1?: { id: string; name: string; avatarUrl: string | null };
+  team2Player2?: { id: string; name: string; avatarUrl: string | null };
+  team1SetsWon?: number;
+  team2SetsWon?: number;
+  isTeam1?: boolean;
 }
 
 type ViewType = 'stats' | 'leaderboard' | 'history';
@@ -54,6 +64,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [currentView, setCurrentView] = useState<ViewType>('stats');
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
+  const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
 
   useEffect(() => {
     fetchStats();
@@ -123,6 +134,110 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         return sorted;
     }
   };
+
+  // Process match history to create trend data grouped by session
+  const trendData = useMemo(() => {
+    if (!matchHistory || matchHistory.length === 0 || !user?.id) return [];
+
+    try {
+      // Sort by date (oldest first) first to group sessions properly
+      const sortedHistory = [...matchHistory].sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      // Group sets by sessionId
+      const sessionsMap = new Map<string, typeof sortedHistory>();
+      sortedHistory.forEach((set) => {
+        if (!set.sessionId) return;
+        if (!sessionsMap.has(set.sessionId)) {
+          sessionsMap.set(set.sessionId, []);
+        }
+        sessionsMap.get(set.sessionId)!.push(set);
+      });
+
+      // Convert to array and sort sessions by date
+      let sessions = Array.from(sessionsMap.entries()).sort((a, b) => {
+        const dateA = a[1][0]?.date ? new Date(a[1][0].date).getTime() : 0;
+        const dateB = b[1][0]?.date ? new Date(b[1][0].date).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      // Filter to last 5 sessions if needed
+      if (trendFilter === 'last5Sessions') {
+        sessions = sessions.slice(-5);
+      }
+
+      if (sessions.length === 0) return [];
+
+      let cumulativeWon = 0;
+      let cumulativeLost = 0;
+      const data: Array<{ session: string; gamesWon: number; gamesLost: number; sessionNumber: number }> = [];
+
+      sessions.forEach(([sessionId, sets], sessionIndex) => {
+        let sessionWon = 0;
+        let sessionLost = 0;
+
+        sets.forEach((set) => {
+          if (!set.scores || !Array.isArray(set.scores) || set.scores.length === 0) {
+            return;
+          }
+
+          // Find the player's score in this set
+          const playerScore = set.scores.find((s: any) => 
+            (s.userId && s.userId === user.id) || (s.guestId && s.guestId === user.id)
+          );
+
+          if (playerScore && typeof playerScore.gamesWon === 'number') {
+            sessionWon += playerScore.gamesWon;
+            
+            // Find max opponent score (games lost)
+            const otherScores = set.scores.filter((s: any) => 
+              (s.userId && s.userId !== user.id) || (s.guestId && s.guestId !== user.id)
+            );
+            
+            if (otherScores.length > 0) {
+              const opponentScores = otherScores.map((s: any) => s.gamesWon).filter((score: any) => typeof score === 'number');
+              if (opponentScores.length > 0) {
+                const maxOpponentScore = Math.max(...opponentScores);
+                sessionLost += maxOpponentScore;
+              }
+            }
+          }
+        });
+
+        // Only add session if player participated
+        if (sessionWon > 0 || sessionLost > 0) {
+          cumulativeWon += sessionWon;
+          cumulativeLost += sessionLost;
+
+          // Format session label
+          const firstSet = sets[0];
+          let sessionLabel = `Session ${sessionIndex + 1}`;
+          if (firstSet?.venueName) {
+            // Shorten venue name if too long
+            const venueShort = firstSet.venueName.length > 15 
+              ? firstSet.venueName.substring(0, 15) + '...' 
+              : firstSet.venueName;
+            sessionLabel = venueShort;
+          }
+
+          data.push({
+            session: sessionLabel,
+            gamesWon: cumulativeWon,
+            gamesLost: cumulativeLost,
+            sessionNumber: sessionIndex + 1,
+          });
+        }
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error processing trend data:', error);
+      return [];
+    }
+  }, [matchHistory, user?.id, trendFilter]);
 
   if (isLoading) {
     return (
@@ -225,7 +340,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                   </div>
 
                   {/* Win Rate Progress Bar */}
-                  <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
+                  <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-gray-400 font-medium">Game Win Performance</span>
                       <span className="text-padel-green font-bold">{stats.gameWinRate.toFixed(1)}%</span>
@@ -242,6 +357,81 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <span>100%</span>
                     </div>
                   </div>
+
+                  {/* Games Won vs Lost Trend Graph */}
+                  {trendData.length > 0 && (
+                    <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-white">Games Trend Over Time</h3>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setTrendFilter('all')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                              trendFilter === 'all'
+                                ? 'bg-padel-green text-white'
+                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
+                            }`}
+                          >
+                            All Sessions
+                          </button>
+                          <button
+                            onClick={() => setTrendFilter('last5Sessions')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                              trendFilter === 'last5Sessions'
+                                ? 'bg-padel-green text-white'
+                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
+                            }`}
+                          >
+                            Last 5 Sessions
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis 
+                              dataKey="session" 
+                              stroke="#9CA3AF"
+                              style={{ fontSize: '12px' }}
+                              angle={-45}
+                              textAnchor="end"
+                              height={60}
+                            />
+                            <YAxis stroke="#9CA3AF" style={{ fontSize: '12px' }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#1F2937',
+                                border: '1px solid #374151',
+                                borderRadius: '8px',
+                                color: '#F3F4F6',
+                              }}
+                              labelStyle={{ color: '#9CA3AF' }}
+                            />
+                            <Legend 
+                              wrapperStyle={{ color: '#9CA3AF', fontSize: '14px' }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="gamesWon" 
+                              stroke="#10B981" 
+                              strokeWidth={2}
+                              dot={{ fill: '#10B981', r: 4 }}
+                              name="Games Won"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="gamesLost" 
+                              stroke="#EF4444" 
+                              strokeWidth={2}
+                              dot={{ fill: '#EF4444', r: 4 }}
+                              name="Games Lost"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-12 text-gray-400">
