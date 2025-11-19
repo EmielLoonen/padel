@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Avatar from '../components/Avatar';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -92,7 +92,17 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       const response = await axios.get(`${API_URL}/api/sets/history/${user?.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatchHistory(response.data.sets);
+      // Sort by date (latest first) and then by set number (descending)
+      const sortedHistory = [...response.data.sets].sort((a: any, b: any) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA; // Latest date first
+        }
+        // If same date, sort by set number (descending)
+        return (b.setNumber || 0) - (a.setNumber || 0);
+      });
+      setMatchHistory(sortedHistory);
     } catch (error) {
       console.error('Failed to fetch set history:', error);
     }
@@ -199,16 +209,30 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           if (playerScore && typeof playerScore.gamesWon === 'number') {
             sessionWon += playerScore.gamesWon;
             
-            // Find max opponent score (games lost)
-            // Opponents can be either registered users (userId) or guests (guestId)
-            const otherScores = set.scores.filter((s: any) => s.userId !== user.id);
-            
-            if (otherScores.length > 0) {
-              const opponentScores = otherScores.map((s: any) => s.gamesWon).filter((score: any) => typeof score === 'number');
-              if (opponentScores.length > 0) {
-                const maxOpponentScore = Math.max(...opponentScores);
-                sessionLost += maxOpponentScore;
+            // Group players by score to identify teams (teammates have the same score)
+            const scoreGroups = new Map<number, Array<{ userId?: string; guestId?: string }>>();
+            set.scores.forEach((s: any) => {
+              const score = s.gamesWon;
+              if (!scoreGroups.has(score)) {
+                scoreGroups.set(score, []);
               }
+              scoreGroups.get(score)!.push({ userId: s.userId, guestId: s.guestId });
+            });
+
+            // Find which team the current player belongs to (by score)
+            const playerTeamScore = playerScore.gamesWon;
+            
+            // Find opponent team (the team with a different score)
+            let maxOpponentScore = 0;
+            scoreGroups.forEach((players, score) => {
+              if (score !== playerTeamScore) {
+                // This is the opponent team, take their max score
+                maxOpponentScore = Math.max(maxOpponentScore, score);
+              }
+            });
+            
+            if (maxOpponentScore > 0) {
+              sessionLost += maxOpponentScore;
             }
           }
         });
@@ -451,9 +475,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 return [value, name];
                               }}
                             />
-                            <Legend 
-                              wrapperStyle={{ color: '#9CA3AF', fontSize: '14px' }}
-                            />
                             {/* Waterfall chart: starting value (baseline) */}
                             <Bar 
                               dataKey="startValue" 
@@ -648,12 +669,33 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       year: 'numeric',
                     });
                     if (!groups[dateKey]) {
-                      groups[dateKey] = [];
+                      groups[dateKey] = {
+                        dateValue: new Date(set.date).getTime(),
+                        sets: []
+                      };
                     }
-                    groups[dateKey].push(set);
+                    groups[dateKey].sets.push(set);
                     return groups;
                   }, {})
-                ).map(([date, sets]: [string, any]) => (
+                )
+                .sort(([, a]: [string, any], [, b]: [string, any]) => {
+                  // Sort by date (latest first - descending)
+                  return b.dateValue - a.dateValue;
+                })
+                .map(([date, group]: [string, any]) => {
+                  // Sort sets within each date group by set number (descending - latest set first)
+                  const sortedSets = [...group.sets].sort((a: any, b: any) => {
+                    // First sort by set number (descending)
+                    if (b.setNumber !== a.setNumber) {
+                      return b.setNumber - a.setNumber;
+                    }
+                    // If same set number, sort by creation time (descending)
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+                  });
+                  
+                  return { date, sets: sortedSets };
+                })
+                .map(({ date, sets }: { date: string; sets: any[] }) => (
                   <div key={date}>
                     {/* Date Header */}
                     <div className="sticky top-0 bg-dark-elevated/90 backdrop-blur-sm border-l-4 border-padel-green px-4 py-2 mb-3 rounded-r-lg">

@@ -449,11 +449,26 @@ export const setService = {
         // Count games won for this player in this set (only once per set)
         existing.gamesWon += score.gamesWon;
 
-        // For games lost, find the highest opponent score (not sum of all opponents)
-        const otherScores = score.set.scores.filter((s) => s.userId !== userId);
-        const maxOpponentScore = otherScores.length > 0 
-          ? Math.max(...otherScores.map((s) => s.gamesWon))
-          : 0;
+        // For games lost, find the opponent team's score
+        // Group players by score to identify teams (teammates have the same score)
+        const scoreGroups = new Map<number, number>();
+        score.set.scores.forEach((s) => {
+          const gamesWon = s.gamesWon;
+          scoreGroups.set(gamesWon, (scoreGroups.get(gamesWon) || 0) + 1);
+        });
+
+        // Find which team the current player belongs to (by score)
+        const playerTeamScore = score.gamesWon;
+        
+        // Find opponent team (the team with a different score)
+        let maxOpponentScore = 0;
+        scoreGroups.forEach((count, teamScore) => {
+          if (teamScore !== playerTeamScore) {
+            // This is the opponent team, take their score
+            maxOpponentScore = Math.max(maxOpponentScore, teamScore);
+          }
+        });
+        
         existing.gamesLost += maxOpponentScore;
         
         existing.processedSets.add(setId);
