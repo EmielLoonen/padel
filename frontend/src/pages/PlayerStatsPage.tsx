@@ -224,7 +224,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             
             // Find opponent team (the team with a different score)
             let maxOpponentScore = 0;
-            scoreGroups.forEach((players, score) => {
+            scoreGroups.forEach((_, score) => {
               if (score !== playerTeamScore) {
                 // This is the opponent team, take their max score
                 maxOpponentScore = Math.max(maxOpponentScore, score);
