@@ -175,7 +175,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       let cumulativeLost = 0;
       const data: Array<{ session: string; gamesWon: number; gamesLost: number; sessionNumber: number }> = [];
 
-      sessions.forEach(([sessionId, sets], sessionIndex) => {
+      sessions.forEach(([, sets], sessionIndex) => {
         let sessionWon = 0;
         let sessionLost = 0;
 
