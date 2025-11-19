@@ -224,15 +224,34 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           cumulativeLost += sessionLost;
           const cumulativeNet = cumulativeWon - cumulativeLost;
 
-          // Format session label
+          // Format session label with date
           const firstSet = sets[0];
           let sessionLabel = `Session ${sessionIndex + 1}`;
+          
+          // Add date to label
+          let dateStr = '';
+          if (firstSet?.date) {
+            try {
+              const date = new Date(firstSet.date);
+              if (!isNaN(date.getTime())) {
+                dateStr = date.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                });
+              }
+            } catch (e) {
+              // Ignore date parsing errors
+            }
+          }
+          
           if (firstSet?.venueName) {
             // Shorten venue name if too long
-            const venueShort = firstSet.venueName.length > 15 
-              ? firstSet.venueName.substring(0, 15) + '...' 
+            const venueShort = firstSet.venueName.length > 12 
+              ? firstSet.venueName.substring(0, 12) + '...' 
               : firstSet.venueName;
-            sessionLabel = venueShort;
+            sessionLabel = dateStr ? `${venueShort} (${dateStr})` : venueShort;
+          } else if (dateStr) {
+            sessionLabel = `${sessionLabel} (${dateStr})`;
           }
 
           data.push({
