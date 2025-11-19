@@ -422,7 +422,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 color: '#F3F4F6',
                               }}
                               labelStyle={{ color: '#9CA3AF' }}
-                              formatter={(value: number, name: string, props: any) => {
+                              formatter={(value: number, name: string) => {
                                 if (name === 'startValue') {
                                   return [value, 'Starting Net'];
                                 } else if (name === 'netChange') {
