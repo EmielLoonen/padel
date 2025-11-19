@@ -193,17 +193,15 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           }
 
           // Find the player's score in this set
-          const playerScore = set.scores.find((s: any) => 
-            (s.userId && s.userId === user.id) || (s.guestId && s.guestId === user.id)
-          );
+          // Note: user.id is always a registered user ID, not a guest ID
+          const playerScore = set.scores.find((s: any) => s.userId === user.id);
 
           if (playerScore && typeof playerScore.gamesWon === 'number') {
             sessionWon += playerScore.gamesWon;
             
             // Find max opponent score (games lost)
-            const otherScores = set.scores.filter((s: any) => 
-              (s.userId && s.userId !== user.id) || (s.guestId && s.guestId !== user.id)
-            );
+            // Opponents can be either registered users (userId) or guests (guestId)
+            const otherScores = set.scores.filter((s: any) => s.userId !== user.id);
             
             if (otherScores.length > 0) {
               const opponentScores = otherScores.map((s: any) => s.gamesWon).filter((score: any) => typeof score === 'number');
