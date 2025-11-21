@@ -155,25 +155,37 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         return;
       }
       
-      // If only one court, auto-submit
-      if (courtsInfo.length === 1) {
-        const court = courtsInfo[0];
-        if (!court.isFull && (court.rsvps?.length || 0) < court.maxPlayers) {
-          try {
-            await createOrUpdateRSVP(sessionId, status, court.id);
-            setSelectedCourtId(court.id);
-            await fetchSessionById(sessionId);
-            await fetchRSVPs(sessionId);
-          } catch (error: any) {
-            alert(error?.response?.data?.error || 'Failed to update RSVP');
-            setRSVPStatus(null);
-          }
-        } else {
-          alert('Court is full');
+      // Auto-select first available court (or waitlist if all full)
+      const availableCourt = courtsInfo.find(
+        (court) => !court.isFull && (court.rsvps?.length || 0) < court.maxPlayers
+      );
+      
+      if (availableCourt) {
+        // Auto-select first available court and submit immediately
+        try {
+          await createOrUpdateRSVP(sessionId, status, availableCourt.id);
+          setSelectedCourtId(availableCourt.id);
+          await fetchSessionById(sessionId);
+          await fetchRSVPs(sessionId);
+        } catch (error: any) {
+          alert(error?.response?.data?.error || 'Failed to update RSVP');
           setRSVPStatus(null);
         }
+      } else if (courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers)) {
+        // All courts are full - add to waitlist
+        try {
+          await createOrUpdateRSVP(sessionId, status, null);
+          setSelectedCourtId(null);
+          await fetchSessionById(sessionId);
+          await fetchRSVPs(sessionId);
+        } catch (error: any) {
+          alert(error?.response?.data?.error || 'Failed to update RSVP');
+          setRSVPStatus(null);
+        }
+      } else {
+        // Fallback: just set status and show court selector
+        // (This shouldn't normally happen, but keeping as safety)
       }
-      // For multiple courts, just set status and wait for court selection
     }
   };
 
@@ -373,6 +385,11 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           {/* Court Selection (only shown if user said "yes") */}
           {rsvpStatus === 'yes' && courtsInfo && courtsInfo.length > 0 && (
             <div className="mt-6">
+              {selectedCourtId && (
+                <p className="text-sm text-gray-400 mb-3">
+                  ✓ You're confirmed! You can change your court selection below if needed.
+                </p>
+              )}
               <CourtSelector
                 courts={courtsInfo}
                 selectedCourtId={selectedCourtId}
@@ -579,7 +596,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                     {maybeGuests.map((guest: any) => (
                       <div
                         key={guest.id}
-                        className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1.5 rounded-lg border border-yellow-500/30 group"
+                        className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1.5 rounded-lg border border-yellow-500/30"
                       >
                         <Avatar src={null} name={guest.name} size="sm" />
                         <span className="text-sm font-medium text-yellow-300">{guest.name}</span>
@@ -587,7 +604,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         {(guest.addedBy.id === user?.id || isCreator) && (
                           <button
                             onClick={() => handleRemoveGuest(guest.id)}
-                            className="ml-1 text-red-500 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="ml-1 text-red-500 hover:text-red-400 text-xs transition-colors"
                             title="Remove guest"
                           >
                             ✕
@@ -618,7 +635,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                     {noGuests.map((guest: any) => (
                       <div
                         key={guest.id}
-                        className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30 group"
+                        className="flex items-center gap-2 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30"
                       >
                         <Avatar src={null} name={guest.name} size="sm" />
                         <span className="text-sm font-medium text-red-300">{guest.name}</span>
@@ -626,7 +643,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         {(guest.addedBy.id === user?.id || isCreator) && (
                           <button
                             onClick={() => handleRemoveGuest(guest.id)}
-                            className="ml-1 text-red-500 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="ml-1 text-red-500 hover:text-red-400 text-xs transition-colors"
                             title="Remove guest"
                           >
                             ✕
