@@ -452,10 +452,14 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <span className="text-gray-400 font-medium">Game Win Performance</span>
                       <span className="text-padel-green font-bold">{stats.gameWinRate.toFixed(1)}%</span>
                     </div>
-                    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden relative">
+                      {/* Full-width gradient background (0-100%) */}
                       <div
-                        className="bg-gradient-to-r from-padel-green to-emerald-500 h-4 rounded-full transition-all duration-500"
-                        style={{ width: `${stats.gameWinRate}%` }}
+                        className="absolute inset-0 rounded-full transition-all duration-500"
+                        style={{
+                          background: `linear-gradient(to right, rgb(239, 68, 68) 0%, rgb(34, 197, 94) 100%)`,
+                          clipPath: `inset(0 ${100 - stats.gameWinRate}% 0 0)`
+                        }}
                       />
                     </div>
                     <div className="flex justify-between mt-2 text-xs text-gray-500">
