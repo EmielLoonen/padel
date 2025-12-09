@@ -20,6 +20,15 @@ interface PlayerStats {
   totalGames: number;
   setWinRate: number;
   gameWinRate: number;
+  teammateWinRates?: Array<{
+    teammateId: string;
+    teammateName: string;
+    teammateAvatar: string | null;
+    gamesWon: number;
+    gamesLost: number;
+    totalGames: number;
+    winRate: number;
+  }>;
 }
 
 interface PlayerStatsPageProps {
@@ -455,6 +464,54 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <span>100%</span>
                     </div>
                   </div>
+
+                  {/* Win Rate Per Teammate */}
+                  {stats.teammateWinRates && stats.teammateWinRates.length > 0 && (
+                    <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
+                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <span>🤝</span>
+                        Compatibility Score
+                      </h3>
+                      <div className="space-y-3">
+                        {stats.teammateWinRates.map((teammate) => (
+                          <div
+                            key={teammate.teammateId}
+                            className="bg-dark-card p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition-all"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <Avatar
+                                  src={teammate.teammateAvatar}
+                                  name={teammate.teammateName}
+                                  size="sm"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white font-semibold truncate">{teammate.teammateName}</p>
+                                  <p className="text-xs text-gray-400">
+                                    {teammate.totalGames} {teammate.totalGames === 1 ? 'game' : 'games'} · {teammate.gamesWon}W-{teammate.gamesLost}L
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0 ml-4">
+                                <p className="text-lg font-bold text-padel-green">{teammate.winRate.toFixed(1)}%</p>
+                              </div>
+                            </div>
+                            {/* Win Rate Progress Bar */}
+                            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mt-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-500 ${
+                                  teammate.winRate >= 50
+                                    ? 'bg-gradient-to-r from-padel-green to-emerald-500'
+                                    : 'bg-gradient-to-r from-red-500 to-red-600'
+                                }`}
+                                style={{ width: `${teammate.winRate}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Games Won vs Lost Trend Graph */}
                   {trendData.length > 0 && (

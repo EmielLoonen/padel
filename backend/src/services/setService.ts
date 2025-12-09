@@ -323,7 +323,19 @@ export const setService = {
           include: {
             scores: {
               include: {
-                user: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                  },
+                },
+                guest: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -337,6 +349,16 @@ export const setService = {
     let gamesLost = 0;
     const totalSets = userScores.length;
 
+    // Map to track teammate stats: teammateId -> { gamesWon, gamesLost, totalGames }
+    const teammateStatsMap = new Map<string, {
+      teammateId: string;
+      teammateName: string;
+      teammateAvatar: string | null;
+      gamesWon: number;
+      gamesLost: number;
+      totalGames: number;
+    }>();
+
     userScores.forEach((userScore) => {
       const set = userScore.set;
       const allScores = set.scores;
@@ -348,27 +370,83 @@ export const setService = {
       // Find the highest score in this set (winner)
       const maxScore = Math.max(...allScores.map((s) => s.gamesWon));
 
-      // For games lost, find the highest opponent score (not sum of all opponents)
+      // Find teammate (the other player with the same score)
+      // Only count registered users as teammates (not guests)
+      const teammateScore = allScores.find((s) => 
+        s.userId !== userId && 
+        s.userId !== null && 
+        s.gamesWon === userGamesWon
+      );
+
+      // For games lost, find the highest opponent score (excluding teammate)
       // Assumes typical 2v2: you + partner have same score vs opponents with same score
-      const otherScores = allScores.filter((s) => s.userId !== userId);
-      const maxOpponentScore = otherScores.length > 0 
-        ? Math.max(...otherScores.map((s) => s.gamesWon))
+      const opponentScores = allScores.filter((s) => 
+        s.userId !== userId && 
+        s.gamesWon !== userGamesWon  // Exclude teammate (who has same score)
+      );
+      const maxOpponentScore = opponentScores.length > 0 
+        ? Math.max(...opponentScores.map((s) => s.gamesWon))
         : 0;
       gamesLost += maxOpponentScore;
 
       // Determine if user won this set
       // A set is won if the user has the highest score AND reached at least 6 games
-      if (userGamesWon === maxScore && userGamesWon >= 6) {
+      const userWon = userGamesWon === maxScore && userGamesWon >= 6;
+      if (userWon) {
         setsWon++;
       } else if (maxScore >= 6) {
         // Someone else won with 6+ games
         setsLost++;
+      }
+
+      if (teammateScore && teammateScore.userId && teammateScore.user) {
+        const teammateId = teammateScore.userId;
+        const teammateName = teammateScore.user.name;
+        const teammateAvatar = teammateScore.user.avatarUrl;
+
+        // Track games for teammate stats (count all sets, not just complete ones)
+        const existing = teammateStatsMap.get(teammateId) || {
+          teammateId,
+          teammateName,
+          teammateAvatar,
+          gamesWon: 0,
+          gamesLost: 0,
+          totalGames: 0,
+        };
+
+        // Add games won (user's games in this set - which is the team's score)
+        existing.gamesWon += userGamesWon;
+        
+        // Add games lost (opponent team's score - excluding teammate)
+        existing.gamesLost += maxOpponentScore;
+        
+        // Calculate total games
+        existing.totalGames = existing.gamesWon + existing.gamesLost;
+
+        teammateStatsMap.set(teammateId, existing);
       }
     });
 
     const totalGames = gamesWon + gamesLost;
     const setWinRate = totalSets > 0 ? (setsWon / totalSets) * 100 : 0;
     const gameWinRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
+
+    // Convert teammate stats to array and calculate win rates
+    const teammateWinRates = Array.from(teammateStatsMap.values())
+      .map((stats) => {
+        const winRate = stats.totalGames > 0 ? (stats.gamesWon / stats.totalGames) * 100 : 0;
+        return {
+          ...stats,
+          winRate: Math.round(winRate * 10) / 10,
+        };
+      })
+      .sort((a, b) => {
+        // Sort by win rate (descending - highest to lowest), then by total games (descending) as tiebreaker
+        if (b.winRate !== a.winRate) {
+          return b.winRate - a.winRate;
+        }
+        return b.totalGames - a.totalGames;
+      });
 
     return {
       totalSets,
@@ -379,6 +457,7 @@ export const setService = {
       totalGames,
       setWinRate: Math.round(setWinRate * 10) / 10,
       gameWinRate: Math.round(gameWinRate * 10) / 10,
+      teammateWinRates,
     };
   },
 
