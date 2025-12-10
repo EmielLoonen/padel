@@ -190,5 +190,51 @@ export const notificationService = {
 
     await Promise.all(notifications);
   },
+
+  async notifyCourtAssignment(sessionId: string, courtId: string, userId: string, creatorId: string) {
+    // Get session and court details
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        courts: {
+          where: { id: courtId },
+        },
+      },
+    });
+
+    if (!session || !session.courts[0]) {
+      return;
+    }
+
+    const court = session.courts[0];
+    const courtNumber = court.courtNumber;
+
+    // Notify the user who got assigned to the court
+    await this.createNotification({
+      userId,
+      type: 'rsvp_update',
+      title: '🎾 Court Spot Available!',
+      message: `A spot opened up on Court ${courtNumber}! You've been automatically assigned.`,
+      sessionId,
+    });
+
+    // Optionally notify the session creator
+    if (userId !== creatorId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+
+      if (user) {
+        await this.createNotification({
+          userId: creatorId,
+          type: 'rsvp_update',
+          title: '🔄 Waitlist Assignment',
+          message: `${user.name} was automatically assigned to Court ${courtNumber} from the waitlist.`,
+          sessionId,
+        });
+      }
+    }
+  },
 };
 

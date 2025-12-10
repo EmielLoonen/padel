@@ -22,6 +22,19 @@ export const rsvpService = {
       throw new Error('Session not found');
     }
 
+    // Get existing RSVP to check if they had a court assigned
+    const existingRSVP = await prisma.rSVP.findUnique({
+      where: {
+        sessionId_userId: {
+          sessionId,
+          userId,
+        },
+      },
+    });
+
+    const previousCourtId = existingRSVP?.courtId || null;
+    const isCancelling = status === 'no' && previousCourtId !== null;
+
     // If status is "yes" and courtId is provided, validate it
     if (status === 'yes' && courtId) {
       const court = session.courts.find((c) => c.id === courtId);
@@ -77,6 +90,72 @@ export const rsvpService = {
         court: true,
       },
     });
+
+    // If someone cancelled and freed up a court, assign first waitlist person
+    if (isCancelling && previousCourtId) {
+      // Find first person on waitlist (status='yes', courtId=null, ordered by createdAt)
+      const waitlistRSVP = await prisma.rSVP.findFirst({
+        where: {
+          sessionId,
+          status: 'yes',
+          courtId: null,
+          userId: { not: userId }, // Don't assign to the person who just cancelled
+        },
+        orderBy: {
+          createdAt: 'asc', // First come, first served
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (waitlistRSVP) {
+        // Check if the court still has space (accounting for guests)
+        const courtRSVPs = await prisma.rSVP.count({
+          where: {
+            courtId: previousCourtId,
+            status: 'yes',
+          },
+        });
+
+        const courtGuests = await prisma.guest.count({
+          where: { courtId: previousCourtId },
+        });
+
+        const court = await prisma.court.findUnique({
+          where: { id: previousCourtId },
+        });
+
+        if (court && courtRSVPs + courtGuests < court.maxPlayers) {
+          // Assign waitlist person to the freed court
+          await prisma.rSVP.update({
+            where: {
+              sessionId_userId: {
+                sessionId,
+                userId: waitlistRSVP.userId,
+              },
+            },
+            data: {
+              courtId: previousCourtId,
+            },
+          });
+
+          // Notify the waitlist person that they got a spot
+          await notificationService.notifyCourtAssignment(
+            sessionId,
+            previousCourtId,
+            waitlistRSVP.userId,
+            session.createdById
+          );
+        }
+      }
+    }
 
     // Notify session creator about the RSVP (but not if they're RSVPing to their own session)
     if (userId !== session.createdById) {

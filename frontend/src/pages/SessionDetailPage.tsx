@@ -462,67 +462,165 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
           <h2 className="text-2xl font-bold text-white mb-4">Your RSVP</h2>
 
-          {/* RSVP Status Buttons */}
-          <div className="flex gap-3 mb-6 flex-wrap">
-            <button
-              type="button"
-              onClick={(e) => handleRSVPChange('yes', e)}
-              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
-              className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                rsvpStatus === 'yes'
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-2xl shadow-green-500/50'
-                  : 'bg-dark-elevated text-gray-300 hover:bg-green-500/20 border-2 border-gray-700 hover:border-green-500'
-              } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              ✅ I'm Coming
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleRSVPChange('maybe', e)}
-              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
-              className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                rsvpStatus === 'maybe'
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-2xl shadow-yellow-500/50'
-                  : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-2 border-gray-700 hover:border-yellow-500'
-              } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              🤔 Maybe
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleRSVPChange('no', e)}
-              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
-              className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                rsvpStatus === 'no'
-                  ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
-                  : 'bg-dark-elevated text-gray-300 hover:bg-red-500/20 border-2 border-gray-700 hover:border-red-500'
-              }`}
-            >
-              ❌ Can't Make It
-            </button>
-          </div>
+          {/* Check if all courts are full or if user is already on a court */}
+          {(() => {
+            const allCourtsFull = courtsInfo && courtsInfo.length > 0 && 
+              courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
+            const userHasCourt = selectedCourtId !== null;
+            
+            // If user is already on a court, only show "Can't Make It"
+            if (userHasCourt && rsvpStatus === 'yes') {
+              return (
+                <div className="mb-6">
+                  <div className="bg-green-500/10 border-l-4 border-green-500 p-4 rounded-lg mb-4">
+                    <p className="text-green-400 font-semibold mb-2">✓ You're Confirmed!</p>
+                    <p className="text-gray-300 text-sm">
+                      You're already assigned to a court. If you can't make it, click below to cancel.
+                    </p>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={(e) => handleRSVPChange('no', e)}
+                    disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${
+                      rsvpStatus === 'no'
+                        ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
+                        : 'bg-dark-elevated text-gray-300 hover:bg-red-500/20 border-2 border-gray-700 hover:border-red-500'
+                    }`}
+                  >
+                    ❌ Can't Make It
+                  </button>
+                </div>
+              );
+            }
+            
+            return allCourtsFull ? (
+              // All courts full - show waitlist option and "Can't Make It" only
+              <>
+                <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg mb-4">
+                  <p className="text-yellow-400 font-semibold mb-2">⚠️ All Courts Are Full</p>
+                  <p className="text-gray-300 text-sm">
+                    All courts for this session are currently full. You can join the waitlist below and you'll be notified if a spot opens up.
+                  </p>
+                </div>
+                
+                {/* Waitlist Button */}
+                <div className="mb-6">
+                  <button
+                    type="button"
+                    onClick={(e) => handleRSVPChange('yes', e)}
+                    disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current || rsvpStatus === 'yes'}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all border-2 ${
+                      rsvpStatus === 'yes'
+                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                        : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-gray-700 hover:border-yellow-500'
+                    } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl">⏳</span>
+                      <span>{rsvpStatus === 'yes' ? 'On Waitlist' : 'Join Waitlist'}</span>
+                    </div>
+                  </button>
+                </div>
 
-          {/* Court Selection (only shown if user said "yes") */}
-          {rsvpStatus === 'yes' && courtsInfo && courtsInfo.length > 0 && (
-            <div className="mt-6">
-              {selectedCourtId && (
-                <p className="text-sm text-gray-400 mb-3">
-                  ✓ You're confirmed! You can change your court selection below if needed.
-                </p>
-              )}
-              <CourtSelector
-                courts={courtsInfo}
-                selectedCourtId={selectedCourtId}
-                onSelectCourt={(courtId) => {
-                  // Only allow court selection if initialized and not processing
-                  if (hasInitialized.current && !isProcessingRSVP.current && !isLoadingRSVP) {
-                    handleCourtSelection(courtId);
-                  }
-                }}
-                disabled={isLoadingRSVP || !hasInitialized.current || isProcessingRSVP.current}
-              />
-            </div>
-          )}
+                {/* Can't Make It Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleRSVPChange('no', e)}
+                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${
+                    rsvpStatus === 'no'
+                      ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
+                      : 'bg-dark-elevated text-gray-300 hover:bg-red-500/20 border-2 border-gray-700 hover:border-red-500'
+                  }`}
+                >
+                  ❌ Can't Make It
+                </button>
+              </>
+            ) : (
+              // Courts available - show all RSVP options
+              <div className="flex gap-3 mb-6 flex-wrap">
+                <button
+                  type="button"
+                  onClick={(e) => handleRSVPChange('yes', e)}
+                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
+                    rsvpStatus === 'yes'
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-2xl shadow-green-500/50'
+                      : 'bg-dark-elevated text-gray-300 hover:bg-green-500/20 border-2 border-gray-700 hover:border-green-500'
+                  } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  ✅ I'm Coming
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleRSVPChange('maybe', e)}
+                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
+                    rsvpStatus === 'maybe'
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-2xl shadow-yellow-500/50'
+                      : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-2 border-gray-700 hover:border-yellow-500'
+                  } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  🤔 Maybe
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleRSVPChange('no', e)}
+                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
+                    rsvpStatus === 'no'
+                      ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
+                      : 'bg-dark-elevated text-gray-300 hover:bg-red-500/20 border-2 border-gray-700 hover:border-red-500'
+                  }`}
+                >
+                  ❌ Can't Make It
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Court Selection (only shown if user said "yes" and courts are available) */}
+          {rsvpStatus === 'yes' && courtsInfo && courtsInfo.length > 0 && (() => {
+            const allCourtsFull = courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
+            
+            // Don't show court selector if all courts are full (user is on waitlist)
+            if (allCourtsFull && !selectedCourtId) {
+              return (
+                <div className="mt-6">
+                  <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg">
+                    <p className="text-yellow-400 font-semibold">⏳ You're on the waitlist</p>
+                    <p className="text-gray-300 text-sm mt-1">
+                      You'll be notified if a spot opens up on any court.
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            
+            // Show court selector if user has a court or if courts are available
+            return (
+              <div className="mt-6">
+                {selectedCourtId && rsvpStatus === 'yes' && (
+                  <p className="text-sm text-gray-400 mb-3">
+                    ✓ You're confirmed! You can change your court selection below if needed.
+                  </p>
+                )}
+                <CourtSelector
+                  courts={courtsInfo}
+                  selectedCourtId={selectedCourtId}
+                  onSelectCourt={(courtId) => {
+                    // Only allow court selection if initialized and not processing
+                    if (hasInitialized.current && !isProcessingRSVP.current && !isLoadingRSVP) {
+                      handleCourtSelection(courtId);
+                    }
+                  }}
+                  disabled={isLoadingRSVP || !hasInitialized.current || isProcessingRSVP.current}
+                />
+              </div>
+            );
+          })()}
         </div>
 
         {/* Courts Overview */}
