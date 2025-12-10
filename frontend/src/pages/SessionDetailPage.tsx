@@ -484,7 +484,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                     onClick={(e) => handleRSVPChange('no', e)}
                     disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
                     className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                      rsvpStatus === 'no'
+                      (rsvpStatus as string) === 'no'
                         ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
                         : 'bg-dark-elevated text-gray-300 hover:bg-red-500/20 border-2 border-gray-700 hover:border-red-500'
                     }`}

@@ -75,18 +75,8 @@ function App() {
 
   // Show modal when missed notifications are loaded
   useEffect(() => {
-    console.log('Checking missed notifications:', {
-      isAuthenticated,
-      hasCheckedMissedNotifications,
-      missedNotificationsCount: missedNotifications.length,
-      missedNotifications
-    });
-    
     if (isAuthenticated && hasCheckedMissedNotifications && missedNotifications.length > 0) {
-      console.log('Showing missed notifications modal with', missedNotifications.length, 'notifications');
       setShowMissedNotifications(true);
-    } else if (isAuthenticated && hasCheckedMissedNotifications && missedNotifications.length === 0) {
-      console.log('No missed notifications to show');
     }
   }, [missedNotifications, hasCheckedMissedNotifications, isAuthenticated]);
 
@@ -575,6 +565,7 @@ function App() {
       {showMissedNotifications && (
         <MissedNotificationsModal
           onClose={() => setShowMissedNotifications(false)}
+          onNotificationClick={(sessionId) => setSelectedSessionId(sessionId)}
         />
       )}
     </div>

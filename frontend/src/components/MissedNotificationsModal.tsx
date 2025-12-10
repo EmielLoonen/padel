@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
 import { useNotificationStore } from '../store/notificationStore';
-import { useSessionStore } from '../store/sessionStore';
 
 interface MissedNotificationsModalProps {
   onClose: () => void;
+  onNotificationClick?: (sessionId: string) => void;
 }
 
-export default function MissedNotificationsModal({ onClose }: MissedNotificationsModalProps) {
+export default function MissedNotificationsModal({ onClose, onNotificationClick }: MissedNotificationsModalProps) {
   const { missedNotifications, markAllAsRead } = useNotificationStore();
-  const { setSelectedSessionId } = useSessionStore();
 
   useEffect(() => {
     // Mark all missed notifications as read when modal is shown
@@ -18,8 +17,8 @@ export default function MissedNotificationsModal({ onClose }: MissedNotification
   }, []);
 
   const handleNotificationClick = (sessionId?: string) => {
-    if (sessionId) {
-      setSelectedSessionId(sessionId);
+    if (sessionId && onNotificationClick) {
+      onNotificationClick(sessionId);
     }
     onClose();
   };
