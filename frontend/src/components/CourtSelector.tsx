@@ -14,11 +14,17 @@ export default function CourtSelector({
   onSelectCourt,
   disabled = false,
 }: CourtSelectorProps) {
-  // If only one court, auto-select it
+  // If only one court, auto-select it (but only if not disabled)
+  // Note: This auto-selection is now controlled by the parent component's disabled prop
+  // to prevent auto-selection during initialization
   useEffect(() => {
     if (courts.length === 1 && !disabled && !selectedCourtId) {
       const court = courts[0];
-      onSelectCourt(court.id);
+      // Only auto-select if the court is not full
+      const isFull = court.isFull || (court.rsvps && court.rsvps.length >= court.maxPlayers);
+      if (!isFull) {
+        onSelectCourt(court.id);
+      }
     }
   }, [courts.length, disabled, selectedCourtId, courts, onSelectCourt]);
 

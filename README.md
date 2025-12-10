@@ -73,7 +73,20 @@ pnpm prisma migrate dev
 pnpm prisma db seed
 ```
 
-### 4. Start Development Servers
+### 4. Test Users
+
+After seeding, you can log in with any of these test accounts (password: `password123`):
+
+- `john@test.com` (John Doe)
+- `sarah@test.com` (Sarah Smith)
+- `mike@test.com` (Mike Johnson)
+- `emma@test.com` (Emma Davis)
+- `alex@test.com` (Alex Brown)
+- `lisa@test.com` (Lisa Wilson)
+- `tom@test.com` (Tom Anderson)
+- `anna@test.com` (Anna Martinez)
+
+### 5. Start Development Servers
 
 ```bash
 # From project root

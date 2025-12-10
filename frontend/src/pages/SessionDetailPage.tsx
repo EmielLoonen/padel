@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useSessionStore } from '../store/sessionStore';
 import { useRSVPStore } from '../store/sessionStore';
@@ -35,8 +35,14 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [rsvpStatus, setRSVPStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<any[]>([]);
+  const isProcessingRSVP = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // Reset initialization flag when session changes
+    hasInitialized.current = false;
+    isProcessingRSVP.current = false;
+    
     fetchSessionById(sessionId);
     fetchRSVPs(sessionId);
     fetchSets();
@@ -121,85 +127,196 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   };
 
   useEffect(() => {
-    const userRSVP = rsvps.find((r) => r.userId === user?.id);
-    if (userRSVP) {
-      setRSVPStatus(userRSVP.status as 'yes' | 'no' | 'maybe');
-      setSelectedCourtId(userRSVP.courtId || null);
+    // Only update RSVP status from rsvps if we're not currently processing an RSVP change
+    if (!isProcessingRSVP.current) {
+      const userRSVP = rsvps.find((r) => r.userId === user?.id);
+      if (userRSVP) {
+        // Only update if status actually changed to prevent unnecessary updates
+        const newStatus = userRSVP.status as 'yes' | 'no' | 'maybe';
+        if (rsvpStatus !== newStatus) {
+          setRSVPStatus(newStatus);
+        }
+        const newCourtId = userRSVP.courtId || null;
+        if (selectedCourtId !== newCourtId) {
+          setSelectedCourtId(newCourtId);
+        }
+      } else {
+        // Only reset if we had a status before (not on initial load)
+        if (hasInitialized.current && rsvpStatus !== null) {
+          setRSVPStatus(null);
+          setSelectedCourtId(null);
+        }
+      }
+      // Mark as initialized after RSVPs have been loaded and courtsInfo is available
+      // This ensures we don't process RSVP changes until data is ready
+      if (!hasInitialized.current && !isLoadingRSVP && courtsInfo !== null) {
+        hasInitialized.current = true;
+      }
     }
   }, [rsvps, user]);
 
-  const handleRSVPChange = async (status: 'yes' | 'no' | 'maybe') => {
+  const handleRSVPChange = async (status: 'yes' | 'no' | 'maybe', event?: React.MouseEvent) => {
+    // CRITICAL: Only process if this was triggered by a user click (event must be present)
+    // This prevents alerts from showing on page load or automatic triggers
+    if (!event) {
+      console.warn('handleRSVPChange called without event - ignoring');
+      return;
+    }
+    
+    // Prevent default and stop propagation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Don't process if not initialized yet (still loading initial data)
+    if (!hasInitialized.current) {
+      console.warn('handleRSVPChange called before initialization - ignoring');
+      return;
+    }
+    
+    // Prevent multiple simultaneous requests
+    if (isLoadingRSVP || isProcessingRSVP.current) {
+      console.warn('handleRSVPChange called while processing - ignoring');
+      return;
+    }
+    
     // If clicking the same status, do nothing
     if (rsvpStatus === status) {
       return;
     }
     
+    // Set processing flag
+    isProcessingRSVP.current = true;
+    const previousStatus = rsvpStatus;
     setRSVPStatus(status);
     
-    if (status !== 'yes') {
-      // For "no" and "maybe", submit immediately without court selection
-      try {
-        await createOrUpdateRSVP(sessionId, status, null);
-        await fetchSessionById(sessionId); // Refresh to get updated courts
-        await fetchRSVPs(sessionId);
-      } catch (error: any) {
-        alert(error?.response?.data?.error || 'Failed to update RSVP');
-        setRSVPStatus(null);
-      }
-    } else if (status === 'yes') {
-      // For "yes", check if we have court info
-      if (!courtsInfo || courtsInfo.length === 0) {
-        console.error('No courts available');
-        alert('No courts available for this session');
-        setRSVPStatus(null);
-        return;
-      }
-      
-      // Auto-select first available court (or waitlist if all full)
-      const availableCourt = courtsInfo.find(
-        (court) => !court.isFull && (court.rsvps?.length || 0) < court.maxPlayers
-      );
-      
-      if (availableCourt) {
-        // Auto-select first available court and submit immediately
-        try {
-          await createOrUpdateRSVP(sessionId, status, availableCourt.id);
-          setSelectedCourtId(availableCourt.id);
-          await fetchSessionById(sessionId);
-          await fetchRSVPs(sessionId);
-        } catch (error: any) {
-          alert(error?.response?.data?.error || 'Failed to update RSVP');
-          setRSVPStatus(null);
-        }
-      } else if (courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers)) {
-        // All courts are full - add to waitlist
+    try {
+      if (status !== 'yes') {
+        // For "no" and "maybe", submit immediately without court selection
         try {
           await createOrUpdateRSVP(sessionId, status, null);
-          setSelectedCourtId(null);
-          await fetchSessionById(sessionId);
+          await fetchSessionById(sessionId); // Refresh to get updated courts
           await fetchRSVPs(sessionId);
         } catch (error: any) {
-          alert(error?.response?.data?.error || 'Failed to update RSVP');
-          setRSVPStatus(null);
+          const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
+          // Only show alert if this was a user-initiated action
+          if (event) {
+            alert(errorMessage);
+          } else {
+            console.error('RSVP error (non-user action):', errorMessage);
+          }
+          // Reset to previous status on error
+          setRSVPStatus(previousStatus);
         }
-      } else {
-        // Fallback: just set status and show court selector
-        // (This shouldn't normally happen, but keeping as safety)
+      } else if (status === 'yes') {
+        // For "yes", check if we have court info
+        if (!courtsInfo || courtsInfo.length === 0) {
+          console.error('No courts available');
+          // Only show alert if this was a user-initiated action
+          if (event) {
+            alert('No courts available for this session');
+          }
+          setRSVPStatus(previousStatus);
+          return;
+        }
+        
+        // Check if all courts are full first
+        const allCourtsFull = courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
+        
+        if (allCourtsFull) {
+          // All courts are full - add to waitlist
+          try {
+            await createOrUpdateRSVP(sessionId, status, null);
+            setSelectedCourtId(null);
+            await fetchSessionById(sessionId);
+            await fetchRSVPs(sessionId);
+          } catch (error: any) {
+            const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
+            // Only show alert if this was a user-initiated action
+            if (event) {
+              alert(errorMessage);
+            } else {
+              console.error('RSVP error (non-user action):', errorMessage);
+            }
+            // Reset to previous status on error
+            setRSVPStatus(previousStatus);
+          }
+        } else {
+          // Auto-select first available court
+          const availableCourt = courtsInfo.find(
+            (court) => !court.isFull && (court.rsvps?.length || 0) < court.maxPlayers
+          );
+          
+          if (availableCourt) {
+            // Auto-select first available court and submit immediately
+            try {
+              await createOrUpdateRSVP(sessionId, status, availableCourt.id);
+              setSelectedCourtId(availableCourt.id);
+              await fetchSessionById(sessionId);
+              await fetchRSVPs(sessionId);
+            } catch (error: any) {
+              const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
+              
+              // Handle "Court is full" error specifically
+              if (errorMessage === 'Court is full' || errorMessage.includes('full')) {
+                // Only show alert if this was a user-initiated action
+                if (event) {
+                  alert('This court is now full. Please try selecting another court or join the waitlist.');
+                } else {
+                  console.error('Court is full error (non-user action):', errorMessage);
+                }
+                // Refresh court info to get latest state
+                await fetchRSVPs(sessionId);
+                // Reset to previous status
+                setRSVPStatus(previousStatus);
+              } else {
+                // Only show alert if this was a user-initiated action
+                if (event) {
+                  alert(errorMessage);
+                } else {
+                  console.error('RSVP error (non-user action):', errorMessage);
+                }
+                setRSVPStatus(previousStatus);
+              }
+            }
+          } else {
+            // Fallback: just set status and show court selector
+            // (This shouldn't normally happen, but keeping as safety)
+            setRSVPStatus(previousStatus);
+          }
+        }
       }
+    } finally {
+      // Always clear processing flag
+      isProcessingRSVP.current = false;
     }
   };
 
   const handleCourtSelection = async (courtId: string | null) => {
+    // Don't process if not initialized yet
+    if (!hasInitialized.current) {
+      return;
+    }
+    
+    // Prevent if already processing
+    if (isProcessingRSVP.current || isLoadingRSVP) {
+      return;
+    }
+    
     setSelectedCourtId(courtId);
     
     // Submit RSVP with court selection
     if (rsvpStatus === 'yes') {
+      isProcessingRSVP.current = true;
       try {
         await createOrUpdateRSVP(sessionId, rsvpStatus, courtId);
         await fetchSessionById(sessionId); // Refresh to get updated courts
       } catch (error: any) {
-        alert(error?.response?.data?.error || 'Failed to update RSVP');
+        const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
+        // Only show alert for user-initiated actions (court selection is always user-initiated)
+        alert(errorMessage);
         setSelectedCourtId(null);
+      } finally {
+        isProcessingRSVP.current = false;
       }
     }
   };
@@ -348,30 +465,33 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           {/* RSVP Status Buttons */}
           <div className="flex gap-3 mb-6 flex-wrap">
             <button
-              onClick={() => handleRSVPChange('yes')}
-              disabled={isLoadingRSVP}
+              type="button"
+              onClick={(e) => handleRSVPChange('yes', e)}
+              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
               className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                 rsvpStatus === 'yes'
                   ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-2xl shadow-green-500/50'
                   : 'bg-dark-elevated text-gray-300 hover:bg-green-500/20 border-2 border-gray-700 hover:border-green-500'
-              }`}
+              } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               ✅ I'm Coming
             </button>
             <button
-              onClick={() => handleRSVPChange('maybe')}
-              disabled={isLoadingRSVP}
+              type="button"
+              onClick={(e) => handleRSVPChange('maybe', e)}
+              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
               className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                 rsvpStatus === 'maybe'
                   ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-2xl shadow-yellow-500/50'
                   : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-2 border-gray-700 hover:border-yellow-500'
-              }`}
+              } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               🤔 Maybe
             </button>
             <button
-              onClick={() => handleRSVPChange('no')}
-              disabled={isLoadingRSVP}
+              type="button"
+              onClick={(e) => handleRSVPChange('no', e)}
+              disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
               className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                 rsvpStatus === 'no'
                   ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
@@ -393,8 +513,13 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               <CourtSelector
                 courts={courtsInfo}
                 selectedCourtId={selectedCourtId}
-                onSelectCourt={handleCourtSelection}
-                disabled={isLoadingRSVP}
+                onSelectCourt={(courtId) => {
+                  // Only allow court selection if initialized and not processing
+                  if (hasInitialized.current && !isProcessingRSVP.current && !isLoadingRSVP) {
+                    handleCourtSelection(courtId);
+                  }
+                }}
+                disabled={isLoadingRSVP || !hasInitialized.current || isProcessingRSVP.current}
               />
             </div>
           )}

@@ -51,14 +51,14 @@ pnpm dev
 
 All users have password: `password123`
 
-- john@test.com
-- sarah@test.com  
-- mike@test.com
-- emma@test.com
-- alex@test.com
-- lisa@test.com
-- david@test.com
-- nina@test.com
+- john@test.com (John Doe)
+- sarah@test.com (Sarah Smith)
+- mike@test.com (Mike Johnson)
+- emma@test.com (Emma Davis)
+- alex@test.com (Alex Brown)
+- lisa@test.com (Lisa Wilson)
+- tom@test.com (Tom Anderson)
+- anna@test.com (Anna Martinez)
 
 ---
 
