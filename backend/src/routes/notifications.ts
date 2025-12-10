@@ -93,5 +93,28 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Get missed notifications (since last login)
+router.get('/missed', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get previousLastLogin from query parameter if provided (from login response)
+    const previousLastLogin = req.query.previousLastLogin 
+      ? new Date(req.query.previousLastLogin as string)
+      : undefined;
+
+    const notifications = await notificationService.getMissedNotifications(
+      req.user.userId,
+      previousLastLogin
+    );
+    res.json({ notifications });
+  } catch (error) {
+    console.error('Get missed notifications error:', error);
+    res.status(500).json({ error: 'Failed to fetch missed notifications' });
+  }
+});
+
 export default router;
 

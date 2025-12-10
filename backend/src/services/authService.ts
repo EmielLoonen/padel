@@ -77,6 +77,16 @@ export const authService = {
       throw new Error('Invalid credentials');
     }
 
+    // Store previous lastLogin before updating (for missed notifications check)
+    const previousLastLogin = user.lastLogin;
+    const newLastLogin = new Date();
+
+    // Update last login timestamp
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: newLastLogin },
+    });
+
     // Generate JWT token
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
@@ -92,6 +102,7 @@ export const authService = {
         isAdmin: user.isAdmin,
       },
       token,
+      previousLastLogin: previousLastLogin ? previousLastLogin.toISOString() : null, // Include previous login time for frontend
     };
   },
 

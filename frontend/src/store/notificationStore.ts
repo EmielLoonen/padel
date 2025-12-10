@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 interface Notification {
   id: string;
   userId: string;
-  type: 'session_created' | 'rsvp_update' | 'session_reminder' | 'session_updated';
+  type: 'session_created' | 'rsvp_update' | 'session_reminder' | 'session_updated' | 'booking_update';
   title: string;
   message: string;
   sessionId?: string;
@@ -22,10 +22,12 @@ interface Notification {
 
 interface NotificationState {
   notifications: Notification[];
+  missedNotifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
   showDropdown: boolean;
   fetchNotifications: () => Promise<void>;
+  fetchMissedNotifications: (previousLastLogin?: string | null) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -36,6 +38,7 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
+  missedNotifications: [],
   unreadCount: 0,
   isLoading: false,
   showDropdown: false,
@@ -58,6 +61,25 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       set({ isLoading: false });
+    }
+  },
+
+  fetchMissedNotifications: async (previousLastLogin?: string | null) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Fetching missed notifications...', { previousLastLogin });
+      
+      const params = previousLastLogin ? { previousLastLogin } : {};
+      const response = await axios.get(`${API_URL}/api/notifications/missed`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+
+      console.log('Missed notifications response:', response.data);
+      set({ missedNotifications: response.data.notifications || [] });
+    } catch (error) {
+      console.error('Failed to fetch missed notifications:', error);
+      set({ missedNotifications: [] });
     }
   },
 

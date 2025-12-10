@@ -191,6 +191,34 @@ export const notificationService = {
     await Promise.all(notifications);
   },
 
+  async getMissedNotifications(userId: string, previousLastLogin?: Date | null) {
+    // Show all unread notifications when user logs in
+    // This represents what they "missed" - any unread notifications regardless of when created
+    // The previousLastLogin parameter is kept for potential future use but not currently used
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId,
+        read: false, // Only show unread notifications
+      },
+      include: {
+        session: {
+          select: {
+            id: true,
+            venueName: true,
+            date: true,
+            time: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50, // Limit to 50 most recent
+    });
+
+    return notifications;
+  },
+
   async notifyCourtAssignment(sessionId: string, courtId: string, userId: string, creatorId: string) {
     // Get session and court details
     const session = await prisma.session.findUnique({

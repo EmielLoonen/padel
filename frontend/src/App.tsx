@@ -12,12 +12,13 @@ import AdminPage from './pages/AdminPage';
 import NotificationBell from './components/NotificationBell';
 import LoadingSpinner from './components/LoadingSpinner';
 import Avatar from './components/Avatar';
+import MissedNotificationsModal from './components/MissedNotificationsModal';
 import './App.css';
 
 function App() {
   const { isAuthenticated, user, logout, initializeAuth } = useAuthStore();
   const { sessions, fetchSessions, isLoading } = useSessionStore();
-  const { fetchNotifications } = useNotificationStore();
+  const { fetchNotifications, fetchMissedNotifications, missedNotifications } = useNotificationStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -29,6 +30,8 @@ function App() {
   const [isPullingToRefresh, setIsPullingToRefresh] = useState(false);
   const [pullStartY, setPullStartY] = useState(0);
   const [pullDistance, setPullDistance] = useState(0);
+  const [showMissedNotifications, setShowMissedNotifications] = useState(false);
+  const [hasCheckedMissedNotifications, setHasCheckedMissedNotifications] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -39,14 +42,53 @@ function App() {
       // Reset to upcoming tab on login
       setSessionTab('upcoming');
       fetchSessions('upcoming');
+      fetchNotifications();
       setShowSignup(false); // Reset to login page when authenticated
       // Reset all view states to show dashboard
       setShowSettings(false);
       setShowStats(false);
       setShowCreateForm(false);
       setSelectedSessionId(null);
+      
+      // Check for missed notifications (only once per session)
+      // Note: This will be called after login, but we need to check if this is a fresh login
+      // For now, we'll check missed notifications - if user just logged in via login page,
+      // the previousLastLogin will be passed from the login response
+      if (!hasCheckedMissedNotifications) {
+        // Try to get previousLastLogin from localStorage (set during login)
+        const previousLastLogin = localStorage.getItem('previousLastLogin');
+        fetchMissedNotifications(previousLastLogin || undefined).then(() => {
+          localStorage.removeItem('previousLastLogin'); // Clean up
+          setHasCheckedMissedNotifications(true);
+        }).catch((error) => {
+          console.error('Error fetching missed notifications:', error);
+          localStorage.removeItem('previousLastLogin'); // Clean up
+          setHasCheckedMissedNotifications(true); // Set to true even on error to prevent retries
+        });
+      }
+    } else {
+      // Reset when logged out
+      setHasCheckedMissedNotifications(false);
+      setShowMissedNotifications(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, hasCheckedMissedNotifications]);
+
+  // Show modal when missed notifications are loaded
+  useEffect(() => {
+    console.log('Checking missed notifications:', {
+      isAuthenticated,
+      hasCheckedMissedNotifications,
+      missedNotificationsCount: missedNotifications.length,
+      missedNotifications
+    });
+    
+    if (isAuthenticated && hasCheckedMissedNotifications && missedNotifications.length > 0) {
+      console.log('Showing missed notifications modal with', missedNotifications.length, 'notifications');
+      setShowMissedNotifications(true);
+    } else if (isAuthenticated && hasCheckedMissedNotifications && missedNotifications.length === 0) {
+      console.log('No missed notifications to show');
+    }
+  }, [missedNotifications, hasCheckedMissedNotifications, isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -528,6 +570,13 @@ function App() {
           )}
         </div>
       </div>
+      
+      {/* Missed Notifications Modal */}
+      {showMissedNotifications && (
+        <MissedNotificationsModal
+          onClose={() => setShowMissedNotifications(false)}
+        />
+      )}
     </div>
   );
 }

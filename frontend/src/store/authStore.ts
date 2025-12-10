@@ -41,8 +41,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
 
-      const { user, token } = response.data;
+      const { user, token, previousLastLogin } = response.data;
       localStorage.setItem('token', token);
+      
+      // Store previousLastLogin temporarily for missed notifications check
+      if (previousLastLogin) {
+        localStorage.setItem('previousLastLogin', previousLastLogin);
+      }
+      
       set({ user, token, isAuthenticated: true, isLoading: false });
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Login failed';
