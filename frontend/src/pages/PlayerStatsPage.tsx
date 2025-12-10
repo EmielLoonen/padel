@@ -432,6 +432,10 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <p className="text-gray-400 text-sm mb-1">Sets Lost</p>
                       <p className="text-3xl font-bold text-red-400">{stats.setsLost}</p>
                     </div>
+                    <div className="bg-dark-elevated p-4 rounded-xl border border-gray-700">
+                      <p className="text-gray-400 text-sm mb-1">Total Games</p>
+                      <p className="text-3xl font-bold text-white">{stats.totalGames}</p>
+                    </div>
                     <div className="bg-dark-elevated p-4 rounded-xl border border-green-500/30">
                       <p className="text-gray-400 text-sm mb-1">Games Won</p>
                       <p className="text-3xl font-bold text-green-400">{stats.gamesWon}</p>
@@ -439,10 +443,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                     <div className="bg-dark-elevated p-4 rounded-xl border border-red-500/30">
                       <p className="text-gray-400 text-sm mb-1">Games Lost</p>
                       <p className="text-3xl font-bold text-red-400">{stats.gamesLost}</p>
-                    </div>
-                    <div className="bg-dark-elevated p-4 rounded-xl border border-padel-green/50">
-                      <p className="text-gray-400 text-sm mb-1">Game Win Rate</p>
-                      <p className="text-3xl font-bold text-padel-green">{stats.gameWinRate.toFixed(1)}%</p>
                     </div>
                   </div>
 
