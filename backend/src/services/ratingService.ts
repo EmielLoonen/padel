@@ -377,7 +377,20 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
   const matchRatings: Array<MatchRatingData & { createdAt: Date }> = [];
 
   for (const userScore of userScores) {
-    const matchRatingData = await calculateMatchRating(userId, userScore.set);
+    // Convert Prisma Decimal to number for the set
+    const setWithConvertedRating: SetWithScores = {
+      ...userScore.set,
+      scores: userScore.set.scores.map((score) => ({
+        userId: score.userId,
+        guestId: score.guestId,
+        gamesWon: score.gamesWon,
+        user: score.user ? {
+          id: score.user.id,
+          rating: score.user.rating ? Number(score.user.rating) : null
+        } : null,
+      })),
+    };
+    const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating);
     if (matchRatingData) {
       matchRatings.push({
         ...matchRatingData,
@@ -440,7 +453,20 @@ export async function updatePlayerRating(
     });
 
     if (set) {
-      const matchRatingData = await calculateMatchRating(userId, set);
+      // Convert Prisma Decimal to number for the set
+      const setWithConvertedRating: SetWithScores = {
+        ...set,
+        scores: set.scores.map((score) => ({
+          userId: score.userId,
+          guestId: score.guestId,
+          gamesWon: score.gamesWon,
+          user: score.user ? {
+            id: score.user.id,
+            rating: score.user.rating ? Number(score.user.rating) : null
+          } : null,
+        })),
+      };
+      const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating);
       if (matchRatingData) {
         matchRating = matchRatingData.matchRating;
 
