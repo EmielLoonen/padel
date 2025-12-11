@@ -426,7 +426,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                   <h1 className="text-2xl sm:text-3xl font-bold text-white">{user?.name}</h1>
                   <div className="flex items-center gap-4 mt-1">
                     <p className="text-gray-400">Player Statistics</p>
-                    {stats.rating !== null && stats.rating !== undefined && (
+                    {stats && stats.rating !== null && stats.rating !== undefined && (
                       <RatingDisplay rating={stats.rating} size="md" showLabel />
                     )}
                   </div>
