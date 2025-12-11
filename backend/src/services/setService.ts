@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { recalculateRatingsForSet } from './ratingService';
 
 const prisma = new PrismaClient();
 
@@ -98,6 +99,11 @@ export const setService = {
           },
         },
       },
+    });
+
+    // Recalculate ratings for all players in this set (async, don't wait)
+    recalculateRatingsForSet(set.id).catch((error) => {
+      console.error('Error recalculating ratings after set creation:', error);
     });
 
     return set;
@@ -284,6 +290,11 @@ export const setService = {
       },
     });
 
+    // Recalculate ratings for all players in this set (async, don't wait)
+    recalculateRatingsForSet(setId).catch((error) => {
+      console.error('Error recalculating ratings after set update:', error);
+    });
+
     return updatedSet;
   },
 
@@ -307,14 +318,47 @@ export const setService = {
       throw new Error('Only the set creator or admin can delete this set');
     }
 
+    // Get affected user IDs before deleting
+    const affectedScores = await prisma.setScore.findMany({
+      where: { setId },
+      select: { userId: true },
+    });
+    const affectedUserIds = Array.from(
+      new Set(
+        affectedScores
+          .map((s) => s.userId)
+          .filter((id): id is string => id !== null)
+      )
+    );
+
     await prisma.set.delete({
       where: { id: setId },
+    });
+
+    // Recalculate ratings for all affected players (async, don't wait)
+    // Note: We need to recalculate each player individually since the set is already deleted
+    Promise.all(
+      affectedUserIds.map((userId) =>
+        import('./ratingService').then(({ recalculatePlayerRating }) =>
+          recalculatePlayerRating(userId).catch((error) => {
+            console.error(`Error recalculating rating for user ${userId} after set deletion:`, error);
+          })
+        )
+      )
+    ).catch((error) => {
+      console.error('Error recalculating ratings after set deletion:', error);
     });
 
     return { message: 'Set deleted successfully' };
   },
 
   async getPlayerStats(userId: string) {
+    // Get user with rating
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { rating: true },
+    });
+
     // Get all set scores for this user
     const userScores = await prisma.setScore.findMany({
       where: { userId },
@@ -458,6 +502,7 @@ export const setService = {
       setWinRate: Math.round(setWinRate * 10) / 10,
       gameWinRate: Math.round(gameWinRate * 10) / 10,
       teammateWinRates,
+      rating: user?.rating ? Number(user.rating) : null,
     };
   },
 
@@ -470,6 +515,7 @@ export const setService = {
             id: true,
             name: true,
             avatarUrl: true,
+            rating: true,
           },
         },
         set: {
@@ -485,6 +531,7 @@ export const setService = {
       userId: string;
       userName: string;
       userAvatar: string | null;
+      rating: number | null;
       totalSets: number;
       totalSetsIncludingIncomplete: number;
       setsWon: number;
@@ -509,6 +556,7 @@ export const setService = {
         userId,
         userName,
         userAvatar,
+        rating: score.user?.rating ? Number(score.user.rating) : null,
         totalSets: 0,
         totalSetsIncludingIncomplete: 0,
         setsWon: 0,

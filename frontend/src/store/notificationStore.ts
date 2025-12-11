@@ -67,18 +67,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchMissedNotifications: async (previousLastLogin?: string | null) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching missed notifications...', { previousLastLogin });
-      
       const params = previousLastLogin ? { previousLastLogin } : {};
       const response = await axios.get(`${API_URL}/api/notifications/missed`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
       });
 
-      console.log('Missed notifications response:', response.data);
       set({ missedNotifications: response.data.notifications || [] });
     } catch (error) {
-      console.error('Failed to fetch missed notifications:', error);
       set({ missedNotifications: [] });
     }
   },

@@ -10,6 +10,7 @@ import userRoutes from './routes/users';
 import guestRoutes from './routes/guests';
 import setRoutes from './routes/sets';
 import adminRoutes from './routes/admin';
+import ratingRoutes from './routes/ratings';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/courts', courtRoutes);
 app.use('/api/guests', guestRoutes);
 app.use('/api/sets', setRoutes);
+app.use('/api/ratings', ratingRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Start server
@@ -67,7 +69,8 @@ app.listen(PORT, () => {
   console.log(`✅ RSVP endpoints: http://localhost:${PORT}/api/rsvps`);
   console.log(`🔔 Notification endpoints: http://localhost:${PORT}/api/notifications`);
   console.log(`🏟️ Court endpoints: http://localhost:${PORT}/api/courts`);
-  console.log(`👥 Guest endpoints: http://localhost:${PORT}/api/guests`);
-  console.log(`🎾 Set endpoints: http://localhost:${PORT}/api/sets`);
+    console.log(`👥 Guest endpoints: http://localhost:${PORT}/api/guests`);
+    console.log(`🎾 Set endpoints: http://localhost:${PORT}/api/sets`);
+    console.log(`⭐ Rating endpoints: http://localhost:${PORT}/api/ratings`);
 });
 

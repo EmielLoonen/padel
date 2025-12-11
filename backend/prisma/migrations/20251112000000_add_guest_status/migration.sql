@@ -23,3 +23,6 @@ ALTER TABLE "guests" ADD CONSTRAINT "guests_session_id_fkey" FOREIGN KEY ("sessi
 ALTER TABLE "guests" DROP CONSTRAINT "guests_court_id_fkey";
 ALTER TABLE "guests" ADD CONSTRAINT "guests_court_id_fkey" FOREIGN KEY ("court_id") REFERENCES "courts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+
+
+

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Avatar from '../components/Avatar';
+import RatingDisplay from '../components/RatingDisplay';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -20,6 +21,7 @@ interface PlayerStats {
   totalGames: number;
   setWinRate: number;
   gameWinRate: number;
+  rating?: number | null;
   teammateWinRates?: Array<{
     teammateId: string;
     teammateName: string;
@@ -35,7 +37,7 @@ interface PlayerStatsPageProps {
   onBack: () => void;
 }
 
-type LeaderboardSortBy = 'sets' | 'games';
+type LeaderboardSortBy = 'sets' | 'games' | 'rating';
 
 interface MatchHistory {
   id: string;
@@ -148,6 +150,16 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             return b.gameWinRate - a.gameWinRate;
           }
           return b.gamesWon - a.gamesWon;
+        });
+      case 'rating':
+        // Sort by rating, then by total sets
+        return sorted.sort((a, b) => {
+          const ratingA = a.rating ?? 0;
+          const ratingB = b.rating ?? 0;
+          if (ratingB !== ratingA) {
+            return ratingB - ratingA;
+          }
+          return b.totalSets - a.totalSets;
         });
       default:
         return sorted;
@@ -410,9 +422,14 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 border border-gray-800">
               <div className="flex items-center gap-4 mb-6">
                 <Avatar src={user?.avatarUrl} name={user?.name || ''} size="xl" />
-                <div>
+                <div className="flex-1">
                   <h1 className="text-2xl sm:text-3xl font-bold text-white">{user?.name}</h1>
-                  <p className="text-gray-400">Player Statistics</p>
+                  <div className="flex items-center gap-4 mt-1">
+                    <p className="text-gray-400">Player Statistics</p>
+                    {stats.rating !== null && stats.rating !== undefined && (
+                      <RatingDisplay rating={stats.rating} size="md" showLabel />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -639,6 +656,16 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
               <p className="text-sm text-gray-400 mb-2">Sort by:</p>
               <div className="flex gap-2">
                 <button
+                  onClick={() => setLeaderboardSort('rating')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                    leaderboardSort === 'rating'
+                      ? 'bg-padel-green text-white'
+                      : 'bg-dark-elevated text-gray-400 hover:text-white'
+                  }`}
+                >
+                  ⭐ Rating
+                </button>
+                <button
                   onClick={() => setLeaderboardSort('sets')}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
                     leaderboardSort === 'sets'
@@ -701,6 +728,9 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
                               )}
                             </p>
+                            {leaderboardSort === 'rating' && player.rating !== null && player.rating !== undefined && (
+                              <div><RatingDisplay rating={player.rating} size="sm" /></div>
+                            )}
                             {leaderboardSort === 'sets' && <p>{player.setsWon}W - {player.setsLost}L</p>}
                             {leaderboardSort === 'games' && <p>{player.gamesWon}W - {player.gamesLost}L</p>}
                           </div>
@@ -711,6 +741,9 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               <span className="text-gray-500"> ({player.totalSetsIncludingIncomplete} total)</span>
                             )}
                             {' ·'}
+                            {leaderboardSort === 'rating' && player.rating !== null && player.rating !== undefined && (
+                              <span className="ml-1"><RatingDisplay rating={player.rating} size="sm" /></span>
+                            )}
                             {leaderboardSort === 'sets' && ` ${player.setsWon}W-${player.setsLost}L`}
                             {leaderboardSort === 'games' && ` ${player.gamesWon}W-${player.gamesLost}L`}
                           </p>
@@ -745,13 +778,24 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                         )}
                       </div>
 
-                      {/* Win Rate */}
+                      {/* Win Rate / Rating */}
                       <div className="text-right flex-shrink-0">
-                        <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">Win Rate</p>
-                        <p className="text-base sm:text-xl font-bold text-padel-green">
-                          {leaderboardSort === 'sets' && player.setWinRate.toFixed(1)}
-                          {leaderboardSort === 'games' && player.gameWinRate.toFixed(1)}%
-                        </p>
+                        {leaderboardSort === 'rating' ? (
+                          <>
+                            <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">UTR Rating</p>
+                            <div className="text-base sm:text-xl">
+                              <RatingDisplay rating={player.rating ?? null} size="lg" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">Win Rate</p>
+                            <p className="text-base sm:text-xl font-bold text-padel-green">
+                              {leaderboardSort === 'sets' && player.setWinRate.toFixed(1)}
+                              {leaderboardSort === 'games' && player.gameWinRate.toFixed(1)}%
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

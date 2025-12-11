@@ -10,6 +10,7 @@ import AddGuestModal from '../components/AddGuestModal';
 import AddSetModal from '../components/AddSetModal';
 import EditSetModal from '../components/EditSetModal';
 import Avatar from '../components/Avatar';
+import RatingDisplay from '../components/RatingDisplay';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -35,6 +36,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [rsvpStatus, setRSVPStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<any[]>([]);
+  const [playerRatings, setPlayerRatings] = useState<Map<string, number>>(new Map());
+  const [matchPredictions, setMatchPredictions] = useState<Map<string, any>>(new Map());
   const isProcessingRSVP = useRef(false);
   const hasInitialized = useRef(false);
 
@@ -47,6 +50,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     fetchRSVPs(sessionId);
     fetchSets();
     fetchPlayerStats();
+    fetchPlayerRatings();
   }, [sessionId]);
 
   const fetchPlayerStats = async () => {
@@ -61,6 +65,39 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
+  const fetchPlayerRatings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/ratings/leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const ratingsMap = new Map<string, number>();
+      response.data.leaderboard.forEach((player: any) => {
+        if (player.rating !== null && player.rating !== undefined) {
+          ratingsMap.set(player.userId, player.rating);
+        }
+      });
+      setPlayerRatings(ratingsMap);
+    } catch (error) {
+      console.error('Failed to fetch player ratings:', error);
+    }
+  };
+
+  const fetchMatchPrediction = async (team1Ids: string[], team2Ids: string[]) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/ratings/predict-match`,
+        { team1PlayerIds: team1Ids, team2PlayerIds: team2Ids },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data.prediction;
+    } catch (error) {
+      console.error('Failed to fetch match prediction:', error);
+      return null;
+    }
+  };
+
   const calculateBalancedTeams = (court: any) => {
     const allPlayers = [
       ...(court.rsvps?.map((rsvp: any) => ({ id: rsvp.user.id, name: rsvp.user.name, isGuest: false })) || []),
@@ -69,25 +106,29 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
 
     if (allPlayers.length !== 4) return null;
 
-    // Get stats for each player
+    // Get stats and ratings for each player
     const playersWithStats = allPlayers.map((player) => {
       const stats = playerStats.find((s) => s.userId === player.id);
+      const rating = playerRatings.get(player.id) || null;
       return {
         ...player,
         gameWinRate: stats?.gameWinRate || 0,
         totalGames: stats?.totalGames || 0,
+        rating: rating || (player.isGuest ? null : 5.0), // Default to 5.0 for registered users without rating, null for guests
       };
     });
 
-    // Sort by game win rate (guests and players with no stats go to bottom)
+    // Sort by UTR rating (guests and players with no rating go to bottom)
     const sortedPlayers = [...playersWithStats].sort((a, b) => {
       if (a.isGuest && b.isGuest) return 0;
       if (a.isGuest) return 1;
       if (b.isGuest) return -1;
-      if (a.totalGames === 0 && b.totalGames === 0) return 0;
-      if (a.totalGames === 0) return 1;
-      if (b.totalGames === 0) return -1;
-      return b.gameWinRate - a.gameWinRate;
+      const ratingA = a.rating ?? 0;
+      const ratingB = b.rating ?? 0;
+      if (ratingA === 0 && ratingB === 0) return 0;
+      if (ratingA === 0) return 1;
+      if (ratingB === 0) return -1;
+      return ratingB - ratingA; // Sort descending (highest rating first)
     });
 
     // Best + Worst vs Middle two
@@ -689,6 +730,12 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                               <span className="text-sm font-medium text-green-400">
                                 {rsvp.user.name}
                               </span>
+                              {playerRatings.has(rsvp.user.id) && (
+                                <RatingDisplay 
+                                  rating={playerRatings.get(rsvp.user.id)!} 
+                                  size="sm" 
+                                />
+                              )}
                             </div>
                           ))}
                         </div>
@@ -738,23 +785,42 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       const balancedTeams = calculateBalancedTeams(court);
                       if (!balancedTeams) return null;
 
+                      // Get team IDs for prediction (only for registered users, not guests)
+                      const team1Ids = balancedTeams.team1.map((p: any) => p.isGuest ? null : p.id).filter((id: any) => id !== null);
+                      const team2Ids = balancedTeams.team2.map((p: any) => p.isGuest ? null : p.id).filter((id: any) => id !== null);
+                      const predictionKey = `${team1Ids.join(',')}-${team2Ids.join(',')}`;
+                      const prediction = matchPredictions.get(predictionKey);
+
+                      // Fetch prediction if not already loaded and both teams have 2 registered users
+                      if (!prediction && team1Ids.length === 2 && team2Ids.length === 2) {
+                        fetchMatchPrediction(team1Ids, team2Ids).then((pred) => {
+                          if (pred) {
+                            setMatchPredictions(new Map(matchPredictions.set(predictionKey, pred)));
+                          }
+                        });
+                      }
+
                       return (
                         <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-xl">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-lg">🎯</span>
                             <p className="text-sm font-bold text-purple-300">Smart Balance Suggestion</p>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
                             {/* Team 1 */}
                             <div className="bg-dark-card p-2 rounded-lg border border-gray-700">
                               <p className="text-xs text-gray-400 mb-1">Team 1</p>
                               {balancedTeams.team1.map((player: any) => (
                                 <div key={player.id} className="flex items-center justify-between text-xs">
                                   <span className="text-white">{player.name}</span>
-                                  {player.totalGames > 0 && (
+                                  {player.rating !== null && player.rating !== undefined ? (
+                                    <RatingDisplay rating={player.rating} size="sm" />
+                                  ) : player.totalGames > 0 ? (
                                     <span className="text-gray-500">
                                       {player.gameWinRate.toFixed(0)}% ({player.totalGames} games)
                                     </span>
+                                  ) : (
+                                    <span className="text-gray-500">No rating</span>
                                   )}
                                 </div>
                               ))}
@@ -765,17 +831,53 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                               {balancedTeams.team2.map((player: any) => (
                                 <div key={player.id} className="flex items-center justify-between text-xs">
                                   <span className="text-white">{player.name}</span>
-                                  {player.totalGames > 0 && (
+                                  {player.rating !== null && player.rating !== undefined ? (
+                                    <RatingDisplay rating={player.rating} size="sm" />
+                                  ) : player.totalGames > 0 ? (
                                     <span className="text-gray-500">
                                       {player.gameWinRate.toFixed(0)}% ({player.totalGames} games)
                                     </span>
+                                  ) : (
+                                    <span className="text-gray-500">No rating</span>
                                   )}
                                 </div>
                               ))}
                             </div>
                           </div>
+                          
+                          {/* Match Prediction */}
+                          {prediction && (
+                            <div className="mt-3 pt-3 border-t border-purple-500/30">
+                              <p className="text-xs text-gray-400 mb-2 font-semibold">Expected Match Outcome (3 sets):</p>
+                              <div className="space-y-1.5">
+                                {prediction.expectedSetScores.map((set: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between text-xs bg-dark-card px-2 py-1 rounded">
+                                    <span className="text-gray-400">Set {index + 1}:</span>
+                                    <span className="text-white">
+                                      <span className={set.team1Games > set.team2Games ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                                        {set.team1Games}
+                                      </span>
+                                      {' - '}
+                                      <span className={set.team2Games > set.team1Games ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                                        {set.team2Games}
+                                      </span>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="mt-2 flex items-center justify-between text-xs">
+                                <span className="text-gray-400">
+                                  Team 1 Win Probability: <span className="text-purple-300 font-semibold">{(prediction.team1ExpectedWinPct * 100).toFixed(1)}%</span>
+                                </span>
+                                <span className="text-gray-400">
+                                  Match Weight: <span className="text-purple-300 font-semibold">{prediction.matchWeight.toFixed(2)}</span>
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
                           <p className="text-xs text-gray-400 mt-2 italic">
-                            Based on historical game win rates
+                            Based on UTR ratings{prediction ? ' with match prediction' : ''}
                           </p>
                         </div>
                       );

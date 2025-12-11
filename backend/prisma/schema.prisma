@@ -21,6 +21,8 @@ model User {
   resetToken           String?   @map("reset_token")
   resetTokenExpiry     DateTime? @map("reset_token_expiry")
   lastLogin            DateTime? @map("last_login")
+  rating               Decimal?  @db.Decimal(5, 2) // UTR rating (1.00-16.50)
+  ratingUpdatedAt      DateTime? @map("rating_updated_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
@@ -31,6 +33,8 @@ model User {
   addedGuests          Guest[]
   setScores            SetScore[]
   createdSets          Set[]          @relation("SetCreator")
+  ratingHistory        RatingHistory[]
+  matchRatings         MatchRating[]
 
   @@map("users")
 }
@@ -155,6 +159,8 @@ model Set {
   court             Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
   createdBy         User        @relation("SetCreator", fields: [createdById], references: [id])
   scores            SetScore[]  // Player scores for this set
+  ratingHistory     RatingHistory[]
+  matchRatings      MatchRating[]
 
   @@index([courtId])
   @@index([createdById])
@@ -178,5 +184,45 @@ model SetScore {
   @@index([userId])
   @@index([guestId])
   @@map("set_scores")
+}
+
+model RatingHistory {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  rating            Decimal  @db.Decimal(5, 2)
+  previousRating    Decimal? @map("previous_rating") @db.Decimal(5, 2)
+  setId             String?  @map("set_id")
+  matchRating       Decimal? @map("match_rating") @db.Decimal(5, 2)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set               Set?     @relation(fields: [setId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([setId])
+  @@map("rating_history")
+}
+
+model MatchRating {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  setId             String   @map("set_id")
+  matchRating       Decimal  @map("match_rating") @db.Decimal(5, 2)
+  expectedWinPct    Decimal  @map("expected_win_pct") @db.Decimal(5, 4)
+  actualWinPct      Decimal  @map("actual_win_pct") @db.Decimal(5, 4)
+  matchWeight       Decimal  @map("match_weight") @db.Decimal(5, 4)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set               Set      @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setId])
+  @@index([userId])
+  @@index([setId])
+  @@index([createdAt])
+  @@map("match_ratings")
 }
 

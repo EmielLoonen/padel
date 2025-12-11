@@ -29,7 +29,17 @@
      npx prisma db seed
      ```
 
-5. **Done!** 🎉
+5. **Calculate Historical Ratings** (One-time setup):
+   - Backend service → Shell tab
+   - Run:
+     ```bash
+     cd backend
+     npm run prisma:calculate-ratings
+     ```
+   - This calculates UTR ratings for all players based on historical match data
+   - See `docs/PRODUCTION_RATING_SETUP.md` for details
+
+6. **Done!** 🎉
    - Frontend: `https://padel-coordinator-frontend.onrender.com`
    - Backend: `https://padel-coordinator-api.onrender.com`
 
