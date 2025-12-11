@@ -3,6 +3,7 @@ import {
   getRatingHistory,
   recalculatePlayerRating,
   getMatchRating,
+  recalculateRatingsForSet,
 } from '../services/ratingService';
 import { authenticateToken } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
@@ -12,6 +13,121 @@ const prisma = new PrismaClient();
 
 // All rating routes require authentication
 router.use(authenticateToken);
+
+// Calculate historical ratings for all players (admin only - one-time setup)
+// This endpoint can be called via HTTP to calculate ratings without shell access
+router.post('/calculate-historical', async (req: Request, res: Response) => {
+  try {
+    console.log('Starting historical rating calculation via API...');
+
+    // Get all sets ordered by creation date (oldest first)
+    const sets = await prisma.set.findMany({
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        scores: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    console.log(`Found ${sets.length} sets to process`);
+
+    // Process each set chronologically
+    let processed = 0;
+    for (const set of sets) {
+      try {
+        // Get unique user IDs from this set
+        const userIds = Array.from(
+          new Set(
+            set.scores
+              .map((s) => s.userId)
+              .filter((id): id is string => id !== null)
+          )
+        );
+
+        if (userIds.length > 0) {
+          // Recalculate ratings for all players in this set
+          await recalculateRatingsForSet(set.id);
+          processed++;
+
+          if (processed % 10 === 0) {
+            console.log(`Processed ${processed}/${sets.length} sets...`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing set ${set.id}:`, error);
+        // Continue with next set
+      }
+    }
+
+    console.log(`\nCompleted! Processed ${processed} sets.`);
+
+    // Get summary statistics
+    const usersWithRatings = await prisma.user.count({
+      where: {
+        rating: {
+          not: null,
+        },
+      },
+    });
+
+    const avgRating = await prisma.user.aggregate({
+      where: {
+        rating: {
+          not: null,
+        },
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    const topPlayers = await prisma.user.findMany({
+      where: {
+        rating: {
+          not: null,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        rating: true,
+      },
+      orderBy: {
+        rating: 'desc',
+      },
+      take: 10,
+    });
+
+    res.json({
+      success: true,
+      message: 'Historical rating calculation completed',
+      summary: {
+        totalSets: sets.length,
+        processedSets: processed,
+        usersWithRatings,
+        averageRating: avgRating._avg.rating ? Number(avgRating._avg.rating).toFixed(2) : 'N/A',
+        topPlayers: topPlayers.map((p) => ({
+          name: p.name,
+          rating: p.rating ? Number(p.rating).toFixed(2) : null,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Historical rating calculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to calculate historical ratings',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
 
 // Predict match outcome for two teams
 router.post('/predict-match', async (req: Request, res: Response) => {
