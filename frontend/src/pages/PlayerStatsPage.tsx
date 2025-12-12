@@ -75,7 +75,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [currentView, setCurrentView] = useState<ViewType>('stats');
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
-  const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number; setId?: string | null }>>([]);
+  const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number | null; setId?: string | null }>>([]);
   const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
 
   useEffect(() => {
