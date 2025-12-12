@@ -75,12 +75,14 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [currentView, setCurrentView] = useState<ViewType>('stats');
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
+  const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number; setId?: string | null }>>([]);
   const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
 
   useEffect(() => {
     fetchStats();
     fetchLeaderboard();
     fetchMatchHistory();
+    fetchRatingHistory();
   }, []);
 
   const fetchStats = async () => {
@@ -116,6 +118,29 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       setMatchHistory(sortedHistory);
     } catch (error) {
       console.error('Failed to fetch set history:', error);
+    }
+  };
+
+  const fetchRatingHistory = async () => {
+    if (!user?.id) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/ratings/${user.id}/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Sort by date (oldest first) for trend calculation
+      const sortedHistory = [...response.data.history].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB;
+      });
+      setRatingHistory(sortedHistory.map((h: any) => ({
+        createdAt: h.createdAt,
+        rating: h.rating ? Number(h.rating) : null,
+        setId: h.setId,
+      })));
+    } catch (error) {
+      console.error('Failed to fetch rating history:', error);
     }
   };
 
@@ -254,6 +279,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         cumulativeNet: number; // cumulative net difference
         startValue: number; // starting cumulative net value
         sessionNumber: number;
+        rating: number | null; // UTR rating at this point
       }> = [];
 
       sessions.forEach(([, sets], sessionIndex) => {
@@ -339,6 +365,55 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             sessionLabel = `${sessionLabel} (${dateStr})`;
           }
 
+          // Find rating at the end of this session
+          // Match ratings to sets within this session, or use the most recent rating before this session
+          let sessionRating: number | null = null;
+          
+          if (ratingHistory.length > 0) {
+            // First, try to find ratings that correspond to sets in this session
+            const setIdsInSession = new Set(sets.map((s: any) => s.id));
+            let latestRatingInSession: number | null = null;
+            let latestRatingDate = 0;
+            
+            // Look for ratings that match sets in this session (iterate in reverse to get latest)
+            for (let i = ratingHistory.length - 1; i >= 0; i--) {
+              const ratingEntry = ratingHistory[i];
+              if (ratingEntry.setId && setIdsInSession.has(ratingEntry.setId)) {
+                const ratingDate = new Date(ratingEntry.createdAt).getTime();
+                if (ratingDate > latestRatingDate) {
+                  latestRatingDate = ratingDate;
+                  latestRatingInSession = ratingEntry.rating;
+                }
+              }
+            }
+            
+            if (latestRatingInSession !== null) {
+              sessionRating = latestRatingInSession;
+            } else if (firstSet?.date) {
+              // Debug: log if we're not finding ratings for sets
+              if (setIdsInSession.size > 0) {
+                console.log(`No rating found for sets in session ${sessionIndex + 1}, setIds:`, Array.from(setIdsInSession));
+              }
+              // If no rating found for sets in this session, use the most recent rating before or at this session date
+              const sessionDate = new Date(firstSet.date).getTime();
+              // Find the latest rating entry before or at this session date
+              for (let i = ratingHistory.length - 1; i >= 0; i--) {
+                const ratingDate = new Date(ratingHistory[i].createdAt).getTime();
+                if (ratingDate <= sessionDate) {
+                  sessionRating = ratingHistory[i].rating;
+                  break;
+                }
+              }
+              // If no rating found before this session, use the first available rating (oldest)
+              if (sessionRating === null && ratingHistory.length > 0) {
+                sessionRating = ratingHistory[0].rating;
+              }
+            } else {
+              // No date available, use the most recent rating
+              sessionRating = ratingHistory[ratingHistory.length - 1].rating;
+            }
+          }
+
           data.push({
             session: sessionLabel,
             gamesWon: sessionWon,
@@ -347,6 +422,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             cumulativeNet,
             startValue,
             sessionNumber: sessionIndex + 1,
+            rating: sessionRating,
           });
         }
       });
@@ -356,7 +432,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       console.error('Error processing trend data:', error);
       return [];
     }
-  }, [matchHistory, user?.id, trendFilter]);
+  }, [matchHistory, user?.id, trendFilter, ratingHistory]);
 
   if (isLoading) {
     return (
@@ -574,8 +650,20 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               textAnchor="end"
                               height={60}
                             />
-                            <YAxis stroke="#9CA3AF" style={{ fontSize: '12px' }} />
-                            <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="3 3" strokeWidth={1} />
+                            <YAxis 
+                              yAxisId="left"
+                              stroke="#9CA3AF" 
+                              style={{ fontSize: '12px' }} 
+                              label={{ value: 'Net Games', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#9CA3AF' } }}
+                            />
+                            <YAxis 
+                              yAxisId="right"
+                              orientation="right"
+                              stroke="#A855F7" 
+                              style={{ fontSize: '12px' }} 
+                              label={{ value: 'UTR Rating', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#A855F7' } }}
+                            />
+                            <ReferenceLine yAxisId="left" y={0} stroke="#6B7280" strokeDasharray="3 3" strokeWidth={1} />
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: '#1F2937',
@@ -591,12 +679,15 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 } else if (name === 'netChange') {
                                   const sign = value >= 0 ? '+' : '';
                                   return [`${sign}${value}`, 'Net Change (this session)'];
+                                } else if (name === 'rating') {
+                                  return value !== null ? [value.toFixed(2), 'UTR Rating'] : ['N/A', 'UTR Rating'];
                                 }
                                 return [value, name];
                               }}
                             />
                             {/* Baseline bar (dotted line, shows starting position) */}
                             <Bar 
+                              yAxisId="left"
                               dataKey="startValue" 
                               stackId="net"
                               fill="transparent"
@@ -607,6 +698,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                             />
                             {/* Net change bars (incremental per session, positioned cumulatively) */}
                             <Bar 
+                              yAxisId="left"
                               dataKey="netChange" 
                               stackId="net"
                               fill="#10B981"
@@ -619,6 +711,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                             </Bar>
                             {/* Dotted line connecting cumulative points */}
                             <Line 
+                              yAxisId="left"
                               type="monotone"
                               dataKey="cumulativeNet"
                               stroke="#6B7280"
@@ -627,6 +720,18 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               dot={false}
                               activeDot={false}
                               name="Cumulative Trend"
+                            />
+                            {/* UTR Rating trend line */}
+                            <Line 
+                              yAxisId="right"
+                              type="monotone"
+                              dataKey="rating"
+                              stroke="#A855F7"
+                              strokeWidth={2}
+                              dot={{ fill: '#A855F7', r: 4 }}
+                              activeDot={{ r: 6 }}
+                              name="UTR Rating"
+                              connectNulls={false}
                             />
                           </ComposedChart>
                         </ResponsiveContainer>
