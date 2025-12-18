@@ -39,7 +39,6 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [playerStats, setPlayerStats] = useState<any[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Map<string, number>>(new Map());
   const [matchPredictions, setMatchPredictions] = useState<Map<string, any>>(new Map());
-  const [allUsers, setAllUsers] = useState<Array<{ id: string; name: string; email: string; avatarUrl: string | null }>>([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedCourtForAddUser, setSelectedCourtForAddUser] = useState<{ id: string; number: number } | null>(null);
   const isProcessingRSVP = useRef(false);
@@ -55,10 +54,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     fetchSets();
     fetchPlayerStats();
     fetchPlayerRatings();
-    if (user?.isAdmin) {
-      fetchAllUsers();
-    }
-  }, [sessionId, user?.isAdmin]);
+  }, [sessionId]);
 
   const fetchPlayerStats = async () => {
     try {
@@ -394,34 +390,6 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       await fetchRSVPs(sessionId);
     } catch (error: any) {
       alert(error?.response?.data?.error || 'Failed to remove guest');
-    }
-  };
-
-  const fetchAllUsers = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAllUsers(response.data.users);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
-
-  const handleAdminAddUser = async (userId: string, status: 'yes' | 'no' | 'maybe', courtId: string | null) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_URL}/api/admin/sessions/${sessionId}/add-user`,
-        { userId, status, courtId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchRSVPs(sessionId);
-      await fetchSessionById(sessionId);
-      setShowAddUserModal(false);
-    } catch (error: any) {
-      alert(error?.response?.data?.error || 'Failed to add user to session');
     }
   };
 
