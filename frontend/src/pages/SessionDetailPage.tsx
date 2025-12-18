@@ -7,6 +7,7 @@ import CourtSelector from '../components/CourtSelector';
 import EditSessionModal from '../components/EditSessionModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddGuestModal from '../components/AddGuestModal';
+import AddUserModal from '../components/AddUserModal';
 import AddSetModal from '../components/AddSetModal';
 import EditSetModal from '../components/EditSetModal';
 import Avatar from '../components/Avatar';
@@ -38,6 +39,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [playerStats, setPlayerStats] = useState<any[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Map<string, number>>(new Map());
   const [matchPredictions, setMatchPredictions] = useState<Map<string, any>>(new Map());
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; name: string; email: string; avatarUrl: string | null }>>([]);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [selectedCourtForAddUser, setSelectedCourtForAddUser] = useState<{ id: string; number: number } | null>(null);
   const isProcessingRSVP = useRef(false);
   const hasInitialized = useRef(false);
 
@@ -51,7 +55,10 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     fetchSets();
     fetchPlayerStats();
     fetchPlayerRatings();
-  }, [sessionId]);
+    if (user?.isAdmin) {
+      fetchAllUsers();
+    }
+  }, [sessionId, user?.isAdmin]);
 
   const fetchPlayerStats = async () => {
     try {
@@ -390,6 +397,51 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
+  const fetchAllUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAllUsers(response.data.users);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
+  const handleAdminAddUser = async (userId: string, status: 'yes' | 'no' | 'maybe', courtId: string | null) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API_URL}/api/admin/sessions/${sessionId}/add-user`,
+        { userId, status, courtId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchRSVPs(sessionId);
+      await fetchSessionById(sessionId);
+      setShowAddUserModal(false);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'Failed to add user to session');
+    }
+  };
+
+  const handleAdminRemoveUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to remove this user from the session?')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API_URL}/api/admin/sessions/${sessionId}/remove-user/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchRSVPs(sessionId);
+      await fetchSessionById(sessionId);
+    } catch (error: any) {
+      alert(error?.response?.data?.error || 'Failed to remove user from session');
+    }
+  };
+
   const handleDelete = async () => {
     try {
       await deleteSession(sessionId);
@@ -700,16 +752,30 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         </p>
                         <p className="text-xs text-gray-500">spots</p>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
-                          setShowAddGuestModal(true);
-                        }}
-                        className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                        title="Add guest player"
-                      >
-                        + Guest
-                      </button>
+                      <div className="flex gap-2">
+                        {user?.isAdmin && (
+                          <button
+                            onClick={() => {
+                              setSelectedCourtForAddUser({ id: court.id, number: court.courtNumber });
+                              setShowAddUserModal(true);
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                            title="Add user (Admin)"
+                          >
+                            + User
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
+                            setShowAddGuestModal(true);
+                          }}
+                          className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                          title="Add guest player"
+                        >
+                          + Guest
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -724,7 +790,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                           {court.rsvps.map((rsvp) => (
                             <div
                               key={rsvp.id}
-                              className="flex items-center gap-2 bg-green-500/20 px-2 py-1.5 rounded-lg border border-green-500/30"
+                              className="flex items-center gap-2 bg-green-500/20 px-2 py-1.5 rounded-lg border border-green-500/30 group"
                             >
                               <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
                               <span className="text-sm font-medium text-green-400">
@@ -735,6 +801,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                                   rating={playerRatings.get(rsvp.user.id)!} 
                                   size="sm" 
                                 />
+                              )}
+                              {user?.isAdmin && (
+                                <button
+                                  onClick={() => handleAdminRemoveUser(rsvp.user.id)}
+                                  className="ml-auto text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                  title="Remove user"
+                                >
+                                  ✕
+                                </button>
                               )}
                             </div>
                           ))}
@@ -1126,6 +1201,30 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             onSuccess={() => {
               setShowEditModal(false);
               fetchSessionById(sessionId);
+            }}
+          />
+        )}
+
+        {/* Add User Modal (Admin) */}
+        {showAddUserModal && selectedCourtForAddUser && (
+          <AddUserModal
+            sessionId={sessionId}
+            courtId={selectedCourtForAddUser.id}
+            courtNumber={selectedCourtForAddUser.number}
+            courtIsFull={(() => {
+              const court = courtsInfo?.find((c) => c.id === selectedCourtForAddUser.id);
+              return (court?.availableSpots ?? 0) === 0;
+            })()}
+            onSuccess={async () => {
+              setShowAddUserModal(false);
+              setSelectedCourtForAddUser(null);
+              // Refresh RSVPs and session data to show the newly added user
+              await fetchRSVPs(sessionId);
+              await fetchSessionById(sessionId);
+            }}
+            onClose={() => {
+              setShowAddUserModal(false);
+              setSelectedCourtForAddUser(null);
             }}
           />
         )}
