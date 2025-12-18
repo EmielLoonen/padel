@@ -932,18 +932,75 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           </div>
         )}
 
-        {/* Maybe/No RSVPs & Guests Section */}
+        {/* Waitlist/Maybe/No RSVPs & Guests Section */}
         {(() => {
+          const waitlistRSVPs = rsvps?.filter((r) => r.status === 'yes' && !r.courtId) || [];
+          const waitlistGuests = currentSession?.guests?.filter((g: any) => g.status === 'yes' && !g.courtId) || [];
           const maybeRSVPs = rsvps?.filter((r) => r.status === 'maybe') || [];
           const maybeGuests = currentSession?.guests?.filter((g: any) => g.status === 'maybe') || [];
           const noRSVPs = rsvps?.filter((r) => r.status === 'no') || [];
           const noGuests = currentSession?.guests?.filter((g: any) => g.status === 'no') || [];
+          const hasWaitlist = waitlistRSVPs.length > 0 || waitlistGuests.length > 0;
           const hasMaybes = maybeRSVPs.length > 0 || maybeGuests.length > 0;
           const hasNos = noRSVPs.length > 0 || noGuests.length > 0;
           
-          return (hasMaybes || hasNos) && (
+          return (hasWaitlist || hasMaybes || hasNos) && (
             <div className="bg-dark-card rounded-2xl shadow-2xl p-6 border border-gray-800 mb-6">
-              <h2 className="text-xl font-bold text-white mb-4">Maybe & Can't Make It</h2>
+              <h2 className="text-xl font-bold text-white mb-4">Waitlist, Maybe & Can't Make It</h2>
+              
+              {/* Waitlist */}
+              {hasWaitlist && (
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-orange-400 mb-2">⏳ Waitlist ({waitlistRSVPs.length + waitlistGuests.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Registered Players */}
+                    {waitlistRSVPs.map((rsvp) => (
+                      <div
+                        key={rsvp.id}
+                        className="flex items-center gap-2 bg-orange-500/20 px-3 py-1.5 rounded-lg border border-orange-500/30 group"
+                      >
+                        <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
+                        <span className="text-sm font-medium text-orange-300">{rsvp.user.name}</span>
+                        {playerRatings.has(rsvp.user.id) && (
+                          <RatingDisplay 
+                            rating={playerRatings.get(rsvp.user.id)!} 
+                            size="sm" 
+                          />
+                        )}
+                        {user?.isAdmin && (
+                          <button
+                            onClick={() => handleAdminRemoveUser(rsvp.user.id)}
+                            className="ml-auto text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                            title="Remove from waitlist"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {/* Guests */}
+                    {waitlistGuests.map((guest: any) => (
+                      <div
+                        key={guest.id}
+                        className="flex items-center gap-2 bg-orange-500/20 px-3 py-1.5 rounded-lg border border-orange-500/30"
+                      >
+                        <Avatar src={null} name={guest.name} size="sm" />
+                        <span className="text-sm font-medium text-orange-300">{guest.name}</span>
+                        <span className="text-xs text-gray-500">(Guest)</span>
+                        {(guest.addedBy.id === user?.id || isCreator) && (
+                          <button
+                            onClick={() => handleRemoveGuest(guest.id)}
+                            className="ml-1 text-red-500 hover:text-red-400 text-xs transition-colors"
+                            title="Remove guest"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {/* Maybe */}
               {hasMaybes && (
