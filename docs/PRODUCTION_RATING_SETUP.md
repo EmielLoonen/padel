@@ -116,3 +116,4 @@ Historical rating calculation completed successfully!
 ### Script takes too long
 - For large datasets (1000+ sets), consider running during off-peak hours
 - The script processes sets sequentially to maintain chronological order
+

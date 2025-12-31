@@ -26,7 +26,7 @@ Copy the `token` from the response.
 ### Option A: Using cURL (Command Line)
 
 ```bash
-curl -X POST https://your-backend-url.onrender.com/api/ratings/calculate-historical \
+curl -X POST https://padel-coordinator-api.onrender.com/api/ratings/calculate-historical \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json"
 ```
@@ -115,4 +115,5 @@ The endpoint will process all historical sets and return a summary:
 ## Alternative: One-Time Script on Deployment
 
 If you prefer, you can also modify your deployment to run this automatically once. However, this is not recommended as it would recalculate on every deployment.
+
 

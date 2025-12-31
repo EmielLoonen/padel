@@ -44,3 +44,4 @@ ALTER TABLE "rating_history" ADD CONSTRAINT "rating_history_set_id_fkey" FOREIGN
 ALTER TABLE "match_ratings" ADD CONSTRAINT "match_ratings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "match_ratings" ADD CONSTRAINT "match_ratings_set_id_fkey" FOREIGN KEY ("set_id") REFERENCES "sets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+
