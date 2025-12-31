@@ -111,6 +111,14 @@ export default function EditSetModal({
       }
     }
 
+    // Check if we have a tied/stopped set (all players have same score)
+    if (scoredPlayers.length === 4 && scoreGroups.size === 1) {
+      const teamSize = Array.from(scoreGroups.values())[0];
+      if (teamSize === 4) {
+        return '✓ Valid tied/stopped set';
+      }
+    }
+
     return '⚠️ Teammates should have matching scores';
   };
 
@@ -139,20 +147,32 @@ export default function EditSetModal({
         scoreGroups.get(score)!.push(playerId);
       });
 
-      // For 2v2 or team games, we should have exactly 2 different scores (one per team)
-      if (scoredPlayers.length >= 4 && scoreGroups.size !== 2) {
-        setError(
-          `Set ${set.setNumber}: In a 4-player game, there should be 2 teams with matching scores (e.g., 6-6 vs 4-4). Please ensure teammates have the same score.`
-        );
-        return;
-      }
-
-      // If we have 4 players, each team should have exactly 2 players
-      if (scoredPlayers.length === 4 && scoreGroups.size === 2) {
-        const teamSizes = Array.from(scoreGroups.values()).map((team) => team.length);
-        if (!teamSizes.every((size) => size === 2)) {
+      // For 2v2 or team games with 4 players:
+      // - Allow tied scores (all players have same score, e.g., 5-5) - scoreGroups.size === 1
+      // - Allow normal scores (2 teams with different scores) - scoreGroups.size === 2
+      if (scoredPlayers.length === 4) {
+        if (scoreGroups.size === 1) {
+          // Tied/stopped set - all players have same score (e.g., 5-5)
+          // This is valid for stopped sets
+          if (scoreGroups.get(scoredPlayers[0].score)!.length !== 4) {
+            setError(
+              `Set ${set.setNumber}: All players should have the same score for a tied/stopped set.`
+            );
+            return;
+          }
+        } else if (scoreGroups.size === 2) {
+          // Normal 2v2 format - each team should have exactly 2 players
+          const teamSizes = Array.from(scoreGroups.values()).map((team) => team.length);
+          if (!teamSizes.every((size) => size === 2)) {
+            setError(
+              `Set ${set.setNumber}: Each team should have 2 players with the same score (2v2 format).`
+            );
+            return;
+          }
+        } else {
+          // Invalid: more than 2 different scores or other invalid combinations
           setError(
-            `Set ${set.setNumber}: Each team should have 2 players with the same score (2v2 format).`
+            `Set ${set.setNumber}: In a 4-player game, there should be either 2 teams with matching scores (e.g., 6-4 vs 4-6) or a tied/stopped set (e.g., 5-5). Please ensure teammates have the same score.`
           );
           return;
         }
