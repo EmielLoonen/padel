@@ -5,13 +5,118 @@ const prisma = new PrismaClient();
 
 type RSVPStatus = 'yes' | 'no' | 'maybe';
 
+interface OverlapInfo {
+  sessionId: string;
+  sessionName: string;
+  date: Date;
+  courtNumber: number;
+  startTime: string;
+  endTime: string;
+}
+
+// Helper function to parse time string (HH:MM) and add minutes
+function addMinutesToTime(timeStr: string, minutes: number): string {
+  const [hours, mins] = timeStr.split(':').map(Number);
+  const totalMinutes = hours * 60 + mins + minutes;
+  const newHours = Math.floor(totalMinutes / 60);
+  const newMins = totalMinutes % 60;
+  return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
+}
+
+// Helper function to check if two time ranges overlap
+function timeRangesOverlap(
+  start1: string,
+  end1: string,
+  start2: string,
+  end2: string
+): boolean {
+  // Convert time strings to minutes for comparison
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const start1Min = toMinutes(start1);
+  const end1Min = toMinutes(end1);
+  const start2Min = toMinutes(start2);
+  const end2Min = toMinutes(end2);
+
+  // Two ranges overlap if: start1 < end2 AND end1 > start2
+  return start1Min < end2Min && end1Min > start2Min;
+}
+
+// Check for time overlaps with existing RSVPs
+async function checkTimeOverlaps(
+  userId: string,
+  sessionDate: Date,
+  courtStartTime: string,
+  courtDuration: number,
+  excludeSessionId?: string
+): Promise<OverlapInfo[]> {
+  // Normalize session date to start of day for comparison
+  const sessionDateStart = new Date(sessionDate);
+  sessionDateStart.setHours(0, 0, 0, 0);
+  
+  const sessionDateEnd = new Date(sessionDateStart);
+  sessionDateEnd.setDate(sessionDateEnd.getDate() + 1);
+
+  // Get all sessions where user has RSVP'd "yes" on the same date
+  const existingRSVPs = await prisma.rSVP.findMany({
+    where: {
+      userId,
+      status: 'yes',
+      courtId: { not: null }, // Only check RSVPs with assigned courts
+      session: {
+        date: {
+          gte: sessionDateStart,
+          lt: sessionDateEnd,
+        },
+        id: excludeSessionId ? { not: excludeSessionId } : undefined,
+      },
+    },
+    include: {
+      session: {
+        include: {
+          courts: true,
+        },
+      },
+      court: true,
+    },
+  });
+
+  const overlaps: OverlapInfo[] = [];
+  const newEndTime = addMinutesToTime(courtStartTime, courtDuration);
+
+  for (const rsvp of existingRSVPs) {
+    if (!rsvp.court) continue;
+
+    const existingStartTime = rsvp.court.startTime;
+    const existingDuration = rsvp.court.duration;
+    const existingEndTime = addMinutesToTime(existingStartTime, existingDuration);
+
+    // Check if time ranges overlap
+    if (timeRangesOverlap(courtStartTime, newEndTime, existingStartTime, existingEndTime)) {
+      overlaps.push({
+        sessionId: rsvp.session.id,
+        sessionName: rsvp.session.venueName,
+        date: rsvp.session.date,
+        courtNumber: rsvp.court.courtNumber,
+        startTime: existingStartTime,
+        endTime: existingEndTime,
+      });
+    }
+  }
+
+  return overlaps;
+}
+
 export const rsvpService = {
   async createOrUpdateRSVP(
     sessionId: string,
     userId: string,
     status: RSVPStatus,
     courtId?: string | null
-  ) {
+  ): Promise<{ rsvp: any; overlaps: OverlapInfo[] }> {
     // Check if session and court exist
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
@@ -35,29 +140,40 @@ export const rsvpService = {
     const previousCourtId = existingRSVP?.courtId || null;
     const isCancelling = status === 'no' && previousCourtId !== null;
 
-    // If status is "yes" and courtId is provided, validate it
+    let overlaps: OverlapInfo[] = [];
+
+    // If status is "yes" and courtId is provided, validate it and check for overlaps
     if (status === 'yes' && courtId) {
       const court = session.courts.find((c) => c.id === courtId);
       if (!court) {
         throw new Error('Court not found');
       }
 
-            // Check if court is full (excluding current user if they're already on this court)
-            const courtRSVPs = await prisma.rSVP.count({
-              where: {
-                courtId: courtId,
-                status: 'yes',
-                userId: { not: userId }, // Exclude current user from count
-              },
-            });
+      // Check if court is full (excluding current user if they're already on this court)
+      const courtRSVPs = await prisma.rSVP.count({
+        where: {
+          courtId: courtId,
+          status: 'yes',
+          userId: { not: userId }, // Exclude current user from count
+        },
+      });
 
-            const courtGuests = await prisma.guest.count({
-              where: { courtId: courtId },
-            });
+      const courtGuests = await prisma.guest.count({
+        where: { courtId: courtId },
+      });
 
-            if (courtRSVPs + courtGuests >= court.maxPlayers) {
-              throw new Error('Court is full');
-            }
+      if (courtRSVPs + courtGuests >= court.maxPlayers) {
+        throw new Error('Court is full');
+      }
+
+      // Check for time overlaps with existing RSVPs
+      overlaps = await checkTimeOverlaps(
+        userId,
+        session.date,
+        court.startTime,
+        court.duration,
+        sessionId // Exclude current session from overlap check
+      );
     }
 
     // Upsert RSVP (create or update)
@@ -167,7 +283,7 @@ export const rsvpService = {
       );
     }
 
-    return rsvp;
+    return { rsvp, overlaps };
   },
 
   async getRSVPsForSession(sessionId: string) {

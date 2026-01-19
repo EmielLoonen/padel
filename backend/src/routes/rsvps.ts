@@ -38,14 +38,14 @@ router.post(
       }
 
       const { status, courtId } = req.body;
-      const rsvp = await rsvpService.createOrUpdateRSVP(
+      const result = await rsvpService.createOrUpdateRSVP(
         req.params.sessionId,
         req.user.userId,
         status,
         courtId
       );
 
-      res.json({ rsvp });
+      res.json({ rsvp: result.rsvp, overlaps: result.overlaps });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Session not found' || error.message === 'Court not found') {

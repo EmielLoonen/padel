@@ -238,7 +238,7 @@ interface RSVPState {
   courtsInfo: Court[] | null;
   isLoadingRSVP: boolean;
   fetchRSVPs: (sessionId: string) => Promise<void>;
-  createOrUpdateRSVP: (sessionId: string, status: 'yes' | 'no' | 'maybe', courtId?: string | null) => Promise<void>;
+  createOrUpdateRSVP: (sessionId: string, status: 'yes' | 'no' | 'maybe', courtId?: string | null) => Promise<{ overlaps: Array<{ sessionId: string; sessionName: string; date: string; courtNumber: number; startTime: string; endTime: string }> }>;
 }
 
 // Export types for components
@@ -274,23 +274,28 @@ export const useRSVPStore = create<RSVPState>((set) => ({
     set({ isLoadingRSVP: true });
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
+      const response = await axios.post(
         `${API_URL}/api/rsvps/session/${sessionId}`,
         { status, courtId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       // Refresh RSVPs after update
-      const response = await axios.get(`${API_URL}/api/rsvps/session/${sessionId}`, {
+      const refreshResponse = await axios.get(`${API_URL}/api/rsvps/session/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       set({
-        rsvps: response.data.rsvps,
-        rsvpSummary: response.data.summary,
-        courtsInfo: response.data.courtsInfo,
+        rsvps: refreshResponse.data.rsvps,
+        rsvpSummary: refreshResponse.data.summary,
+        courtsInfo: refreshResponse.data.courtsInfo,
         isLoadingRSVP: false,
       });
+
+      // Return overlaps if present
+      return {
+        overlaps: response.data.overlaps || [],
+      };
     } catch (error) {
       console.error('Failed to update RSVP:', error);
       set({ isLoadingRSVP: false });

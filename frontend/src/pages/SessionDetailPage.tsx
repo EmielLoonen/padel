@@ -12,6 +12,7 @@ import AddSetModal from '../components/AddSetModal';
 import EditSetModal from '../components/EditSetModal';
 import Avatar from '../components/Avatar';
 import RatingDisplay from '../components/RatingDisplay';
+import OverlapWarningModal from '../components/OverlapWarningModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -41,6 +42,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [matchPredictions, setMatchPredictions] = useState<Map<string, any>>(new Map());
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedCourtForAddUser, setSelectedCourtForAddUser] = useState<{ id: string; number: number } | null>(null);
+  const [showOverlapWarning, setShowOverlapWarning] = useState(false);
+  const [overlaps, setOverlaps] = useState<Array<{ sessionId: string; sessionName: string; date: string; courtNumber: number; startTime: string; endTime: string }>>([]);
+  const [pendingRSVP, setPendingRSVP] = useState<{ status: 'yes' | 'no' | 'maybe'; courtId: string | null } | null>(null);
   const isProcessingRSVP = useRef(false);
   const hasInitialized = useRef(false);
 
@@ -293,7 +297,19 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           if (availableCourt) {
             // Auto-select first available court and submit immediately
             try {
-              await createOrUpdateRSVP(sessionId, status, availableCourt.id);
+              const result = await createOrUpdateRSVP(sessionId, status, availableCourt.id);
+              
+              // Check for overlaps
+              if (result?.overlaps && result.overlaps.length > 0) {
+                // Store overlaps and show warning modal
+                setOverlaps(result.overlaps);
+                setPendingRSVP({ status, courtId: availableCourt.id });
+                setShowOverlapWarning(true);
+                // Don't update status yet - wait for user confirmation
+                setRSVPStatus(previousStatus);
+                return;
+              }
+              
               setSelectedCourtId(availableCourt.id);
               await fetchSessionById(sessionId);
               await fetchRSVPs(sessionId);
@@ -349,10 +365,22 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     setSelectedCourtId(courtId);
     
     // Submit RSVP with court selection
-    if (rsvpStatus === 'yes') {
+    if (rsvpStatus === 'yes' && courtId) {
       isProcessingRSVP.current = true;
       try {
-        await createOrUpdateRSVP(sessionId, rsvpStatus, courtId);
+        const result = await createOrUpdateRSVP(sessionId, rsvpStatus, courtId);
+        
+        // Check for overlaps
+        if (result?.overlaps && result.overlaps.length > 0) {
+          // Store overlaps and show warning modal
+          setOverlaps(result.overlaps);
+          setPendingRSVP({ status: rsvpStatus, courtId });
+          setShowOverlapWarning(true);
+          // Revert court selection until user confirms
+          setSelectedCourtId(null);
+          return;
+        }
+        
         await fetchSessionById(sessionId); // Refresh to get updated courts
       } catch (error: any) {
         const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
@@ -362,6 +390,56 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       } finally {
         isProcessingRSVP.current = false;
       }
+    }
+  };
+
+  const handleOverlapProceed = async () => {
+    if (!pendingRSVP) return;
+    
+    setShowOverlapWarning(false);
+    isProcessingRSVP.current = true;
+    
+    try {
+      // RSVP was already created, just refresh the data
+      setSelectedCourtId(pendingRSVP.courtId);
+      setRSVPStatus(pendingRSVP.status);
+      await fetchSessionById(sessionId);
+      await fetchRSVPs(sessionId);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || 'Failed to refresh session data';
+      alert(errorMessage);
+    } finally {
+      isProcessingRSVP.current = false;
+      setPendingRSVP(null);
+      setOverlaps([]);
+    }
+  };
+
+  const handleOverlapCancel = async () => {
+    if (!pendingRSVP) return;
+    
+    setShowOverlapWarning(false);
+    isProcessingRSVP.current = true;
+    
+    try {
+      // Delete the RSVP that was just created
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/rsvps/session/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      // Refresh data
+      await fetchSessionById(sessionId);
+      await fetchRSVPs(sessionId);
+      setRSVPStatus(null);
+      setSelectedCourtId(null);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || 'Failed to cancel RSVP';
+      alert(errorMessage);
+    } finally {
+      isProcessingRSVP.current = false;
+      setPendingRSVP(null);
+      setOverlaps([]);
     }
   };
 
@@ -1327,6 +1405,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               setShowEditSetModal(false);
               setSelectedSetForEdit(null);
             }}
+          />
+        )}
+
+        {/* Overlap Warning Modal */}
+        {showOverlapWarning && overlaps.length > 0 && (
+          <OverlapWarningModal
+            overlaps={overlaps}
+            onProceed={handleOverlapProceed}
+            onCancel={handleOverlapCancel}
           />
         )}
 
