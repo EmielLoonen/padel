@@ -50,7 +50,7 @@ export default function OverlapWarningModal({
           </p>
 
           <div className="space-y-3">
-            {overlaps.map((overlap, index) => (
+            {overlaps.map((overlap) => (
               <div
                 key={overlap.sessionId}
                 className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg"
