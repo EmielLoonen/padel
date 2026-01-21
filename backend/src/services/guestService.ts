@@ -66,9 +66,19 @@ export const guestService = {
       throw new Error('Guest not found');
     }
 
-    // Only the person who added the guest or the session creator can remove them
-    if (guest.addedById !== userId && guest.session.createdById !== userId) {
-      throw new Error('Only the person who added the guest or the session creator can remove them');
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+
+    // Only the person who added the guest, the session creator, or an admin can remove them
+    if (
+      guest.addedById !== userId &&
+      guest.session.createdById !== userId &&
+      !requestingUser?.isAdmin
+    ) {
+      throw new Error('Only the person who added the guest, the session creator, or an admin can remove them');
     }
 
     await prisma.guest.delete({
@@ -95,9 +105,19 @@ export const guestService = {
       throw new Error('Guest not found');
     }
 
-    // Only the person who added the guest or the session creator can update them
-    if (guest.addedById !== userId && guest.session.createdById !== userId) {
-      throw new Error('Only the person who added the guest or the session creator can update them');
+    // Fetch requesting user to check admin status
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+
+    // Only the person who added the guest, the session creator, or an admin can update them
+    if (
+      guest.addedById !== userId &&
+      guest.session.createdById !== userId &&
+      !requestingUser?.isAdmin
+    ) {
+      throw new Error('Only the person who added the guest, the session creator, or an admin can update them');
     }
 
     // If status is 'yes' and courtId is provided, check if court has space
