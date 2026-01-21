@@ -8,6 +8,6 @@ BEGIN
         WHERE table_name = 'users' 
         AND column_name = 'can_create_sessions'
     ) THEN
-        ALTER TABLE "users" ADD COLUMN "can_create_sessions" BOOLEAN NOT NULL DEFAULT true;
+        ALTER TABLE "users" ADD COLUMN "can_create_sessions" BOOLEAN NOT NULL DEFAULT false;
     END IF;
 END $$;
