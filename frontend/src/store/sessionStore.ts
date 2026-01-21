@@ -17,6 +17,8 @@ interface Court {
       id: string;
       name: string;
       avatarUrl?: string;
+      canCreateSessions?: boolean;
+      isAdmin?: boolean;
     };
   }>;
   guests?: Array<{
@@ -56,6 +58,8 @@ interface Session {
       id: string;
       name: string;
       avatarUrl?: string;
+      canCreateSessions?: boolean;
+      isAdmin?: boolean;
     };
   }>;
   guests?: Array<{
@@ -227,6 +231,8 @@ interface RSVP {
   user: {
     id: string;
     name: string;
+    canCreateSessions?: boolean;
+    isAdmin?: boolean;
     email: string;
     avatarUrl?: string;
   };
