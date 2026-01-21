@@ -35,10 +35,49 @@ const requireAdmin = async (req: any, res: Response, next: any) => {
   }
 };
 
-// Get all users (admin only)
-router.get('/users', requireAdmin, async (req: Request, res: Response) => {
+// Middleware to check if user is admin or Full Seat Player (can add Limited Seat Players to sessions)
+const requireAdminOrCanCreateSessions = async (req: any, res: Response, next: any) => {
   try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true, canCreateSessions: true },
+    });
+
+    if (!user || (!user.isAdmin && !user.canCreateSessions)) {
+      return res.status(403).json({ error: 'Only admins and Full Seat Players can add users to sessions' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Permission check error:', error);
+    res.status(500).json({ error: 'Failed to verify permissions' });
+  }
+};
+
+// Get all users (admin or Full Seat Players can fetch users to add to sessions)
+router.get('/users', requireAdminOrCanCreateSessions, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Check if user is admin
+    const requestingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+
+    // Admins can see all users, Full Seat Players can only see Limited Seat Players
     const users = await prisma.user.findMany({
+      where: requestingUser?.isAdmin
+        ? {} // Admin sees all users
+        : { canCreateSessions: false }, // Full Seat Players only see Limited Seat Players
       select: {
         id: true,
         email: true,
@@ -46,6 +85,7 @@ router.get('/users', requireAdmin, async (req: Request, res: Response) => {
         phone: true,
         avatarUrl: true,
         isAdmin: true,
+        canCreateSessions: true,
         createdAt: true,
       },
       orderBy: {
@@ -109,10 +149,10 @@ router.post(
   }
 );
 
-// Add user to session (admin only)
+// Add user to session (admin or Full Seat Players can add Limited Seat Players)
 router.post(
   '/sessions/:sessionId/add-user',
-  requireAdmin,
+  requireAdminOrCanCreateSessions,
   [
     body('userId').isString().withMessage('User ID is required'),
     body('status').isIn(['yes', 'no', 'maybe']).withMessage('Status must be yes, no, or maybe'),
@@ -151,13 +191,43 @@ router.post(
   }
 );
 
-// Remove user from session (admin only)
+// Remove user from session (admin can remove anyone, Full Seat Players can remove Limited Seat Players)
 router.delete(
   '/sessions/:sessionId/remove-user/:userId',
-  requireAdmin,
+  requireAdminOrCanCreateSessions,
   async (req: Request, res: Response) => {
     try {
       const { sessionId, userId } = req.params;
+      const requestingUserId = req.user?.userId;
+
+      if (!requestingUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Check if requesting user is admin
+      const requestingUser = await prisma.user.findUnique({
+        where: { id: requestingUserId },
+        select: { isAdmin: true },
+      });
+
+      // If not admin, check if the user being removed is a Limited Seat Player
+      if (!requestingUser?.isAdmin) {
+        const userToRemove = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { canCreateSessions: true, isAdmin: true },
+        });
+
+        if (!userToRemove) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Full Seat Players can only remove Limited Seat Players
+        if (userToRemove.isAdmin || userToRemove.canCreateSessions) {
+          return res.status(403).json({ 
+            error: 'You can only remove Limited Seat Players from sessions' 
+          });
+        }
+      }
 
       await rsvpService.deleteRSVP(sessionId, userId);
 
@@ -168,6 +238,50 @@ router.delete(
       }
       console.error('Remove user from session error:', error);
       res.status(500).json({ error: 'Failed to remove user from session' });
+    }
+  }
+);
+
+// Update user's canCreateSessions permission (admin only)
+router.patch(
+  '/users/:userId/can-create-sessions',
+  requireAdmin,
+  [
+    body('canCreateSessions').isBoolean().withMessage('canCreateSessions must be a boolean'),
+  ],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { userId } = req.params;
+      const { canCreateSessions } = req.body;
+
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Update canCreateSessions
+      await prisma.user.update({
+        where: { id: userId },
+        data: { canCreateSessions },
+      });
+
+      res.json({
+        success: true,
+        message: `${user.name} is now a ${canCreateSessions ? 'Full Seat Player' : 'Limited Seat Player'}`,
+      });
+    } catch (error) {
+      console.error('Update canCreateSessions error:', error);
+      res.status(500).json({ error: 'Failed to update session creation permission' });
     }
   }
 );

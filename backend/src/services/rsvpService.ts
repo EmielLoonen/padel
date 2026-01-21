@@ -115,7 +115,8 @@ export const rsvpService = {
     sessionId: string,
     userId: string,
     status: RSVPStatus,
-    courtId?: string | null
+    courtId?: string | null,
+    skipPermissionCheck?: boolean
   ): Promise<{ rsvp: any; overlaps: OverlapInfo[] }> {
     // Check if session and court exist
     const session = await prisma.session.findUnique({
@@ -201,6 +202,8 @@ export const rsvpService = {
             name: true,
             email: true,
             avatarUrl: true,
+            canCreateSessions: true,
+            isAdmin: true,
           },
         },
         court: true,
@@ -296,6 +299,8 @@ export const rsvpService = {
             name: true,
             email: true,
             avatarUrl: true,
+            canCreateSessions: true,
+            isAdmin: true,
           },
         },
         court: true,

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { notificationService } from './notificationService';
 
 const prisma = new PrismaClient();
 
@@ -33,13 +34,14 @@ export const authService = {
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    // Create user
+    // Create user (defaults to Limited Seat Player)
     const user = await prisma.user.create({
       data: {
         email: data.email,
         passwordHash,
         name: data.name,
         phone: data.phone,
+        canCreateSessions: false, // New users are Limited Seat Players by default
       },
       select: {
         id: true,
@@ -48,6 +50,7 @@ export const authService = {
         phone: true,
         avatarUrl: true,
         isAdmin: true,
+        canCreateSessions: true,
         createdAt: true,
       },
     });
@@ -56,6 +59,14 @@ export const authService = {
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
+
+    // Notify admins about new user signup (defaults to Limited Seat Player)
+    try {
+      await notificationService.notifyNewUserSignup(user.id, user.name, user.email);
+    } catch (error) {
+      // Don't fail signup if notification fails
+      console.error('Failed to send new user notification:', error);
+    }
 
     return { user, token };
   },
@@ -100,6 +111,7 @@ export const authService = {
         phone: user.phone,
         avatarUrl: user.avatarUrl,
         isAdmin: user.isAdmin,
+        canCreateSessions: user.canCreateSessions,
       },
       token,
       previousLastLogin: previousLastLogin ? previousLastLogin.toISOString() : null, // Include previous login time for frontend
@@ -116,6 +128,7 @@ export const authService = {
         phone: true,
         avatarUrl: true,
         isAdmin: true,
+        canCreateSessions: true,
         createdAt: true,
       },
     });

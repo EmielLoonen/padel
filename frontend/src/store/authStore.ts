@@ -10,6 +10,7 @@ interface User {
   phone?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
+  canCreateSessions?: boolean;
 }
 
 interface AuthState {

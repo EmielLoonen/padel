@@ -601,8 +601,18 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
           <h2 className="text-2xl font-bold text-white mb-4">Your RSVP</h2>
 
-          {/* Check if all courts are full or if user is already on a court */}
-          {(() => {
+          {/* Check if user has permission to RSVP */}
+          {(!user?.isAdmin && user?.canCreateSessions === false) ? (
+            <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg">
+              <p className="text-yellow-400 font-semibold mb-2">⚠️ Limited Seat Player</p>
+              <p className="text-gray-300 text-sm">
+                As a Limited Seat Player, you cannot create events, RSVP to sessions, or add guest players. Please contact an admin or a Full Seat Player to be added to a session.
+              </p>
+            </div>
+          ) : (
+            <>
+            {/* Check if all courts are full or if user is already on a court */}
+            {(() => {
             const allCourtsFull = courtsInfo && courtsInfo.length > 0 && 
               courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
             const userHasCourt = selectedCourtId !== null;
@@ -760,6 +770,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               </div>
             );
           })()}
+          </>
+          )}
         </div>
 
         {/* Courts Overview */}
@@ -799,28 +811,30 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         <p className="text-xs text-gray-500">spots</p>
                       </div>
                       <div className="flex gap-2">
-                        {user?.isAdmin && (
+                        {(user?.isAdmin || user?.canCreateSessions !== false) && (
                           <button
                             onClick={() => {
                               setSelectedCourtForAddUser({ id: court.id, number: court.courtNumber });
                               setShowAddUserModal(true);
                             }}
                             className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                            title="Add user (Admin)"
+                            title="Add user"
                           >
                             + User
                           </button>
                         )}
-                        <button
-                          onClick={() => {
-                            setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
-                            setShowAddGuestModal(true);
-                          }}
-                          className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                          title="Add guest player"
-                        >
-                          + Guest
-                        </button>
+                        {(user?.isAdmin || user?.canCreateSessions !== false) && (
+                          <button
+                            onClick={() => {
+                              setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
+                              setShowAddGuestModal(true);
+                            }}
+                            className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+                            title="Add guest player"
+                          >
+                            + Guest
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -848,7 +862,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                                   size="sm" 
                                 />
                               )}
-                              {user?.isAdmin && (
+                              {(user?.isAdmin || (user?.canCreateSessions !== false && (!rsvp.user.canCreateSessions && !rsvp.user.isAdmin))) && (
                                 <button
                                   onClick={() => handleAdminRemoveUser(rsvp.user.id)}
                                   className="ml-auto text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
@@ -1045,7 +1059,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                             size="sm" 
                           />
                         )}
-                        {user?.isAdmin && (
+                        {(user?.isAdmin || (user?.canCreateSessions !== false && (!rsvp.user.canCreateSessions && !rsvp.user.isAdmin))) && (
                           <button
                             onClick={() => handleAdminRemoveUser(rsvp.user.id)}
                             className="ml-auto text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
@@ -1308,7 +1322,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           />
         )}
 
-        {/* Add User Modal (Admin) */}
+        {/* Add User Modal */}
         {showAddUserModal && selectedCourtForAddUser && (
           <AddUserModal
             sessionId={sessionId}

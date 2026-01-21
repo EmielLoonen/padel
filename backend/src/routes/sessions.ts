@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import { body, validationResult, query } from 'express-validator';
 import { sessionService } from '../services/sessionService';
 import { authenticateToken } from '../middleware/auth';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 // All session routes require authentication
@@ -67,6 +69,21 @@ router.post(
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Check if user has permission to create sessions
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { canCreateSessions: true, isAdmin: true },
+      });
+
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      // Only admins and Full Seat Players can create sessions
+      if (!user.isAdmin && !user.canCreateSessions) {
+        return res.status(403).json({ error: 'As a Limited Seat Player, you cannot create sessions. Please contact an admin to upgrade your account.' });
       }
 
       const { date, time, venueName, venueAddress, totalCost, notes, courts } = req.body;

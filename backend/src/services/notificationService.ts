@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-type NotificationType = 'session_created' | 'rsvp_update' | 'session_reminder' | 'session_updated' | 'booking_update';
+type NotificationType = 'session_created' | 'rsvp_update' | 'session_reminder' | 'session_updated' | 'booking_update' | 'user_signup';
 
 interface CreateNotificationData {
   userId: string;
@@ -263,6 +263,27 @@ export const notificationService = {
         });
       }
     }
+  },
+
+  async notifyNewUserSignup(userId: string, userName: string, userEmail: string) {
+    // Get all admin users to notify them
+    const admins = await prisma.user.findMany({
+      where: {
+        isAdmin: true,
+      },
+      select: { id: true },
+    });
+
+    const notifications = admins.map((admin) =>
+      this.createNotification({
+        userId: admin.id,
+        type: 'user_signup',
+        title: '👤 New User Signup',
+        message: `${userName} (${userEmail}) has created an account. They are set as a Limited Seat Player by default.`,
+      })
+    );
+
+    await Promise.all(notifications);
   },
 };
 

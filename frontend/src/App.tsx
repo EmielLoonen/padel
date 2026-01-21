@@ -298,16 +298,18 @@ function App() {
           </div>
         </div>
 
-        {/* Create Session Button */}
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="w-full bg-gradient-to-r from-padel-orange to-orange-500 text-white py-3 sm:py-5 px-6 sm:px-8 rounded-xl sm:rounded-2xl hover:from-orange-600 hover:to-orange-600 transition-all font-bold text-base sm:text-xl mb-4 sm:mb-8 shadow-2xl hover:shadow-orange-500/50 active:scale-95 sm:hover:scale-[1.02] transform"
-        >
-          <span className="flex items-center justify-center gap-2 sm:gap-3">
-            <span className="text-xl sm:text-2xl">+</span>
-            Create New Session
-          </span>
-        </button>
+        {/* Create Session Button - Only show if user has permission */}
+        {(user?.isAdmin || user?.canCreateSessions !== false) && (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="w-full bg-gradient-to-r from-padel-orange to-orange-500 text-white py-3 sm:py-5 px-6 sm:px-8 rounded-xl sm:rounded-2xl hover:from-orange-600 hover:to-orange-600 transition-all font-bold text-base sm:text-xl mb-4 sm:mb-8 shadow-2xl hover:shadow-orange-500/50 active:scale-95 sm:hover:scale-[1.02] transform"
+          >
+            <span className="flex items-center justify-center gap-2 sm:gap-3">
+              <span className="text-xl sm:text-2xl">+</span>
+              Create New Session
+            </span>
+          </button>
+        )}
 
         {/* Sessions List */}
         <div className="bg-dark-card rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-8 border border-gray-800">

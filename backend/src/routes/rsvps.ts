@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { rsvpService } from '../services/rsvpService';
 import { authenticateToken } from '../middleware/auth';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 // All RSVP routes require authentication
@@ -35,6 +37,23 @@ router.post(
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Check if user has permission to RSVP (canCreateSessions or isAdmin)
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { canCreateSessions: true, isAdmin: true },
+      });
+
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      // Limited Seat Players cannot RSVP (admins and Full Seat Players can RSVP)
+      if (!user.isAdmin && !user.canCreateSessions) {
+        return res.status(403).json({ 
+          error: 'As a Limited Seat Player, you cannot RSVP to sessions. Please contact an admin or a Full Seat Player to be added to a session.' 
+        });
       }
 
       const { status, courtId } = req.body;

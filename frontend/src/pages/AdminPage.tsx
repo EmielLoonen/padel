@@ -12,6 +12,7 @@ interface User {
   phone: string | null;
   avatarUrl: string | null;
   isAdmin: boolean;
+  canCreateSessions: boolean;
   createdAt: string;
 }
 
@@ -26,6 +27,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [updatingPermissions, setUpdatingPermissions] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -77,6 +79,38 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       setError(err.response?.data?.error || 'Failed to reset password');
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleToggleCanCreateSessions = async (userId: string, currentValue: boolean) => {
+    setUpdatingPermissions((prev) => new Set(prev).add(userId));
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await axios.patch(
+        `${API_URL}/api/admin/users/${userId}/can-create-sessions`,
+        { canCreateSessions: !currentValue },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setSuccess(response.data.message);
+      // Update the user in the list
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.id === userId ? { ...u, canCreateSessions: !currentValue } : u
+        )
+      );
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update permission');
+    } finally {
+      setUpdatingPermissions((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
     }
   };
 
@@ -158,17 +192,35 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => {
-                      setSelectedUser(u);
-                      setNewPassword('');
-                      setError(null);
-                      setSuccess(null);
-                    }}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
-                  >
-                    Reset Password
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {/* Player Type Toggle */}
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer" title={u.canCreateSessions ? 'Full Seat Player - Can create events and RSVP' : 'Limited Seat Player - Cannot create events or RSVP'}>
+                        <input
+                          type="checkbox"
+                          checked={u.canCreateSessions}
+                          onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions)}
+                          disabled={updatingPermissions.has(u.id) || u.isAdmin}
+                          className="w-5 h-5 rounded border-gray-600 bg-dark-elevated text-padel-green focus:ring-2 focus:ring-padel-green focus:ring-offset-2 focus:ring-offset-dark-card cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
+                          {u.canCreateSessions ? 'Full Seat Player' : 'Limited Seat Player'}
+                        </span>
+                      </label>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setNewPassword('');
+                        setError(null);
+                        setSuccess(null);
+                      }}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
+                    >
+                      Reset Password
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
