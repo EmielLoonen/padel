@@ -380,8 +380,11 @@ function App() {
                       day: 'numeric'
                     })}
                     {(() => {
-                      const totalCourtCost = session.courts?.reduce((sum, court) => sum + (court.cost || 0), 0) || 0;
-                      return totalCourtCost > 0 ? <span className="ml-2">• €{totalCourtCost}</span> : null;
+                      const totalCourtCost = session.courts?.reduce((sum, court) => {
+                        const cost = court.cost ? Number(court.cost) : 0;
+                        return sum + cost;
+                      }, 0) || 0;
+                      return totalCourtCost > 0 ? <span className="ml-2">• €{totalCourtCost.toFixed(2)}</span> : null;
                     })()}
                   </p>
 
