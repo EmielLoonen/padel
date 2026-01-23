@@ -198,13 +198,13 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                       <label className="flex items-center gap-2 cursor-pointer" title={u.canCreateSessions ? 'Full Seat Player - Can create events and RSVP' : 'Limited Seat Player - Cannot create events or RSVP'}>
                         <input
                           type="checkbox"
-                          checked={u.canCreateSessions}
-                          onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions)}
+                          checked={u.canCreateSessions === true}
+                          onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions === true)}
                           disabled={updatingPermissions.has(u.id) || u.isAdmin}
                           className="w-5 h-5 rounded border-gray-600 bg-dark-elevated text-padel-green focus:ring-2 focus:ring-padel-green focus:ring-offset-2 focus:ring-offset-dark-card cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
-                          {u.canCreateSessions ? 'Full Seat Player' : 'Limited Seat Player'}
+                          {u.canCreateSessions === true ? 'Full Seat Player' : 'Limited Seat Player'}
                         </span>
                       </label>
                     </div>
