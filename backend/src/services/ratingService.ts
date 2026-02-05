@@ -224,12 +224,15 @@ export async function calculateMatchPrediction(
 
 /**
  * Calculate match rating for a player in a doubles match
+ * @param playerRatingAtMatchTime - The player's rating BEFORE this match was played
  */
 async function calculateMatchRating(
   userId: string,
-  set: SetWithScores
+  set: SetWithScores,
+  playerRatingAtMatchTime: number,
+  opponentRatingsAtMatchTime?: Map<string, number>
 ): Promise<MatchRatingData | null> {
-  const playerRating = await getPlayerRating(userId);
+  const playerRating = playerRatingAtMatchTime;
 
   // Find player's score
   const playerScore = set.scores.find((s) => s.userId === userId);
@@ -268,7 +271,8 @@ async function calculateMatchRating(
   const teammateScore = playerTeam.find((s) => s.userId !== userId);
   let teammateRating: number;
   if (teammateScore?.userId) {
-    teammateRating = await getPlayerRating(teammateScore.userId);
+    // Use historical rating if provided, otherwise get current rating
+    teammateRating = opponentRatingsAtMatchTime?.get(teammateScore.userId) ?? await getPlayerRating(teammateScore.userId);
   } else {
     // Guest player - use temporary rating
     teammateRating = getGuestRating(set.scores, userId);
@@ -280,7 +284,9 @@ async function calculateMatchRating(
   const opponentRatings: number[] = [];
   for (const opponentScore of opponentTeam) {
     if (opponentScore.userId) {
-      opponentRatings.push(await getPlayerRating(opponentScore.userId));
+      // Use historical rating if provided, otherwise get current rating
+      const opponentRating = opponentRatingsAtMatchTime?.get(opponentScore.userId) ?? await getPlayerRating(opponentScore.userId);
+      opponentRatings.push(opponentRating);
     } else {
       // Guest player - use temporary rating
       opponentRatings.push(getGuestRating(set.scores, userId));
@@ -331,9 +337,11 @@ async function calculateMatchRating(
 /**
  * Calculate overall UTR rating for a player
  * Uses weighted average of up to 30 most recent matches from past 12 months
+ * 
+ * IMPORTANT: Processes matches chronologically (oldest first) to use correct historical ratings
  */
 export async function calculatePlayerRating(userId: string): Promise<number> {
-  // Get all sets where player participated, ordered by date
+  // Get all sets where player participated, ordered by date (OLDEST FIRST for chronological processing)
   const userScores = await prisma.setScore.findMany({
     where: {
       userId,
@@ -363,7 +371,7 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
     },
     orderBy: {
       set: {
-        createdAt: 'desc',
+        createdAt: 'asc', // OLDEST FIRST - critical for correct historical calculation
       },
     },
     take: MAX_MATCHES_TO_CONSIDER,
@@ -373,10 +381,16 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
     return DEFAULT_RATING;
   }
 
-  // Calculate match ratings for each set
+  // Track this player's rating as we process matches chronologically
+  // Start with DEFAULT_RATING for the first match (chronologically)
+  let playerRatingBeforeMatch = DEFAULT_RATING;
+
+  // Process matches chronologically and calculate match ratings
   const matchRatings: Array<MatchRatingData & { createdAt: Date }> = [];
 
   for (const userScore of userScores) {
+    const setDate = userScore.set.createdAt;
+    
     // Convert Prisma Decimal to number for the set
     const setWithConvertedRating: SetWithScores = {
       ...userScore.set,
@@ -390,12 +404,24 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
         } : null,
       })),
     };
-    const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating);
+
+    // Calculate match rating using the player's rating BEFORE this match
+    // For opponents, we use their current ratings (approximation, but better than using player's current rating)
+    const matchRatingData = await calculateMatchRating(
+      userId,
+      setWithConvertedRating,
+      playerRatingBeforeMatch
+    );
+
     if (matchRatingData) {
       matchRatings.push({
         ...matchRatingData,
-        createdAt: userScore.set.createdAt,
+        createdAt: setDate,
       });
+
+      // Update player's rating for the next match
+      // Use the match rating as the new baseline for subsequent matches
+      playerRatingBeforeMatch = matchRatingData.matchRating;
     }
   }
 
@@ -403,11 +429,16 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
     return DEFAULT_RATING;
   }
 
-  // Calculate weighted average with recency weighting
+  // Now calculate weighted average with recency weighting
+  // Reverse the order for recency weighting (newer matches weighted higher)
+  const sortedMatchRatings = [...matchRatings].sort((a, b) => 
+    b.createdAt.getTime() - a.createdAt.getTime()
+  );
+
   let weightedSum = 0;
   let weightSum = 0;
 
-  for (const matchRating of matchRatings) {
+  for (const matchRating of sortedMatchRatings) {
     const recencyWeight = calculateRecencyWeight(matchRating.createdAt);
     const totalWeight = matchRating.matchWeight * recencyWeight;
 
@@ -466,7 +497,9 @@ export async function updatePlayerRating(
           } : null,
         })),
       };
-      const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating);
+      // For single set updates, use current ratings (this is for real-time updates, not historical recalculation)
+      const currentRating = await getPlayerRating(userId);
+      const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating, currentRating);
       if (matchRatingData) {
         matchRating = matchRatingData.matchRating;
 
