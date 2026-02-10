@@ -38,10 +38,48 @@ const requireAdmin = async (req: any, res: Response, next: any) => {
   }
 };
 
+// Check admin status (for debugging)
+router.get('/check-admin', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized', isAdmin: false });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { isAdmin: true, email: true, name: true },
+    });
+
+    res.json({
+      isAdmin: user?.isAdmin || false,
+      email: user?.email,
+      name: user?.name,
+    });
+  } catch (error) {
+    console.error('Check admin error:', error);
+    res.status(500).json({
+      error: 'Failed to check admin status',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // Reset all ratings to 5.0 (preserves historical data) (admin only)
 router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
   try {
     const DEFAULT_RATING = 5.0;
+
+    console.log('Reset ratings request received from user:', req.user?.userId);
+
+    // Get count before reset
+    const usersBeforeReset = await prisma.user.count({});
+    const usersWithRatingsBefore = await prisma.user.count({
+      where: {
+        rating: {
+          not: null,
+        },
+      },
+    });
 
     // Reset all player ratings to DEFAULT_RATING
     const resetResult = await prisma.user.updateMany({
@@ -51,11 +89,25 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
       },
     });
 
+    console.log('Reset result:', resetResult);
+
+    // Verify the reset worked
     const usersWithRatings = await prisma.user.count({
       where: {
         rating: {
           not: null,
         },
+      },
+    });
+
+    // Get a sample of updated users to verify
+    const sampleUsers = await prisma.user.findMany({
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        rating: true,
       },
     });
 
@@ -67,7 +119,10 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
       message: 'All ratings reset to 5.0 (historical data preserved)',
       summary: {
         playersReset: resetResult.count,
-        totalPlayers: usersWithRatings,
+        totalUsers: usersBeforeReset,
+        usersWithRatingsBefore,
+        usersWithRatingsAfter: usersWithRatings,
+        sampleUsers,
         historicalDataPreserved: {
           ratingHistoryEntries: historyCount,
           matchRatingEntries: matchRatingsCount,
@@ -80,6 +135,7 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
       success: false,
       error: 'Failed to reset ratings',
       message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
     });
   }
 });
