@@ -225,8 +225,9 @@ export async function calculateMatchPrediction(
 /**
  * Calculate match rating for a player in a doubles match
  * @param playerRatingAtMatchTime - The player's rating BEFORE this match was played
+ * @param opponentRatingsAtMatchTime - Map of opponent userId -> rating at match time (optional, uses current ratings if not provided)
  */
-async function calculateMatchRating(
+export async function calculateMatchRating(
   userId: string,
   set: SetWithScores,
   playerRatingAtMatchTime: number,
@@ -312,7 +313,7 @@ async function calculateMatchRating(
   const performanceDiff = actualWinPct - expectedWinPct;
   const matchRating = Math.max(
     MIN_RATING,
-    Math.min(MAX_RATING, playerRating + performanceDiff * ADJUSTMENT_FACTOR)
+    Math.min(MAX_RATING, playerRatingAtMatchTime + performanceDiff * ADJUSTMENT_FACTOR)
   );
 
   // Calculate match weight
