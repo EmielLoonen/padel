@@ -15,7 +15,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:cleanup-test-users": "tsx prisma/cleanup-test-users.ts",
-    "prisma:calculate-ratings": "tsx prisma/calculate-historical-ratings.ts"
+    "prisma:calculate-ratings": "tsx prisma/calculate-historical-ratings.ts",
+    "prisma:reset-ratings": "tsx prisma/reset-ratings.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",

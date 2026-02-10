@@ -14,6 +14,76 @@ const prisma = new PrismaClient();
 // All rating routes require authentication
 router.use(authenticateToken);
 
+// Middleware to check if user is admin
+const requireAdmin = async (req: any, res: Response, next: any) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ error: 'Failed to verify admin status' });
+  }
+};
+
+// Reset all ratings to 5.0 (preserves historical data) (admin only)
+router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const DEFAULT_RATING = 5.0;
+
+    // Reset all player ratings to DEFAULT_RATING
+    const resetResult = await prisma.user.updateMany({
+      data: {
+        rating: DEFAULT_RATING,
+        ratingUpdatedAt: new Date(),
+      },
+    });
+
+    const usersWithRatings = await prisma.user.count({
+      where: {
+        rating: {
+          not: null,
+        },
+      },
+    });
+
+    const historyCount = await prisma.ratingHistory.count({});
+    const matchRatingsCount = await prisma.matchRating.count({});
+
+    res.json({
+      success: true,
+      message: 'All ratings reset to 5.0 (historical data preserved)',
+      summary: {
+        playersReset: resetResult.count,
+        totalPlayers: usersWithRatings,
+        historicalDataPreserved: {
+          ratingHistoryEntries: historyCount,
+          matchRatingEntries: matchRatingsCount,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Reset ratings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset ratings',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // Calculate historical ratings for all players (admin only - one-time setup)
 // This endpoint can be called via HTTP to calculate ratings without shell access
 router.post('/calculate-historical', async (req: Request, res: Response) => {
