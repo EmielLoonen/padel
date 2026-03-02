@@ -7,7 +7,7 @@ const DEFAULT_RATING = 5.0; // Starting rating for new players
 const MIN_RATING = 1.0;
 const MAX_RATING = 16.5;
 const RATING_DIFF_DIVISOR = 2.5; // Used in expected win percentage calculation
-const ADJUSTMENT_FACTOR = 8.0; // Multiplier for rating adjustments
+const ADJUSTMENT_FACTOR = 2.0; // Multiplier for rating adjustments (reduced from 8.0 to prevent volatility)
 const MAX_MATCHES_TO_CONSIDER = 30; // Maximum matches to include in rating calculation
 const MATCH_AGE_LIMIT_DAYS = 365; // Only consider matches from past 12 months
 
