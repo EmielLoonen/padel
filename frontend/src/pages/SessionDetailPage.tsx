@@ -787,9 +787,16 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                   {/* Header - Mobile: Stack, Desktop: Row */}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                     <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-bold text-padel-green mb-1">
-                        Court {court.courtNumber}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-lg sm:text-xl font-bold text-padel-green">
+                          Court {court.courtNumber}
+                        </h3>
+                        {court.watchCode && (
+                          <span className="font-mono text-sm font-bold bg-gray-700 text-gray-200 px-2 py-0.5 rounded tracking-widest">
+                            {court.watchCode}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm sm:text-base text-gray-400">
                         🕐 {court.startTime} ({court.duration} min)
                       </p>

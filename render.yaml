@@ -6,7 +6,7 @@ services:
   - type: web
     name: padel-coordinator-api
     env: node
-    buildCommand: npm install -g pnpm && pnpm install && cd backend && npx prisma generate && npx prisma migrate deploy && cd .. && pnpm --filter backend build
+    buildCommand: npm install -g pnpm && pnpm install && cd backend && npx prisma generate && npx prisma db push --accept-data-loss && cd .. && pnpm --filter backend build
     startCommand: cd backend && node dist/server.js
     healthCheckPath: /health
     envVars:
@@ -19,10 +19,13 @@ services:
       - key: JWT_SECRET
         generateValue: true # Render will generate a secure secret
       - key: CORS_ORIGIN
-        fromService:
-          type: web
-          name: padel-coordinator-frontend
-          property: host
+        value: https://padel-coordinator-frontend.onrender.com
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
           
   # Frontend Static Site
   - type: web

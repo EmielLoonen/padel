@@ -11,6 +11,7 @@ import guestRoutes from './routes/guests';
 import setRoutes from './routes/sets';
 import adminRoutes from './routes/admin';
 import ratingRoutes from './routes/ratings';
+import watchRoutes from './routes/watch';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/guests', guestRoutes);
 app.use('/api/sets', setRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/watch', watchRoutes);
 
 // Start server
 app.listen(PORT, () => {

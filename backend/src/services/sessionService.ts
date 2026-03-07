@@ -3,6 +3,20 @@ import { notificationService } from './notificationService';
 
 const prisma = new PrismaClient();
 
+// Unambiguous uppercase chars for human-typeable watch codes
+const WATCH_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+async function generateUniqueWatchCode(): Promise<string> {
+  while (true) {
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+      code += WATCH_CODE_CHARS[Math.floor(Math.random() * WATCH_CODE_CHARS.length)];
+    }
+    const existing = await prisma.court.findUnique({ where: { watchCode: code } });
+    if (!existing) return code;
+  }
+}
+
 interface CourtData {
   courtNumber: number;
   startTime: string;
@@ -44,13 +58,16 @@ export const sessionService = {
         numberOfCourts: data.courts.length,
         createdById: data.createdById,
         courts: {
-          create: data.courts.map((court) => ({
-            courtNumber: court.courtNumber,
-            startTime: court.startTime,
-            duration: court.duration || 60,
-            maxPlayers: 4,
-            cost: court.cost,
-          })),
+          create: await Promise.all(
+            data.courts.map(async (court) => ({
+              courtNumber: court.courtNumber,
+              startTime: court.startTime,
+              duration: court.duration || 60,
+              maxPlayers: 4,
+              cost: court.cost,
+              watchCode: await generateUniqueWatchCode(),
+            }))
+          ),
         },
       },
       include: {
