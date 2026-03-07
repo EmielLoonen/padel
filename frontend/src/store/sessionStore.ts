@@ -10,6 +10,7 @@ interface Court {
   duration: number;
   maxPlayers: number;
   cost?: number;
+  watchCode?: string;
   rsvps?: Array<{
     id: string;
     status: 'yes' | 'no' | 'maybe';
