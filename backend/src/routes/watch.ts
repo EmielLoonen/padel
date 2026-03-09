@@ -26,7 +26,7 @@ router.get('/:code', async (req: Request, res: Response) => {
         rsvps: {
           where: { status: 'yes' },
           include: {
-            user: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true, rating: true } },
           },
         },
         guests: {
@@ -40,10 +40,39 @@ router.get('/:code', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Court not found' });
     }
 
-    const players = [
-      ...court.rsvps.map((r) => ({ id: r.user.id, initials: toInitials(r.user.name), type: 'user' as const })),
-      ...court.guests.map((g) => ({ id: g.id, initials: toInitials(g.name), type: 'guest' as const })),
+    type Player = { id: string; initials: string; type: 'user' | 'guest'; rating: number | null };
+
+    const players: Player[] = [
+      ...court.rsvps.map((r) => ({
+        id: r.user.id,
+        initials: toInitials(r.user.name),
+        type: 'user' as const,
+        rating: r.user.rating ? Number(r.user.rating) : null,
+      })),
+      ...court.guests.map((g) => ({
+        id: g.id,
+        initials: toInitials(g.name),
+        type: 'guest' as const,
+        rating: null,
+      })),
     ];
+
+    // Balance teams: sort by rating desc (guests last), then best+worst vs middle two
+    let teams: { team1: Player[]; team2: Player[] } | null = null;
+    if (players.length === 4) {
+      const sorted = [...players].sort((a, b) => {
+        if (a.rating !== null && b.rating !== null) return b.rating - a.rating;
+        if (a.rating !== null) return -1;
+        if (b.rating !== null) return 1;
+        if (a.type === 'guest' && b.type !== 'guest') return 1;
+        if (b.type === 'guest' && a.type !== 'guest') return -1;
+        return 0;
+      });
+      teams = {
+        team1: [sorted[0], sorted[3]],
+        team2: [sorted[1], sorted[2]],
+      };
+    }
 
     res.json({
       courtId: court.id,
@@ -54,6 +83,7 @@ router.get('/:code', async (req: Request, res: Response) => {
         venue: court.session.venueName,
       },
       players,
+      teams,
     });
   } catch (error) {
     console.error('Watch get court error:', error);

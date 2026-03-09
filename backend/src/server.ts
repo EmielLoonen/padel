@@ -74,5 +74,6 @@ app.listen(PORT, () => {
     console.log(`👥 Guest endpoints: http://localhost:${PORT}/api/guests`);
     console.log(`🎾 Set endpoints: http://localhost:${PORT}/api/sets`);
     console.log(`⭐ Rating endpoints: http://localhost:${PORT}/api/ratings`);
+    console.log(`⌚ Watch endpoints: http://localhost:${PORT}/api/watch`);
 });
 
