@@ -1,6 +1,8 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore';
 
+const isPreviewMode = new URLSearchParams(window.location.search).has('preview');
+
 interface LoginPageProps {
   onShowSignup?: () => void;
 }
@@ -11,49 +13,56 @@ const loadingScreens = [
     title: 'Waking up the banana farm...',
     subtitle: 'The database is stretching 🥱',
     animation: 'dance',
-    isCommercial: false
+    isCommercial: false,
+    backgroundImage: undefined as string | undefined
   },
   {
     emoji: '🍸',
     title: 'Campari Negroni',
     subtitle: 'Negroni Love!! ❤️',
     animation: 'wiggle',
-    isCommercial: true
+    isCommercial: true,
+    backgroundImage: '/sponsors/campari.jpg' as string | undefined
   },
   {
     emoji: '☕',
     title: 'Brewing fresh queries...',
     subtitle: 'The database needs its morning coffee',
     animation: 'steam',
-    isCommercial: false
+    isCommercial: false,
+    backgroundImage: undefined as string | undefined
   },
   {
     emoji: '💋',
     title: 'Purol',
     subtitle: 'Keeping Mark\'s lips smooth & soft for the last 20 years',
     animation: 'bounce',
-    isCommercial: true
+    isCommercial: true,
+    backgroundImage: '/sponsors/purol.jpg' as string | undefined
   },
   {
     emoji: '🏃',
     title: 'Running to the server...',
     subtitle: 'It\'s quite far away, be patient',
     animation: 'run',
-    isCommercial: false
+    isCommercial: false,
+    backgroundImage: undefined as string | undefined
   },
   {
     emoji: '🍺',
     title: 'Walhalla Craft Beer',
     subtitle: 'Where legends are brewed!',
     animation: 'steam',
-    isCommercial: true
+    isCommercial: true,
+    backgroundImage: '/sponsors/walhalla.jpg' as string | undefined
   },
   {
     emoji: '🎾',
     title: 'Warming up the padel courts...',
     subtitle: 'Making sure everything is ready for you',
     animation: 'bounce',
-    isCommercial: false
+    isCommercial: false,
+    backgroundImage: undefined as string | undefined
   }
 ];
 
@@ -65,14 +74,14 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
 
   // Rotate through loading screens every 10 seconds
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !isPreviewMode) {
       setCurrentScreen(0);
       return;
     }
 
     const interval = setInterval(() => {
       setCurrentScreen((prev) => (prev + 1) % loadingScreens.length);
-    }, 10000);
+    }, isPreviewMode ? 3000 : 10000);
 
     return () => clearInterval(interval);
   }, [isLoading]);
@@ -87,13 +96,23 @@ export default function LoginPage({ onShowSignup }: LoginPageProps) {
     }
   };
 
-  // Show rotating loading screens while loading
-  if (isLoading) {
+  // Show rotating loading screens while loading (or in preview mode)
+  if (isLoading || isPreviewMode) {
     const screen = loadingScreens[currentScreen];
     
     return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
-        <div className="text-center">
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
+        {screen.backgroundImage && (
+          <img
+            src={screen.backgroundImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        {screen.backgroundImage && (
+          <div className="absolute inset-0 bg-black/60" />
+        )}
+        <div className="text-center relative z-10">
           <style>{`
             @keyframes wiggle {
               0%, 100% { transform: rotate(-15deg); }
