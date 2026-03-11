@@ -357,38 +357,64 @@ function App() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-2 sm:gap-4">
-              {sessions.map((session) => (
+            <div className="space-y-4 sm:space-y-6">
+              {(() => {
+                // Group sessions by date
+                const grouped = sessions.reduce((acc, session) => {
+                  const dateKey = session.date.split('T')[0];
+                  if (!acc[dateKey]) acc[dateKey] = [];
+                  acc[dateKey].push(session);
+                  return acc;
+                }, {} as Record<string, typeof sessions>);
+
+                return Object.entries(grouped).map(([dateKey, dateSessions]) => (
+                  <div key={dateKey}>
+                    {/* Date group header */}
+                    <div className="flex items-center gap-3 mb-2 sm:mb-3">
+                      <div className="h-px flex-1 bg-gray-700" />
+                      <span className="text-xs sm:text-sm font-bold text-padel-green whitespace-nowrap px-1">
+                        {new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                        {dateSessions.length > 1 && (
+                          <span className="ml-2 text-gray-500 font-normal">({dateSessions.length} sessions)</span>
+                        )}
+                      </span>
+                      <div className="h-px flex-1 bg-gray-700" />
+                    </div>
+
+                    {/* Sessions for this date */}
+                    <div className="grid gap-2 sm:gap-3">
+              {dateSessions.map((session) => (
                 <div
                   key={session.id}
                   onClick={() => setSelectedSessionId(session.id)}
                   className="group bg-dark-elevated border border-gray-700 rounded-lg sm:rounded-xl p-3 sm:p-6 hover:border-padel-green transition-all cursor-pointer active:opacity-80 overflow-hidden"
                 >
-                  {/* Header - Venue and Date/Time in one line for mobile */}
+                  {/* Header - Venue and Time */}
                   <div className="flex items-center gap-2 mb-2 sm:mb-3 overflow-hidden">
                     <h3 className="text-base sm:text-2xl font-bold text-white group-hover:text-padel-green transition-colors truncate flex-1 min-w-0">
                       {session.venueName}
                     </h3>
-                    <span className="text-xs sm:text-sm text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
+                    <span className="text-base sm:text-2xl text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
                       {session.time}
                     </span>
                   </div>
-                  
-                  {/* Date - Compact for mobile */}
-                  <p className="text-xs sm:text-base text-gray-400 mb-2 sm:mb-3">
-                    {new Date(session.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                    {(() => {
-                      const totalCourtCost = session.courts?.reduce((sum, court) => {
-                        const cost = court.cost ? Number(court.cost) : 0;
-                        return sum + cost;
-                      }, 0) || 0;
-                      return totalCourtCost > 0 ? <span className="ml-2">• €{totalCourtCost.toFixed(2)}</span> : null;
-                    })()}
-                  </p>
+
+                  {/* Cost only (date is shown in the group header) */}
+                  {(() => {
+                    const totalCourtCost = session.courts?.reduce((sum, court) => {
+                      const cost = court.cost ? Number(court.cost) : 0;
+                      return sum + cost;
+                    }, 0) || 0;
+                    return totalCourtCost > 0 ? (
+                      <p className="text-xs sm:text-base text-gray-400 mb-2 sm:mb-3">
+                        €{totalCourtCost.toFixed(2)}
+                      </p>
+                    ) : null;
+                  })()}
 
                   {session.notes && (
                     <p className="text-xs text-gray-400 italic mb-2 truncate sm:mb-3">
@@ -414,7 +440,7 @@ function App() {
                                   Court {court.courtNumber}
                                 </span>
                                 <span className="text-[10px] sm:text-xs text-gray-500">
-                                  {court.startTime} • {court.duration}min
+                                  {court.duration}min
                                   {court.cost && <span className="ml-1">• €{(court.cost / 4).toFixed(2)}/p</span>}
                                 </span>
                               </div>
@@ -551,16 +577,17 @@ function App() {
                   )}
                   
                   {/* Footer - Creator */}
-                  <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between">
+                  <div className="mt-2 pt-2 border-t border-gray-800">
                     <span className="text-xs text-gray-500">
                       By {session.creator.name}
-                    </span>
-                    <span className="text-xs text-padel-green">
-                      {session.numberOfCourts} {session.numberOfCourts === 1 ? 'court' : 'courts'}
                     </span>
                   </div>
                 </div>
               ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
         </div>
