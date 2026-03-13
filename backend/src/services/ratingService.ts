@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // DSS (Dynamisch Speelsterkte Systeem) constants
-const DEFAULT_RATING = 6.0;         // Starting rating for new players
+const DEFAULT_RATING = 4.5;         // Starting rating for new players
 const MIN_RATING = 1.0;
 const MAX_RATING = 20.0;
 const Q = 2.012;                    // Logistic steepness factor for doubles
@@ -187,8 +187,12 @@ export async function calculateMatchRating(
   // DSS expected win probability
   const expectedWinPct = calculateExpectedWinPercentage(playerTeamRating, opponentTeamRating);
 
-  // DSS actual result (games-based)
-  const opponentGamesWon = opponentTeam.reduce((s, o) => s + o.gamesWon, 0);
+  // DSS actual result (games-based).
+  // In padel both players on a team always share the same score, so we use the
+  // average opponent score (= their team score) rather than summing individuals,
+  // which would double-count and make every win look like a loss.
+  const opponentGamesWon =
+    opponentTeam.reduce((s, o) => s + o.gamesWon, 0) / Math.max(1, opponentTeam.length);
   const actualWinPct = calculateResult(playerTeamScore, opponentGamesWon);
 
   // DSS rating update: R_new = R_old + K × (result − expected)
@@ -209,8 +213,15 @@ export async function calculateMatchRating(
  * Recalculate a player's DSS rating from scratch.
  * Processes sets chronologically (oldest first), applying the DSS
  * incremental update at each step starting from DEFAULT_RATING.
+ *
+ * Accepts an optional liveRatings map so a global recalculation can pass in
+ * the ratings of other players as they stood at the time of each set,
+ * rather than reading stale/post-recalc values from the DB.
  */
-export async function calculatePlayerRating(userId: string): Promise<number> {
+export async function calculatePlayerRating(
+  userId: string,
+  liveRatings?: Map<string, number>
+): Promise<number> {
   const userScores = await prisma.setScore.findMany({
     where: {
       userId,
@@ -253,13 +264,95 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
       })),
     };
 
-    const matchData = await calculateMatchRating(userId, set, rating);
+    const matchData = await calculateMatchRating(userId, set, rating, liveRatings);
     if (matchData) {
       rating = matchData.matchRating;
     }
   }
 
   return Math.max(MIN_RATING, Math.min(MAX_RATING, rating));
+}
+
+/**
+ * Recalculate DSS ratings for ALL players globally in one pass.
+ *
+ * Processes every set in chronological order, updating an in-memory ratings
+ * map after each set. This ensures each player's rating at the time of a set
+ * is based on their actual history up to that point — not post-recalc values
+ * from the DB — which is the correct way to apply the DSS formula.
+ */
+export async function recalculateAllRatings(): Promise<Map<string, number>> {
+  // Fetch all sets with all scores, ordered oldest first
+  const allSets = await prisma.set.findMany({
+    where: {
+      createdAt: {
+        gte: new Date(Date.now() - MATCH_AGE_LIMIT_DAYS * 24 * 60 * 60 * 1000),
+      },
+    },
+    include: {
+      scores: {
+        include: {
+          user: { select: { id: true, rating: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  // In-memory rating map — everyone starts at DEFAULT
+  const ratings = new Map<string, number>();
+  const getRating = (userId: string) => ratings.get(userId) ?? DEFAULT_RATING;
+
+  for (const rawSet of allSets) {
+    // Collect the user IDs in this set
+    const userIds = rawSet.scores
+      .map((s) => s.userId)
+      .filter((id): id is string => id !== null);
+
+    // Build a snapshot of all players' current live ratings for this set
+    const snapshotRatings = new Map<string, number>(
+      userIds.map((id) => [id, getRating(id)])
+    );
+
+    // Build SetWithScores injecting live ratings so getGuestRating also uses
+    // current in-memory values rather than stale DB values
+    const set: SetWithScores = {
+      ...rawSet,
+      scores: rawSet.scores.map((s) => ({
+        userId: s.userId,
+        guestId: s.guestId,
+        gamesWon: s.gamesWon,
+        user: s.userId
+          ? { id: s.userId, rating: getRating(s.userId) }
+          : null,
+      })),
+    };
+
+    // Calculate and apply new ratings for each player in the set
+    const newRatings = new Map<string, number>();
+    for (const userId of userIds) {
+      const currentRating = getRating(userId);
+      const matchData = await calculateMatchRating(userId, set, currentRating, snapshotRatings);
+      if (matchData) {
+        newRatings.set(userId, matchData.matchRating);
+      }
+    }
+
+    // Apply all new ratings after processing the full set
+    for (const [id, rating] of newRatings) {
+      ratings.set(id, rating);
+    }
+  }
+
+  // Persist all recalculated ratings to the DB
+  for (const [userId, rating] of ratings) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { rating, ratingUpdatedAt: new Date() },
+    });
+  }
+
+  return ratings;
 }
 
 /**
