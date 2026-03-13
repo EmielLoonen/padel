@@ -12,6 +12,7 @@ import setRoutes from './routes/sets';
 import adminRoutes from './routes/admin';
 import ratingRoutes from './routes/ratings';
 import watchRoutes from './routes/watch';
+import matchRoutes from './routes/matches';
 
 // Load environment variables
 dotenv.config();
@@ -60,6 +61,7 @@ app.use('/api/sets', setRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/watch', watchRoutes);
+app.use('/api/matches', matchRoutes);
 
 // Start server
 app.listen(PORT, () => {
@@ -75,5 +77,6 @@ app.listen(PORT, () => {
     console.log(`🎾 Set endpoints: http://localhost:${PORT}/api/sets`);
     console.log(`⭐ Rating endpoints: http://localhost:${PORT}/api/ratings`);
     console.log(`⌚ Watch endpoints: http://localhost:${PORT}/api/watch`);
+    console.log(`🎯 Match endpoints: http://localhost:${PORT}/api/matches`);
 });
 
