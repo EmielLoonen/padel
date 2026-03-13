@@ -1,15 +1,15 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Constants for UTR calculation
-const DEFAULT_RATING = 5.0; // Starting rating for new players
+// DSS (Dynamisch Speelsterkte Systeem) constants
+const DEFAULT_RATING = 6.0;         // Starting rating for new players
 const MIN_RATING = 1.0;
-const MAX_RATING = 16.5;
-const RATING_DIFF_DIVISOR = 2.5; // Used in expected win percentage calculation
-const ADJUSTMENT_FACTOR = 2.0; // Multiplier for rating adjustments (reduced from 8.0 to prevent volatility)
-const MAX_MATCHES_TO_CONSIDER = 30; // Maximum matches to include in rating calculation
-const MATCH_AGE_LIMIT_DAYS = 365; // Only consider matches from past 12 months
+const MAX_RATING = 20.0;
+const Q = 2.012;                    // Logistic steepness factor for doubles
+const K = 0.275;                    // Maximum rating change per set
+const MATCH_AGE_LIMIT_DAYS = 365;
+const MAX_SETS_TO_CONSIDER = 30;
 
 interface SetWithScores {
   id: string;
@@ -30,22 +30,33 @@ interface MatchRatingData {
 }
 
 /**
- * Calculate expected win percentage based on rating difference
- * Formula: expectedWinPct = 1 / (1 + 10^((opponentRating - playerRating) / 2.5))
+ * DSS win expectation formula for doubles:
+ * prob = 1 / (1 + e^(-q * (R_team1 - R_team2)))
  */
 function calculateExpectedWinPercentage(
-  playerRating: number,
-  opponentRating: number
+  teamRating: number,
+  opponentTeamRating: number
 ): number {
-  const ratingDiff = opponentRating - playerRating;
-  const exponent = ratingDiff / RATING_DIFF_DIVISOR;
-  const denominator = 1 + Math.pow(10, exponent);
-  return 1 / denominator;
+  return 1 / (1 + Math.exp(-Q * (teamRating - opponentTeamRating)));
 }
 
 /**
- * Get player's current rating or default
+ * DSS team rating: average of both partners
  */
+function calculateTeamRating(r1: number, r2: number): number {
+  return (r1 + r2) / 2;
+}
+
+/**
+ * DSS games-based result (padel 2025 update):
+ * result = gamesWon / (gamesWon + gamesLost), in range [0, 1]
+ * This replaces the binary win/loss with a continuous measure.
+ */
+function calculateResult(gamesWon: number, gamesLost: number): number {
+  const total = gamesWon + gamesLost;
+  return total > 0 ? gamesWon / total : 0.5;
+}
+
 async function getPlayerRating(userId: string): Promise<number> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -54,9 +65,6 @@ async function getPlayerRating(userId: string): Promise<number> {
   return user?.rating ? Number(user.rating) : DEFAULT_RATING;
 }
 
-/**
- * Get temporary rating for guest players (average of other players in match)
- */
 function getGuestRating(
   setScores: SetWithScores['scores'],
   excludeUserId?: string
@@ -64,63 +72,12 @@ function getGuestRating(
   const userRatings = setScores
     .filter((s) => s.userId && s.userId !== excludeUserId && s.user?.rating)
     .map((s) => Number(s.user!.rating!));
-
-  if (userRatings.length === 0) {
-    return DEFAULT_RATING;
-  }
-
-  return userRatings.reduce((sum, rating) => sum + rating, 0) / userRatings.length;
+  if (userRatings.length === 0) return DEFAULT_RATING;
+  return userRatings.reduce((sum, r) => sum + r, 0) / userRatings.length;
 }
 
 /**
- * Calculate team rating (average of two players)
- */
-function calculateTeamRating(
-  player1Rating: number,
-  player2Rating: number
-): number {
-  return (player1Rating + player2Rating) / 2;
-}
-
-/**
- * Calculate match weight based on competitiveness and format
- */
-function calculateMatchWeight(
-  playerGamesWon: number,
-  opponentGamesWon: number,
-  totalGames: number
-): number {
-  const baseWeight = 1.0;
-
-  // Competitiveness factor: closer matches get higher weight
-  const scoreDiff = Math.abs(playerGamesWon - opponentGamesWon);
-  const competitivenessFactor = Math.max(0.5, 1.0 - scoreDiff / 12.0); // Max weight for 0-0 diff, decreases as diff increases
-
-  // Format factor: longer matches (more games) get higher weight
-  const formatFactor = Math.min(1.5, 0.5 + totalGames / 20.0); // Scales from 0.5 to 1.5 based on total games
-
-  return baseWeight * competitivenessFactor * formatFactor;
-}
-
-/**
- * Calculate recency weight (more recent matches weighted higher)
- */
-function calculateRecencyWeight(matchDate: Date): number {
-  const now = new Date();
-  const daysSinceMatch = (now.getTime() - matchDate.getTime()) / (1000 * 60 * 60 * 24);
-  const daysInPeriod = MATCH_AGE_LIMIT_DAYS;
-
-  // Linear decay: 1.0 for today, 0.0 for matches older than limit
-  if (daysSinceMatch >= daysInPeriod) {
-    return 0.0;
-  }
-
-  return 1.0 - daysSinceMatch / daysInPeriod;
-}
-
-/**
- * Calculate expected match prediction for a doubles match
- * Returns expected scores for 3 sets and match weight
+ * Calculate match prediction for a doubles match
  */
 export async function calculateMatchPrediction(
   team1PlayerIds: string[],
@@ -131,101 +88,47 @@ export async function calculateMatchPrediction(
   expectedSetScores: Array<{ team1Games: number; team2Games: number }>;
   matchWeight: number;
 } | null> {
-  if (team1PlayerIds.length !== 2 || team2PlayerIds.length !== 2) {
-    return null;
-  }
+  if (team1PlayerIds.length !== 2 || team2PlayerIds.length !== 2) return null;
 
-  // Get ratings for all players
-  const team1Ratings = await Promise.all(
-    team1PlayerIds.map(async (id) => {
-      // Check if it's a user or guest
-      const user = await prisma.user.findUnique({ where: { id }, select: { rating: true } });
-      if (user) {
-        return user.rating ? Number(user.rating) : DEFAULT_RATING;
-      }
-      // For guests, use default rating (we don't have historical data)
-      return DEFAULT_RATING;
-    })
-  );
+  const getRating = async (id: string) => {
+    const user = await prisma.user.findUnique({ where: { id }, select: { rating: true } });
+    return user?.rating ? Number(user.rating) : DEFAULT_RATING;
+  };
 
-  const team2Ratings = await Promise.all(
-    team2PlayerIds.map(async (id) => {
-      const user = await prisma.user.findUnique({ where: { id }, select: { rating: true } });
-      if (user) {
-        return user.rating ? Number(user.rating) : DEFAULT_RATING;
-      }
-      return DEFAULT_RATING;
-    })
-  );
+  const [t1r1, t1r2, t2r1, t2r2] = await Promise.all([
+    getRating(team1PlayerIds[0]),
+    getRating(team1PlayerIds[1]),
+    getRating(team2PlayerIds[0]),
+    getRating(team2PlayerIds[1]),
+  ]);
 
-  // Calculate team ratings (average of two players)
-  const team1Rating = calculateTeamRating(team1Ratings[0], team1Ratings[1]);
-  const team2Rating = calculateTeamRating(team2Ratings[0], team2Ratings[1]);
+  const team1Rating = calculateTeamRating(t1r1, t1r2);
+  const team2Rating = calculateTeamRating(t2r1, t2r2);
 
-  // Calculate expected win percentage for team 1
   const team1ExpectedWinPct = calculateExpectedWinPercentage(team1Rating, team2Rating);
   const team2ExpectedWinPct = 1 - team1ExpectedWinPct;
 
-  // Calculate expected games per set (assuming best of 3 sets, first to 6 games wins)
-  // Expected games won = expectedWinPct * totalGamesPerSet
-  // For a typical set: first to 6 games, so total games could be 6-12 (6-0 to 6-6)
-  // We'll use an average of ~10 games per set for calculation
-  const avgGamesPerSet = 10;
-  const team1ExpectedGamesPerSet = team1ExpectedWinPct * avgGamesPerSet;
-  const team2ExpectedGamesPerSet = team2ExpectedWinPct * avgGamesPerSet;
-
-  // Helper function to calculate realistic set score
-  // Ensures at least one team reaches 6 games (winning condition)
-  const calculateSetScore = (team1Games: number, team2Games: number) => {
-    // Normalize so the sum is approximately 10 games
-    const total = team1Games + team2Games;
-    let normalizedTeam1 = Math.round((team1Games / total) * 10);
-    let normalizedTeam2 = Math.round((team2Games / total) * 10);
-    
-    // Ensure at least one team reaches 6 (winning condition)
-    if (normalizedTeam1 >= normalizedTeam2) {
-      normalizedTeam1 = Math.max(6, normalizedTeam1);
-      normalizedTeam2 = Math.min(6, Math.max(0, 10 - normalizedTeam1));
-    } else {
-      normalizedTeam2 = Math.max(6, normalizedTeam2);
-      normalizedTeam1 = Math.min(6, Math.max(0, 10 - normalizedTeam2));
-    }
-    
-    // Ensure scores don't exceed reasonable limits (max 6-6 for a set)
-    normalizedTeam1 = Math.min(6, Math.max(0, normalizedTeam1));
-    normalizedTeam2 = Math.min(6, Math.max(0, normalizedTeam2));
-    
-    return { team1Games: normalizedTeam1, team2Games: normalizedTeam2 };
-  };
-
-  // Calculate expected scores for 3 sets
-  const baseScore = calculateSetScore(team1ExpectedGamesPerSet, team2ExpectedGamesPerSet);
-  const expectedSetScores = [
-    baseScore,
-    baseScore,
-    baseScore,
-  ];
-
-  // Calculate match weight (for a competitive match, assume close scores)
-  const expectedScoreDiff = Math.abs(team1ExpectedGamesPerSet - team2ExpectedGamesPerSet);
-  const matchWeight = calculateMatchWeight(
-    team1ExpectedGamesPerSet,
-    team2ExpectedGamesPerSet,
-    avgGamesPerSet
-  );
+  // Expected set score: winner gets 6, loser gets proportional games
+  const loserGames = Math.min(5, Math.round(Math.min(team1ExpectedWinPct, team2ExpectedWinPct) * 10));
+  const setScore = team1ExpectedWinPct >= team2ExpectedWinPct
+    ? { team1Games: 6, team2Games: loserGames }
+    : { team1Games: loserGames, team2Games: 6 };
 
   return {
     team1ExpectedWinPct,
     team2ExpectedWinPct,
-    expectedSetScores,
-    matchWeight,
+    expectedSetScores: [setScore, setScore, setScore],
+    matchWeight: 1.0,
   };
 }
 
 /**
- * Calculate match rating for a player in a doubles match
- * @param playerRatingAtMatchTime - The player's rating BEFORE this match was played
- * @param opponentRatingsAtMatchTime - Map of opponent userId -> rating at match time (optional, uses current ratings if not provided)
+ * Calculate DSS rating update for a player in a set.
+ *
+ * DSS formula: R_new = R_old + K × (result − expected)
+ * - result   = gamesWon / totalGames  (games-based, 0–1)
+ * - expected = logistic win probability based on team ratings
+ * - K        = 0.275
  */
 export async function calculateMatchRating(
   userId: string,
@@ -233,124 +136,87 @@ export async function calculateMatchRating(
   playerRatingAtMatchTime: number,
   opponentRatingsAtMatchTime?: Map<string, number>
 ): Promise<MatchRatingData | null> {
-  const playerRating = playerRatingAtMatchTime;
-
-  // Find player's score
   const playerScore = set.scores.find((s) => s.userId === userId);
-  if (!playerScore) {
-    return null;
-  }
+  if (!playerScore) return null;
 
-  // Group players by score to identify teams
+  // Group players into teams by games won
   const scoreGroups = new Map<number, Array<typeof set.scores[0]>>();
   set.scores.forEach((score) => {
-    const gamesWon = score.gamesWon;
-    if (!scoreGroups.has(gamesWon)) {
-      scoreGroups.set(gamesWon, []);
-    }
-    scoreGroups.get(gamesWon)!.push(score);
+    if (!scoreGroups.has(score.gamesWon)) scoreGroups.set(score.gamesWon, []);
+    scoreGroups.get(score.gamesWon)!.push(score);
   });
 
-  // Find player's team (players with same score)
   const playerTeamScore = playerScore.gamesWon;
   const playerTeam = scoreGroups.get(playerTeamScore) || [];
-
-  // Find opponent team (players with different score)
   const opponentTeam: Array<typeof set.scores[0]> = [];
   scoreGroups.forEach((players, score) => {
-    if (score !== playerTeamScore) {
-      opponentTeam.push(...players);
-    }
+    if (score !== playerTeamScore) opponentTeam.push(...players);
   });
 
-  if (opponentTeam.length === 0) {
-    return null; // Can't calculate without opponents
-  }
+  if (opponentTeam.length === 0) return null;
 
-  // Calculate team ratings
-  // For player's team: get teammate rating (or guest estimate)
+  // Teammate rating
   const teammateScore = playerTeam.find((s) => s.userId !== userId);
   let teammateRating: number;
   if (teammateScore?.userId) {
-    // Use historical rating if provided, otherwise get current rating
-    teammateRating = opponentRatingsAtMatchTime?.get(teammateScore.userId) ?? await getPlayerRating(teammateScore.userId);
+    teammateRating =
+      opponentRatingsAtMatchTime?.get(teammateScore.userId) ??
+      (await getPlayerRating(teammateScore.userId));
   } else {
-    // Guest player - use temporary rating
     teammateRating = getGuestRating(set.scores, userId);
   }
 
-  const playerTeamRating = calculateTeamRating(playerRating, teammateRating);
-
-  // For opponent team: average opponent ratings
+  // Opponent ratings
   const opponentRatings: number[] = [];
-  for (const opponentScore of opponentTeam) {
-    if (opponentScore.userId) {
-      // Use historical rating if provided, otherwise get current rating
-      const opponentRating = opponentRatingsAtMatchTime?.get(opponentScore.userId) ?? await getPlayerRating(opponentScore.userId);
-      opponentRatings.push(opponentRating);
+  for (const opp of opponentTeam) {
+    if (opp.userId) {
+      opponentRatings.push(
+        opponentRatingsAtMatchTime?.get(opp.userId) ??
+          (await getPlayerRating(opp.userId))
+      );
     } else {
-      // Guest player - use temporary rating
       opponentRatings.push(getGuestRating(set.scores, userId));
     }
   }
+
+  // DSS team ratings (average of partners)
+  const playerTeamRating = calculateTeamRating(playerRatingAtMatchTime, teammateRating);
   const opponentTeamRating =
-    opponentRatings.reduce((sum, r) => sum + r, 0) / opponentRatings.length;
+    opponentRatings.reduce((s, r) => s + r, 0) / opponentRatings.length;
 
-  // Calculate expected win percentage
-  const expectedWinPct = calculateExpectedWinPercentage(
-    playerTeamRating,
-    opponentTeamRating
-  );
+  // DSS expected win probability
+  const expectedWinPct = calculateExpectedWinPercentage(playerTeamRating, opponentTeamRating);
 
-  // Calculate actual win percentage
-  const totalGames =
-    playerTeamScore +
-    opponentTeam.reduce((sum, s) => sum + s.gamesWon, 0);
-  const actualWinPct =
-    totalGames > 0 ? playerTeamScore / totalGames : 0.5;
+  // DSS actual result (games-based)
+  const opponentGamesWon = opponentTeam.reduce((s, o) => s + o.gamesWon, 0);
+  const actualWinPct = calculateResult(playerTeamScore, opponentGamesWon);
 
-  // Calculate match rating adjustment
-  const performanceDiff = actualWinPct - expectedWinPct;
-  const matchRating = Math.max(
+  // DSS rating update: R_new = R_old + K × (result − expected)
+  const newRating = Math.max(
     MIN_RATING,
-    Math.min(MAX_RATING, playerRatingAtMatchTime + performanceDiff * ADJUSTMENT_FACTOR)
-  );
-
-  // Calculate match weight
-  const opponentGamesWon = opponentTeam.reduce(
-    (sum, s) => sum + s.gamesWon,
-    0
-  );
-  const matchWeight = calculateMatchWeight(
-    playerTeamScore,
-    opponentGamesWon,
-    totalGames
+    Math.min(MAX_RATING, playerRatingAtMatchTime + K * (actualWinPct - expectedWinPct))
   );
 
   return {
-    matchRating,
+    matchRating: newRating,
     expectedWinPct,
     actualWinPct,
-    matchWeight,
+    matchWeight: 1.0, // DSS uses a fixed K-factor, no variable match weight
   };
 }
 
 /**
- * Calculate overall UTR rating for a player
- * Uses weighted average of up to 30 most recent matches from past 12 months
- * 
- * IMPORTANT: Processes matches chronologically (oldest first) to use correct historical ratings
+ * Recalculate a player's DSS rating from scratch.
+ * Processes sets chronologically (oldest first), applying the DSS
+ * incremental update at each step starting from DEFAULT_RATING.
  */
 export async function calculatePlayerRating(userId: string): Promise<number> {
-  // Get all sets where player participated, ordered by date (OLDEST FIRST for chronological processing)
   const userScores = await prisma.setScore.findMany({
     where: {
       userId,
       set: {
         createdAt: {
-          gte: new Date(
-            Date.now() - MATCH_AGE_LIMIT_DAYS * 24 * 60 * 60 * 1000
-          ),
+          gte: new Date(Date.now() - MATCH_AGE_LIMIT_DAYS * 24 * 60 * 60 * 1000),
         },
       },
     },
@@ -359,104 +225,45 @@ export async function calculatePlayerRating(userId: string): Promise<number> {
         include: {
           scores: {
             include: {
-              user: {
-                select: {
-                  id: true,
-                  rating: true,
-                },
-              },
+              user: { select: { id: true, rating: true } },
             },
           },
         },
       },
     },
-    orderBy: {
-      set: {
-        createdAt: 'asc', // OLDEST FIRST - critical for correct historical calculation
-      },
-    },
-    take: MAX_MATCHES_TO_CONSIDER,
+    orderBy: { set: { createdAt: 'asc' } },
+    take: MAX_SETS_TO_CONSIDER,
   });
 
-  if (userScores.length === 0) {
-    return DEFAULT_RATING;
-  }
+  if (userScores.length === 0) return DEFAULT_RATING;
 
-  // Track this player's rating as we process matches chronologically
-  // Start with DEFAULT_RATING for the first match (chronologically)
-  let playerRatingBeforeMatch = DEFAULT_RATING;
-
-  // Process matches chronologically and calculate match ratings
-  const matchRatings: Array<MatchRatingData & { createdAt: Date }> = [];
+  // Start from DEFAULT and apply DSS incrementally through each set
+  let rating = DEFAULT_RATING;
 
   for (const userScore of userScores) {
-    const setDate = userScore.set.createdAt;
-    
-    // Convert Prisma Decimal to number for the set
-    const setWithConvertedRating: SetWithScores = {
+    const set: SetWithScores = {
       ...userScore.set,
-      scores: userScore.set.scores.map((score) => ({
-        userId: score.userId,
-        guestId: score.guestId,
-        gamesWon: score.gamesWon,
-        user: score.user ? {
-          id: score.user.id,
-          rating: score.user.rating ? Number(score.user.rating) : null
-        } : null,
+      scores: userScore.set.scores.map((s) => ({
+        userId: s.userId,
+        guestId: s.guestId,
+        gamesWon: s.gamesWon,
+        user: s.user
+          ? { id: s.user.id, rating: s.user.rating ? Number(s.user.rating) : null }
+          : null,
       })),
     };
 
-    // Calculate match rating using the player's rating BEFORE this match
-    // For opponents, we use their current ratings (approximation, but better than using player's current rating)
-    const matchRatingData = await calculateMatchRating(
-      userId,
-      setWithConvertedRating,
-      playerRatingBeforeMatch
-    );
-
-    if (matchRatingData) {
-      matchRatings.push({
-        ...matchRatingData,
-        createdAt: setDate,
-      });
-
-      // Update player's rating for the next match
-      // Use the match rating as the new baseline for subsequent matches
-      playerRatingBeforeMatch = matchRatingData.matchRating;
+    const matchData = await calculateMatchRating(userId, set, rating);
+    if (matchData) {
+      rating = matchData.matchRating;
     }
   }
 
-  if (matchRatings.length === 0) {
-    return DEFAULT_RATING;
-  }
-
-  // Now calculate weighted average with recency weighting
-  // Reverse the order for recency weighting (newer matches weighted higher)
-  const sortedMatchRatings = [...matchRatings].sort((a, b) => 
-    b.createdAt.getTime() - a.createdAt.getTime()
-  );
-
-  let weightedSum = 0;
-  let weightSum = 0;
-
-  for (const matchRating of sortedMatchRatings) {
-    const recencyWeight = calculateRecencyWeight(matchRating.createdAt);
-    const totalWeight = matchRating.matchWeight * recencyWeight;
-
-    weightedSum += matchRating.matchRating * totalWeight;
-    weightSum += totalWeight;
-  }
-
-  if (weightSum === 0) {
-    return DEFAULT_RATING;
-  }
-
-  const calculatedRating = weightedSum / weightSum;
-  return Math.max(MIN_RATING, Math.min(MAX_RATING, calculatedRating));
+  return Math.max(MIN_RATING, Math.min(MAX_RATING, rating));
 }
 
 /**
- * Update player's rating and create history entry
+ * Update a player's stored rating and write a history entry.
  */
 export async function updatePlayerRating(
   userId: string,
@@ -465,53 +272,41 @@ export async function updatePlayerRating(
   const previousRating = await getPlayerRating(userId);
   const newRating = await calculatePlayerRating(userId);
 
-  // Get match rating data if setId is provided
   let matchRating: number | null = null;
   if (setId) {
     const set = await prisma.set.findUnique({
       where: { id: setId },
       include: {
         scores: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                rating: true,
-              },
-            },
-          },
+          include: { user: { select: { id: true, rating: true } } },
         },
       },
     });
 
     if (set) {
-      // Convert Prisma Decimal to number for the set
-      const setWithConvertedRating: SetWithScores = {
+      const setWithRatings: SetWithScores = {
         ...set,
-        scores: set.scores.map((score) => ({
-          userId: score.userId,
-          guestId: score.guestId,
-          gamesWon: score.gamesWon,
-          user: score.user ? {
-            id: score.user.id,
-            rating: score.user.rating ? Number(score.user.rating) : null
-          } : null,
+        scores: set.scores.map((s) => ({
+          userId: s.userId,
+          guestId: s.guestId,
+          gamesWon: s.gamesWon,
+          user: s.user
+            ? { id: s.user.id, rating: s.user.rating ? Number(s.user.rating) : null }
+            : null,
         })),
       };
-      // For single set updates, use current ratings (this is for real-time updates, not historical recalculation)
-      const currentRating = await getPlayerRating(userId);
-      const matchRatingData = await calculateMatchRating(userId, setWithConvertedRating, currentRating);
+
+      const matchRatingData = await calculateMatchRating(
+        userId,
+        setWithRatings,
+        previousRating
+      );
+
       if (matchRatingData) {
         matchRating = matchRatingData.matchRating;
 
-        // Store match rating for transparency/debugging
         await prisma.matchRating.upsert({
-          where: {
-            userId_setId: {
-              userId,
-              setId,
-            },
-          },
+          where: { userId_setId: { userId, setId } },
           create: {
             userId,
             setId,
@@ -531,16 +326,11 @@ export async function updatePlayerRating(
     }
   }
 
-  // Update user rating
   await prisma.user.update({
     where: { id: userId },
-    data: {
-      rating: newRating,
-      ratingUpdatedAt: new Date(),
-    },
+    data: { rating: newRating, ratingUpdatedAt: new Date() },
   });
 
-  // Create rating history entry
   await prisma.ratingHistory.create({
     data: {
       userId,
@@ -555,48 +345,32 @@ export async function updatePlayerRating(
 }
 
 /**
- * Recalculate ratings for all players affected by a set
+ * Recalculate ratings for all registered players in a set.
  */
 export async function recalculateRatingsForSet(setId: string): Promise<void> {
   const set = await prisma.set.findUnique({
     where: { id: setId },
-    include: {
-      scores: {
-        select: {
-          userId: true,
-        },
-      },
-    },
+    include: { scores: { select: { userId: true } } },
   });
 
-  if (!set) {
-    return;
-  }
+  if (!set) return;
 
-  // Get all unique user IDs (exclude guests)
   const userIds = Array.from(
-    new Set(
-      set.scores
-        .map((s) => s.userId)
-        .filter((id): id is string => id !== null)
-    )
+    new Set(set.scores.map((s) => s.userId).filter((id): id is string => id !== null))
   );
 
-  // Recalculate ratings for all affected players
-  await Promise.all(
-    userIds.map((userId) => updatePlayerRating(userId, setId))
-  );
+  await Promise.all(userIds.map((userId) => updatePlayerRating(userId, setId)));
 }
 
 /**
- * Recalculate ratings for a specific player
+ * Recalculate rating for a specific player.
  */
 export async function recalculatePlayerRating(userId: string): Promise<number> {
   return updatePlayerRating(userId);
 }
 
 /**
- * Get rating history for a player
+ * Get rating history for a player.
  */
 export async function getRatingHistory(userId: string) {
   return prisma.ratingHistory.findMany({
@@ -610,43 +384,26 @@ export async function getRatingHistory(userId: string) {
           court: {
             select: {
               courtNumber: true,
-              session: {
-                select: {
-                  date: true,
-                  venueName: true,
-                },
-              },
+              session: { select: { date: true, venueName: true } },
             },
           },
         },
       },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: { createdAt: 'desc' },
   });
 }
 
 /**
- * Get match rating details for a player in a specific set
+ * Get DSS match rating details for a player in a specific set.
  */
 export async function getMatchRating(userId: string, setId: string) {
   return prisma.matchRating.findUnique({
-    where: {
-      userId_setId: {
-        userId,
-        setId,
-      },
-    },
+    where: { userId_setId: { userId, setId } },
     include: {
       set: {
-        select: {
-          id: true,
-          setNumber: true,
-          createdAt: true,
-        },
+        select: { id: true, setNumber: true, createdAt: true },
       },
     },
   });
 }
-
