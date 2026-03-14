@@ -279,7 +279,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         cumulativeNet: number; // cumulative net difference
         startValue: number; // starting cumulative net value
         sessionNumber: number;
-        rating: number | null; // UTR rating at this point
+        rating: number | null; // DSS rating at this point
       }> = [];
 
       sessions.forEach(([, sets], sessionIndex) => {
@@ -661,7 +661,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               orientation="right"
                               stroke="#A855F7" 
                               style={{ fontSize: '12px' }} 
-                              label={{ value: 'UTR Rating', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#A855F7' } }}
+                              label={{ value: 'DSS Rating', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#A855F7' } }}
                             />
                             <ReferenceLine yAxisId="left" y={0} stroke="#6B7280" strokeDasharray="3 3" strokeWidth={1} />
                             <Tooltip
@@ -680,7 +680,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                   const sign = value >= 0 ? '+' : '';
                                   return [`${sign}${value}`, 'Net Change (this session)'];
                                 } else if (name === 'rating') {
-                                  return value !== null ? [value.toFixed(2), 'UTR Rating'] : ['N/A', 'UTR Rating'];
+                                  return value !== null ? [value.toFixed(2), 'DSS Rating'] : ['N/A', 'DSS Rating'];
                                 }
                                 return [value, name];
                               }}
@@ -721,7 +721,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               activeDot={false}
                               name="Cumulative Trend"
                             />
-                            {/* UTR Rating trend line */}
+                            {/* DSS Rating trend line */}
                             <Line 
                               yAxisId="right"
                               type="monotone"
@@ -730,7 +730,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               strokeWidth={2}
                               dot={{ fill: '#A855F7', r: 4 }}
                               activeDot={{ r: 6 }}
-                              name="UTR Rating"
+                              name="DSS Rating"
                               connectNulls={false}
                             />
                           </ComposedChart>
@@ -887,7 +887,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <div className="text-right flex-shrink-0">
                         {leaderboardSort === 'rating' ? (
                           <>
-                            <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">UTR Rating</p>
+                            <p className="text-xs text-gray-400 mb-0.5 sm:mb-1 hidden sm:block">DSS Rating</p>
                             <div className="text-base sm:text-xl">
                               <RatingDisplay rating={player.rating ?? null} size="lg" />
                             </div>

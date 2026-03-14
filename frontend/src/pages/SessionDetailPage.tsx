@@ -125,7 +125,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       };
     });
 
-    // Sort by UTR rating (guests and players with no rating go to bottom)
+    // Sort by DSS rating (guests and players with no rating go to bottom)
     const sortedPlayers = [...playersWithStats].sort((a, b) => {
       if (a.isGuest && b.isGuest) return 0;
       if (a.isGuest) return 1;
@@ -1019,7 +1019,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                           )}
                           
                           <p className="text-xs text-gray-400 mt-2 italic">
-                            Based on UTR ratings{prediction ? ' with match prediction' : ''}
+                            Based on DSS ratings{prediction ? ' with match prediction' : ''}
                           </p>
                         </div>
                       );

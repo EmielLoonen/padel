@@ -22,7 +22,7 @@ model User {
   resetToken           String?   @map("reset_token")
   resetTokenExpiry     DateTime? @map("reset_token_expiry")
   lastLogin            DateTime? @map("last_login")
-  rating               Decimal?  @db.Decimal(5, 2) // UTR rating (1.00-16.50)
+  rating               Decimal?  @db.Decimal(5, 2) // DSS rating
   ratingUpdatedAt      DateTime? @map("rating_updated_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

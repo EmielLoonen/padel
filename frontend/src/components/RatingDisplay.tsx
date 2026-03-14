@@ -47,7 +47,7 @@ export default function RatingDisplay({
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       {showLabel && (
-        <span className={`text-gray-400 ${getSizeClasses()}`}>UTR:</span>
+        <span className={`text-gray-400 ${getSizeClasses()}`}>DSS:</span>
       )}
       <span className={`font-bold ${getRatingColor(rating)} ${getSizeClasses()}`}>
         {formattedRating}
