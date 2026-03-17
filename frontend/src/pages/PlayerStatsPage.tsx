@@ -67,6 +67,26 @@ interface MatchHistory {
 
 type ViewType = 'stats' | 'leaderboard' | 'history';
 
+interface MatchPlayerAggStats {
+  totalMatches: number;
+  stats: {
+    totalPoints: number;
+    avgContributionPct: number | null;
+    avgServeWinPct: number | null;
+    avgReturnWinPct: number | null;
+    avgServerWinPct: number | null;
+    totalGameWinningPoints: number;
+    totalSetWinningPoints: number;
+    totalClutchPoints: number;
+    totalBreakPointOpportunities: number;
+    totalBreakPointsConverted: number;
+    avgBreakConversionPct: number | null;
+    avgTeamServeWinPct: number | null;
+    avgTeamReturnWinPct: number | null;
+    maxLongestWinStreak: number | null;
+  } | null;
+}
+
 export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<PlayerStats | null>(null);
@@ -77,12 +97,14 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
   const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number | null; setId?: string | null }>>([]);
   const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
+  const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
 
   useEffect(() => {
     fetchStats();
     fetchLeaderboard();
     fetchMatchHistory();
     fetchRatingHistory();
+    fetchMatchAggStats();
   }, []);
 
   const fetchStats = async () => {
@@ -153,6 +175,19 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       setAllPlayersStats(response.data.leaderboard);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
+    }
+  };
+
+  const fetchMatchAggStats = async () => {
+    if (!user?.id) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/matches/player-stats/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMatchAggStats(response.data);
+    } catch (error) {
+      console.error('Failed to fetch match stats:', error);
     }
   };
 
@@ -609,6 +644,86 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       </div>
                     </div>
                   )}
+
+                  {/* Watch Match Stats */}
+                  {matchAggStats && matchAggStats.totalMatches > 0 && matchAggStats.stats && (() => {
+                    const s = matchAggStats.stats;
+                    const pct = (v: number | null) => v != null ? `${(v * 100).toFixed(1)}%` : '—';
+                    return (
+                      <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
+                        <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                          <span>⌚</span>
+                          Watch Stats
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-4">Aggregated over {matchAggStats.totalMatches} {matchAggStats.totalMatches === 1 ? 'match' : 'matches'} recorded by your watch</p>
+
+                        {/* Serve vs Return */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Serve Win %</p>
+                            <p className="text-2xl font-bold text-padel-green">{pct(s.avgTeamServeWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when your team serves</p>
+                          </div>
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Return Win %</p>
+                            <p className="text-2xl font-bold text-blue-400">{pct(s.avgTeamReturnWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when your team returns</p>
+                          </div>
+                        </div>
+
+                        {/* Personal contribution + server win */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Avg Contribution</p>
+                            <p className="text-2xl font-bold text-white">{pct(s.avgContributionPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">of team's points</p>
+                          </div>
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">On Serve Win %</p>
+                            <p className="text-2xl font-bold text-yellow-400">{pct(s.avgServerWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when you're serving</p>
+                          </div>
+                        </div>
+
+                        {/* Clutch & key points */}
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Clutch Pts</p>
+                            <p className="text-xl font-bold text-purple-400">{s.totalClutchPoints}</p>
+                          </div>
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Game Winners</p>
+                            <p className="text-xl font-bold text-white">{s.totalGameWinningPoints}</p>
+                          </div>
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1">Set Winners</p>
+                            <p className="text-xl font-bold text-white">{s.totalSetWinningPoints}</p>
+                          </div>
+                        </div>
+
+                        {/* Break points */}
+                        {s.totalBreakPointOpportunities > 0 && (
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-gray-400">Break Point Conversion</span>
+                              <span className="text-sm font-bold text-white">
+                                {s.totalBreakPointsConverted}/{s.totalBreakPointOpportunities}
+                                {s.avgBreakConversionPct != null && (
+                                  <span className="text-padel-green ml-1">({pct(s.avgBreakConversionPct)})</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-2 rounded-full bg-gradient-to-r from-padel-green to-emerald-500 transition-all duration-500"
+                                style={{ width: `${s.avgBreakConversionPct != null ? s.avgBreakConversionPct * 100 : 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Games Won vs Lost Trend Graph */}
                   {trendData.length > 0 && (

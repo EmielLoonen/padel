@@ -81,6 +81,7 @@ model Court {
   rsvps                   RSVP[]
   guests                  Guest[]
   sets                    Set[]
+  matches                 Match[]
 
   @@unique([sessionId, courtNumber])
   @@index([sessionId])
@@ -152,19 +153,26 @@ model Notification {
 model Set {
   id                String      @id @default(uuid())
   courtId           String      @map("court_id")
+  matchId           String?     @map("match_id")
   setNumber         Int         @map("set_number") // Which set in the session (1, 2, 3, etc.)
+  winner            Int?        // 1 or 2
+  wasTiebreak       Boolean     @default(false) @map("was_tiebreak")
+  tiebreakTeam1     Int?        @map("tiebreak_team1")
+  tiebreakTeam2     Int?        @map("tiebreak_team2")
   createdById       String      @map("created_by_id")
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
   // Relations
   court             Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  match             Match?      @relation(fields: [matchId], references: [id], onDelete: SetNull)
   createdBy         User        @relation("SetCreator", fields: [createdById], references: [id])
   scores            SetScore[]  // Player scores for this set
   ratingHistory     RatingHistory[]
   matchRatings      MatchRating[]
 
   @@index([courtId])
+  @@index([matchId])
   @@index([createdById])
   @@map("sets")
 }
@@ -226,4 +234,73 @@ model MatchRating {
   @@index([setId])
   @@index([createdAt])
   @@map("match_ratings")
+}
+
+model Match {
+  id              String             @id @default(uuid())
+  matchId         String             @unique @map("match_id") // Device-generated UUID
+  courtId         String             @map("court_id")
+  startDate       DateTime           @map("start_date")
+  endDate         DateTime?          @map("end_date")
+  durationSeconds Int?               @map("duration_seconds")
+  winner          Int?               // 1 or 2
+  pointLog        Json               @map("point_log")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  court           Court              @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sets            Set[]
+  teamStats       MatchTeamStats[]
+  playerStats     MatchPlayerStats[]
+
+  @@index([courtId])
+  @@map("matches")
+}
+
+model MatchTeamStats {
+  id                      String   @id @default(uuid())
+  matchId                 String   @map("match_id")
+  team                    Int      // 1 or 2
+  name                    String
+  pointsWon               Int      @map("points_won")
+  gamesWon                Int      @map("games_won")
+  setsWon                 Int      @map("sets_won")
+  serveWinPct             Decimal? @map("serve_win_pct")           @db.Decimal(6, 4)
+  returnWinPct            Decimal? @map("return_win_pct")          @db.Decimal(6, 4)
+  breakPointOpportunities Int      @map("break_point_opportunities")
+  breakPointsConverted    Int      @map("break_points_converted")
+  breakConversionPct      Decimal? @map("break_conversion_pct")    @db.Decimal(6, 4)
+  longestWinStreak        Int      @map("longest_win_streak")
+  clutchPointsWon         Int      @map("clutch_points_won")
+
+  // Relations
+  match                   Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@map("match_team_stats")
+}
+
+model MatchPlayerStats {
+  id                String   @id @default(uuid())
+  matchId           String   @map("match_id")
+  code              String   // A, B, C, D
+  name              String
+  team              Int      // 1 or 2
+  userId            String?  @map("user_id") // null for guests
+  pointsWon         Int      @map("points_won")
+  contributionPct   Decimal? @map("contribution_pct")  @db.Decimal(6, 4)
+  onServeWinPct     Decimal? @map("on_serve_win_pct")   @db.Decimal(6, 4)
+  onReturnWinPct    Decimal? @map("on_return_win_pct")  @db.Decimal(6, 4)
+  serverWinPct      Decimal? @map("server_win_pct")     @db.Decimal(6, 4)
+  gameWinningPoints Int      @map("game_winning_points")
+  setWinningPoints  Int      @map("set_winning_points")
+  clutchPoints      Int      @map("clutch_points")
+  pointsBySet       Json     @map("points_by_set")
+
+  // Relations
+  match             Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([userId])
+  @@map("match_player_stats")
 }
