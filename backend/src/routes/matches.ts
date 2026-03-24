@@ -295,24 +295,91 @@ router.get('/:watchCode', async (req: Request, res: Response) => {
 });
 
 // GET /api/matches/player-stats/:userId — aggregated watch stats for a player (auth required)
+// Optional query param: ?matchId=<match.id> to filter to a single match
 router.get('/player-stats/:userId', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const { matchId: filterMatchId } = req.query;
 
     // Fetch all player stats rows for this user across all matches
-    const playerRows = await prisma.matchPlayerStats.findMany({
+    const allPlayerRows = await prisma.matchPlayerStats.findMany({
       where: { userId },
       include: {
         match: {
           include: {
             teamStats: true,
+            playerStats: {
+              select: { name: true, team: true, userId: true },
+            },
+            sets: {
+              orderBy: { setNumber: 'asc' },
+              include: {
+                scores: {
+                  select: { userId: true, gamesWon: true },
+                },
+              },
+            },
           },
         },
       },
+      orderBy: { match: { startDate: 'desc' } },
     });
 
+    if (allPlayerRows.length === 0) {
+      return res.json({ totalMatches: 0, matches: [], stats: null });
+    }
+
+    // Build the match list for the filter UI (with per-set scores)
+    const matches = allPlayerRows.map((r) => {
+      const sets = r.match.sets.map((set) => {
+        // Find the authenticated player's score (they're always registered with a userId)
+        const myScore = set.scores.find((sc) => sc.userId === userId)?.gamesWon ?? null;
+
+        // Find the opponent score: it's the other unique gamesWon value in the set
+        // (all team1 players share the same gamesWon, same for team2)
+        let oppScore: number | null = null;
+        if (myScore !== null) {
+          for (const sc of set.scores) {
+            if (sc.gamesWon !== myScore) { oppScore = sc.gamesWon; break; }
+          }
+          oppScore = oppScore ?? myScore; // tie: both teams have the same score
+        }
+
+        const team1Games = r.team === 1 ? (myScore ?? 0) : (oppScore ?? 0);
+        const team2Games = r.team === 1 ? (oppScore ?? 0) : (myScore ?? 0);
+        return { setNumber: set.setNumber, team1Games, team2Games };
+      });
+
+      const team1Players = r.match.playerStats
+        .filter((p) => p.team === 1)
+        .map((p) => ({ name: p.name, userId: p.userId }));
+      const team2Players = r.match.playerStats
+        .filter((p) => p.team === 2)
+        .map((p) => ({ name: p.name, userId: p.userId }));
+
+      const team1Stats = r.match.teamStats.find((t) => t.team === 1);
+      const team2Stats = r.match.teamStats.find((t) => t.team === 2);
+
+      return {
+        id: r.match.id,
+        startDate: r.match.startDate,
+        winner: r.match.winner,
+        playerTeam: r.team,
+        sets,
+        team1Players,
+        team2Players,
+        team1Points: team1Stats?.pointsWon ?? null,
+        team2Points: team2Stats?.pointsWon ?? null,
+      };
+    });
+
+    // Apply optional single-match filter
+    const playerRows = filterMatchId
+      ? allPlayerRows.filter((r) => r.match.id === filterMatchId)
+      : allPlayerRows;
+
     if (playerRows.length === 0) {
-      return res.json({ totalMatches: 0, stats: null });
+      return res.json({ totalMatches: allPlayerRows.length, matches, stats: null });
     }
 
     // Helper: average of non-null Decimal/number values
@@ -352,7 +419,8 @@ router.get('/player-stats/:userId', authenticateToken, async (req: Request, res:
       : null;
 
     res.json({
-      totalMatches,
+      totalMatches: allPlayerRows.length,
+      matches,
       stats: {
         totalPoints,
         avgContributionPct,

@@ -67,8 +67,21 @@ interface MatchHistory {
 
 type ViewType = 'stats' | 'leaderboard' | 'history';
 
+interface MatchSummary {
+  id: string;
+  startDate: string;
+  winner: number | null;
+  playerTeam: number;
+  sets: { setNumber: number; team1Games: number; team2Games: number }[];
+  team1Players: { name: string; userId: string | null }[];
+  team2Players: { name: string; userId: string | null }[];
+  team1Points: number | null;
+  team2Points: number | null;
+}
+
 interface MatchPlayerAggStats {
   totalMatches: number;
+  matches: MatchSummary[];
   stats: {
     totalPoints: number;
     avgContributionPct: number | null;
@@ -98,6 +111,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number | null; setId?: string | null }>>([]);
   const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
   const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -178,14 +192,25 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     }
   };
 
-  const fetchMatchAggStats = async () => {
+  const fetchMatchAggStats = async (matchId?: string | null) => {
     if (!user?.id) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/matches/player-stats/${user.id}`, {
+      const url = matchId
+        ? `${API_URL}/api/matches/player-stats/${user.id}?matchId=${matchId}`
+        : `${API_URL}/api/matches/player-stats/${user.id}`;
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatchAggStats(response.data);
+      setMatchAggStats((prev) => ({
+        ...response.data,
+        // Preserve the full matches list when filtering to a single match
+        matches: matchId && prev?.matches ? prev.matches : response.data.matches,
+      }));
+      // Auto-select the match when there is only one
+      if (!matchId && response.data.matches?.length === 1) {
+        setSelectedMatchId(response.data.matches[0].id);
+      }
     } catch (error) {
       console.error('Failed to fetch match stats:', error);
     }
@@ -597,6 +622,206 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                     </div>
                   </div>
 
+                  {/* Watch Match Stats */}
+                  {matchAggStats && matchAggStats.totalMatches > 0 && (() => {
+                    const s = matchAggStats.stats;
+                    const pct = (v: number | null) => v != null ? `${(v * 100).toFixed(1)}%` : '—';
+                    const formatDate = (iso: string) => {
+                      const d = new Date(iso);
+                      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    };
+                    const Info = ({ text }: { text: string }) => (
+                      <div className="relative inline-block group">
+                        <span className="text-gray-600 hover:text-gray-400 cursor-help text-xs ml-1 select-none">ⓘ</span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-900 border border-gray-600 text-gray-300 text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left shadow-lg">
+                          {text}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600" />
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
+                        <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                          <span>⌚</span>
+                          Watch Stats
+                        </h3>
+
+                        {/* Match filter dropdown */}
+                        {matchAggStats.matches && matchAggStats.matches.length >= 1 && (
+                          <div className="mt-2 mb-3">
+                            <select
+                              value={selectedMatchId ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value || null;
+                                setSelectedMatchId(val);
+                                fetchMatchAggStats(val);
+                              }}
+                              className="w-full bg-dark-card border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-padel-green"
+                            >
+                              <option value="">All matches ({matchAggStats.totalMatches})</option>
+                              {matchAggStats.matches.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {formatDate(m.startDate)}{m.winner !== null ? (m.winner === m.playerTeam ? ' — Win' : ' — Loss') : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Match detail card for selected match */}
+                        {selectedMatchId && (() => {
+                          const sel = matchAggStats.matches?.find((m) => m.id === selectedMatchId);
+                          if (!sel?.sets?.length) return null;
+                          const isWin = sel.winner !== null && sel.winner === sel.playerTeam;
+                          const myPlayers = sel.playerTeam === 1 ? sel.team1Players : sel.team2Players;
+                          const oppPlayers = sel.playerTeam === 1 ? sel.team2Players : sel.team1Players;
+                          const team1Games = sel.sets.reduce((acc, s) => acc + s.team1Games, 0);
+                          const team2Games = sel.sets.reduce((acc, s) => acc + s.team2Games, 0);
+                          const team1Sets = sel.sets.filter((s) => s.team1Games > s.team2Games).length;
+                          const team2Sets = sel.sets.filter((s) => s.team2Games > s.team1Games).length;
+                          return (
+                            <div className="mb-4 bg-dark-card rounded-lg border border-gray-700 p-3">
+                              {/* Result + Score row */}
+                              <div className="flex items-center gap-3 mb-3">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-md flex-shrink-0 ${isWin ? 'bg-green-900/50 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
+                                  {isWin ? 'WIN' : 'LOSS'}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {sel.sets.map((set, i) => {
+                                    const myGames = sel.playerTeam === 1 ? set.team1Games : set.team2Games;
+                                    const oppGames = sel.playerTeam === 1 ? set.team2Games : set.team1Games;
+                                    const wonSet = myGames > oppGames;
+                                    return (
+                                      <span key={i} className={`text-sm font-semibold ${wonSet ? 'text-white' : 'text-gray-500'}`}>
+                                        {myGames}–{oppGames}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {/* Quick stats row */}
+                              <div className="grid grid-cols-3 gap-2 mb-3">
+                                <div className="bg-dark-elevated rounded-md p-2 text-center">
+                                  <p className="text-xs text-gray-500 mb-0.5">Points</p>
+                                  <p className="text-sm font-bold text-white">
+                                    {sel.team1Points ?? '—'}<span className="text-gray-600 mx-1">–</span>{sel.team2Points ?? '—'}
+                                  </p>
+                                </div>
+                                <div className="bg-dark-elevated rounded-md p-2 text-center">
+                                  <p className="text-xs text-gray-500 mb-0.5">Games</p>
+                                  <p className="text-sm font-bold text-white">{team1Games}<span className="text-gray-600 mx-1">–</span>{team2Games}</p>
+                                </div>
+                                <div className="bg-dark-elevated rounded-md p-2 text-center">
+                                  <p className="text-xs text-gray-500 mb-0.5">Sets</p>
+                                  <p className="text-sm font-bold text-white">{team1Sets}<span className="text-gray-600 mx-1">–</span>{team2Sets}</p>
+                                </div>
+                              </div>
+                              {/* Teams row */}
+                              <div className="flex items-start gap-2 text-xs">
+                                <div className="flex-1">
+                                  <p className="text-padel-green font-semibold mb-1">Your team</p>
+                                  {myPlayers.map((p, i) => (
+                                    <p key={i} className="text-white truncate">{p.name}</p>
+                                  ))}
+                                </div>
+                                <div className="text-gray-600 text-xs pt-4 px-1">vs</div>
+                                <div className="flex-1">
+                                  <p className="text-gray-400 font-semibold mb-1">Opponents</p>
+                                  {oppPlayers.map((p, i) => (
+                                    <p key={i} className="text-gray-300 truncate">{p.name}</p>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {s && (<>
+                        {/* Serve vs Return */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Serve Win %<Info text="% of points your team wins when your team is serving. A high score means you dominate your own service games." />
+                            </p>
+                            <p className="text-2xl font-bold text-padel-green">{pct(s.avgTeamServeWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when your team serves</p>
+                          </div>
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Return Win %<Info text="% of points your team wins when the opponents are serving. A high score means you break serve often." />
+                            </p>
+                            <p className="text-2xl font-bold text-blue-400">{pct(s.avgTeamReturnWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when your team returns</p>
+                          </div>
+                        </div>
+
+                        {/* Personal contribution + server win */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Avg Contribution<Info text="Your share of your team's total points won. 50% is perfectly equal with your partner. Above 50% means you won more points than them." />
+                            </p>
+                            <p className="text-2xl font-bold text-white">{pct(s.avgContributionPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">of team's points</p>
+                          </div>
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              On Serve Win %<Info text="% of points you personally win when you are the server. Measures your individual serving effectiveness." />
+                            </p>
+                            <p className="text-2xl font-bold text-yellow-400">{pct(s.avgServerWinPct)}</p>
+                            <p className="text-xs text-gray-500 mt-1">when you're serving</p>
+                          </div>
+                        </div>
+
+                        {/* Clutch & key points */}
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Clutch Pts<Info text="Points you won in high-pressure situations: deuce, advantage, or game point moments." />
+                            </p>
+                            <p className="text-xl font-bold text-purple-400">{s.totalClutchPoints}</p>
+                          </div>
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Game Winners<Info text="The number of times you hit the point that directly won a game." />
+                            </p>
+                            <p className="text-xl font-bold text-white">{s.totalGameWinningPoints}</p>
+                          </div>
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Set Winners<Info text="The number of times you hit the point that directly won a set." />
+                            </p>
+                            <p className="text-xl font-bold text-white">{s.totalSetWinningPoints}</p>
+                          </div>
+                        </div>
+
+                        {/* Break points */}
+                        {s.totalBreakPointOpportunities > 0 && (
+                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-gray-400 flex items-center">
+                                Break Point Conversion<Info text="How often your team converted a break point opportunity into an actual break. Calculated as breaks won ÷ total break point opportunities." />
+                              </span>
+                              <span className="text-sm font-bold text-white">
+                                {s.totalBreakPointsConverted}/{s.totalBreakPointOpportunities}
+                                {s.avgBreakConversionPct != null && (
+                                  <span className="text-padel-green ml-1">({pct(s.avgBreakConversionPct)})</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-2 rounded-full bg-gradient-to-r from-padel-green to-emerald-500 transition-all duration-500"
+                                style={{ width: `${s.avgBreakConversionPct != null ? s.avgBreakConversionPct * 100 : 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        </>)}
+                      </div>
+                    );
+                  })()}
+
                   {/* Win Rate Per Teammate */}
                   {stats.teammateWinRates && stats.teammateWinRates.length > 0 && (
                     <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
@@ -644,86 +869,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       </div>
                     </div>
                   )}
-
-                  {/* Watch Match Stats */}
-                  {matchAggStats && matchAggStats.totalMatches > 0 && matchAggStats.stats && (() => {
-                    const s = matchAggStats.stats;
-                    const pct = (v: number | null) => v != null ? `${(v * 100).toFixed(1)}%` : '—';
-                    return (
-                      <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
-                        <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
-                          <span>⌚</span>
-                          Watch Stats
-                        </h3>
-                        <p className="text-xs text-gray-500 mb-4">Aggregated over {matchAggStats.totalMatches} {matchAggStats.totalMatches === 1 ? 'match' : 'matches'} recorded by your watch</p>
-
-                        {/* Serve vs Return */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Serve Win %</p>
-                            <p className="text-2xl font-bold text-padel-green">{pct(s.avgTeamServeWinPct)}</p>
-                            <p className="text-xs text-gray-500 mt-1">when your team serves</p>
-                          </div>
-                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Return Win %</p>
-                            <p className="text-2xl font-bold text-blue-400">{pct(s.avgTeamReturnWinPct)}</p>
-                            <p className="text-xs text-gray-500 mt-1">when your team returns</p>
-                          </div>
-                        </div>
-
-                        {/* Personal contribution + server win */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Avg Contribution</p>
-                            <p className="text-2xl font-bold text-white">{pct(s.avgContributionPct)}</p>
-                            <p className="text-xs text-gray-500 mt-1">of team's points</p>
-                          </div>
-                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">On Serve Win %</p>
-                            <p className="text-2xl font-bold text-yellow-400">{pct(s.avgServerWinPct)}</p>
-                            <p className="text-xs text-gray-500 mt-1">when you're serving</p>
-                          </div>
-                        </div>
-
-                        {/* Clutch & key points */}
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Clutch Pts</p>
-                            <p className="text-xl font-bold text-purple-400">{s.totalClutchPoints}</p>
-                          </div>
-                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Game Winners</p>
-                            <p className="text-xl font-bold text-white">{s.totalGameWinningPoints}</p>
-                          </div>
-                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
-                            <p className="text-xs text-gray-400 mb-1">Set Winners</p>
-                            <p className="text-xl font-bold text-white">{s.totalSetWinningPoints}</p>
-                          </div>
-                        </div>
-
-                        {/* Break points */}
-                        {s.totalBreakPointOpportunities > 0 && (
-                          <div className="bg-dark-card p-4 rounded-lg border border-gray-700">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm text-gray-400">Break Point Conversion</span>
-                              <span className="text-sm font-bold text-white">
-                                {s.totalBreakPointsConverted}/{s.totalBreakPointOpportunities}
-                                {s.avgBreakConversionPct != null && (
-                                  <span className="text-padel-green ml-1">({pct(s.avgBreakConversionPct)})</span>
-                                )}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="h-2 rounded-full bg-gradient-to-r from-padel-green to-emerald-500 transition-all duration-500"
-                                style={{ width: `${s.avgBreakConversionPct != null ? s.avgBreakConversionPct * 100 : 0}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
 
                   {/* Games Won vs Lost Trend Graph */}
                   {trendData.length > 0 && (
