@@ -553,6 +553,9 @@ export const setService = {
         if (!score.userId) continue;
         const session = score.set.court?.session;
         if (!session) continue;
+        // Only count complete sets (maxScore >= 6), matching how totalSets is counted in stats
+        const maxScore = Math.max(...score.set.scores.map((s) => s.gamesWon));
+        if (maxScore < 6) continue;
         const key = `${score.userId}:${score.setId}`;
         if (seenUserSet.has(key)) continue;
         seenUserSet.add(key);
