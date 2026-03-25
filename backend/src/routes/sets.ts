@@ -11,7 +11,8 @@ router.use(authenticateToken);
 // Get leaderboard
 router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
-    const leaderboard = await setService.getLeaderboard();
+    const rolling = req.query.rolling ? Number(req.query.rolling) : undefined;
+    const leaderboard = await setService.getLeaderboard(rolling);
     res.json({ leaderboard });
   } catch (error) {
     console.error('Get leaderboard error:', error);

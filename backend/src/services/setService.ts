@@ -518,7 +518,7 @@ export const setService = {
     };
   },
 
-  async getLeaderboard() {
+  async getLeaderboard(rolling?: number) {
     // Get all set scores
     const allScores = await prisma.setScore.findMany({
       include: {
@@ -533,10 +533,38 @@ export const setService = {
         set: {
           include: {
             scores: true,
+            court: {
+              include: {
+                session: { select: { id: true, date: true } },
+              },
+            },
           },
         },
       },
     });
+
+    // When rolling is set: compute valid set IDs per user (last N sessions)
+    let validSetIds: Set<string> | null = null;
+    if (rolling) {
+      // Build: userId -> Map<sessionId, { date, setIds[] }>
+      const userSessionMap = new Map<string, Map<string, { date: Date; setIds: string[] }>>();
+      for (const score of allScores) {
+        if (!score.userId) continue;
+        const session = score.set.court?.session;
+        if (!session) continue;
+        if (!userSessionMap.has(score.userId)) userSessionMap.set(score.userId, new Map());
+        const sessions = userSessionMap.get(score.userId)!;
+        if (!sessions.has(session.id)) sessions.set(session.id, { date: session.date, setIds: [] });
+        sessions.get(session.id)!.setIds.push(score.setId);
+      }
+      validSetIds = new Set();
+      for (const sessions of userSessionMap.values()) {
+        const sorted = [...sessions.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        for (const { setIds } of sorted.slice(0, rolling)) {
+          for (const id of setIds) validSetIds.add(id);
+        }
+      }
+    }
 
     // Group by user
     const playerStatsMap = new Map<string, {
@@ -556,6 +584,10 @@ export const setService = {
     allScores.forEach((score) => {
       // Skip guest players - leaderboard is only for registered users
       if (!score.userId || !score.user) {
+        return;
+      }
+      // Skip sets outside the rolling window
+      if (validSetIds && !validSetIds.has(score.setId)) {
         return;
       }
 

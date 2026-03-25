@@ -127,10 +127,11 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
   const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [leaderboardRolling, setLeaderboardRolling] = useState<5 | 10 | 20 | null>(5);
 
   useEffect(() => {
     fetchStats();
-    fetchLeaderboard();
+    fetchLeaderboard(leaderboardRolling);
     fetchMatchHistory();
     fetchRatingHistory();
     fetchMatchAggStats();
@@ -195,10 +196,13 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     }
   };
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (rolling: 5 | 10 | 20 | null = leaderboardRolling) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/sets/leaderboard`, {
+      const url = rolling
+        ? `${API_URL}/api/sets/leaderboard?rolling=${rolling}`
+        : `${API_URL}/api/sets/leaderboard`;
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAllPlayersStats(response.data.leaderboard);
@@ -1111,6 +1115,29 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
               <span>🏆</span>
               Leaderboard
             </h2>
+
+            {/* Rolling window filter */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-400 mb-2">Period:</p>
+              <div className="flex gap-2">
+                {([5, 10, 20, null] as const).map((r) => (
+                  <button
+                    key={r ?? 'all'}
+                    onClick={() => {
+                      setLeaderboardRolling(r);
+                      fetchLeaderboard(r);
+                    }}
+                    className={`flex-1 py-2 px-2 rounded-lg text-sm font-semibold transition-all ${
+                      leaderboardRolling === r
+                        ? 'bg-padel-green text-white'
+                        : 'bg-dark-elevated text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {r === null ? 'All' : `Rolling ${r}`}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Sort Filter */}
             <div className="mb-6">
