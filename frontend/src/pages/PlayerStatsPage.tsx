@@ -1133,7 +1133,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                         : 'bg-dark-elevated text-gray-400 hover:text-white'
                     }`}
                   >
-                    {r === null ? 'All' : `Rolling ${r}`}
+                    {r === null ? 'All' : `Last ${r}`}
                   </button>
                 ))}
               </div>

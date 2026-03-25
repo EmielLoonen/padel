@@ -544,7 +544,8 @@ export const setService = {
     });
 
     // When rolling is set: compute valid set IDs per user (last N sessions)
-    let validSetIds: Set<string> | null = null;
+    // Users with fewer than `rolling` sessions are excluded entirely.
+    let validSetIdsByUser: Map<string, Set<string>> | null = null;
     if (rolling) {
       // Build: userId -> Map<sessionId, { date, setIds[] }>
       const userSessionMap = new Map<string, Map<string, { date: Date; setIds: string[] }>>();
@@ -557,12 +558,16 @@ export const setService = {
         if (!sessions.has(session.id)) sessions.set(session.id, { date: session.date, setIds: [] });
         sessions.get(session.id)!.setIds.push(score.setId);
       }
-      validSetIds = new Set();
-      for (const sessions of userSessionMap.values()) {
+      validSetIdsByUser = new Map();
+      for (const [userId, sessions] of userSessionMap.entries()) {
+        // Skip users who don't have enough sessions to meet the rolling threshold
+        if (sessions.size < rolling) continue;
         const sorted = [...sessions.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const userValidSets = new Set<string>();
         for (const { setIds } of sorted.slice(0, rolling)) {
-          for (const id of setIds) validSetIds.add(id);
+          for (const id of setIds) userValidSets.add(id);
         }
+        validSetIdsByUser.set(userId, userValidSets);
       }
     }
 
@@ -586,8 +591,8 @@ export const setService = {
       if (!score.userId || !score.user) {
         return;
       }
-      // Skip sets outside the rolling window
-      if (validSetIds && !validSetIds.has(score.setId)) {
+      // Skip sets outside the rolling window (or user excluded due to insufficient sessions)
+      if (validSetIdsByUser && !validSetIdsByUser.get(score.userId)?.has(score.setId)) {
         return;
       }
 
