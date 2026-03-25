@@ -299,9 +299,10 @@ export const setService = {
   },
 
   async deleteSet(setId: string, userId: string) {
-    // Get the set to check permissions
+    // Get the set to check permissions and capture matchId before deletion
     const set = await prisma.set.findUnique({
       where: { id: setId },
+      select: { id: true, createdById: true, matchId: true },
     });
 
     if (!set) {
@@ -334,6 +335,17 @@ export const setService = {
     await prisma.set.delete({
       where: { id: setId },
     });
+
+    // If the set belonged to a Match, delete the Match when no sets remain linked to it
+    // (cascades to MatchPlayerStats and MatchTeamStats automatically)
+    if (set.matchId) {
+      const remainingSets = await prisma.set.count({ where: { matchId: set.matchId } });
+      if (remainingSets === 0) {
+        await prisma.match.delete({ where: { id: set.matchId } }).catch(() => {
+          // Match may have already been deleted or not exist — safe to ignore
+        });
+      }
+    }
 
     // Recalculate ratings for all affected players (async, don't wait)
     // Note: We need to recalculate each player individually since the set is already deleted

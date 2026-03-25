@@ -82,6 +82,7 @@ router.get('/:code', async (req: Request, res: Response) => {
         time: court.session.time,
         venue: court.session.venueName,
       },
+      players,
       teams,
     });
   } catch (error) {

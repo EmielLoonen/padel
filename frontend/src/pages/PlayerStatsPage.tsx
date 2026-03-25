@@ -67,16 +67,31 @@ interface MatchHistory {
 
 type ViewType = 'stats' | 'leaderboard' | 'history';
 
+interface MatchPlayerRow {
+  name: string;
+  userId: string | null;
+  team: number;
+  pointsWon: number;
+  contributionPct: number | null;
+  onServeWinPct: number | null;
+  onReturnWinPct: number | null;
+  serverWinPct: number | null;
+  gameWinningPoints: number;
+  setWinningPoints: number;
+  clutchPoints: number;
+  pointsBySet: Record<string, number> | null;
+}
+
 interface MatchSummary {
   id: string;
   startDate: string;
   winner: number | null;
   playerTeam: number;
   sets: { setNumber: number; team1Games: number; team2Games: number }[];
-  team1Players: { name: string; userId: string | null }[];
-  team2Players: { name: string; userId: string | null }[];
+  players: MatchPlayerRow[];
   team1Points: number | null;
   team2Points: number | null;
+  sessionDate?: string;
 }
 
 interface MatchPlayerAggStats {
@@ -631,14 +646,33 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                     };
                     const Info = ({ text }: { text: string }) => (
-                      <div className="relative inline-block group">
+                      <span className="relative inline-block group">
                         <span className="text-gray-600 hover:text-gray-400 cursor-help text-xs ml-1 select-none">ⓘ</span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-900 border border-gray-600 text-gray-300 text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left shadow-lg">
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-900 border border-gray-600 text-gray-300 text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 text-left shadow-lg">
                           {text}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600" />
-                        </div>
-                      </div>
+                          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-600" />
+                        </span>
+                      </span>
                     );
+                    // Derive the winning team (1 or 2) from available match data when match.winner is null
+                    const deriveWinner = (m: MatchSummary): number | null => {
+                      if (m.winner !== null) return m.winner;
+                      // 1. Set count
+                      const t1s = m.sets.filter((s) => s.team1Games > s.team2Games).length;
+                      const t2s = m.sets.filter((s) => s.team2Games > s.team1Games).length;
+                      if (t1s > t2s) return 1;
+                      if (t2s > t1s) return 2;
+                      // 2. Total games
+                      const t1g = m.sets.reduce((a, s) => a + s.team1Games, 0);
+                      const t2g = m.sets.reduce((a, s) => a + s.team2Games, 0);
+                      if (t1g > t2g) return 1;
+                      if (t2g > t1g) return 2;
+                      // 3. Points from MatchTeamStats (reliable even when set scores are corrupted)
+                      if (m.team1Points != null && m.team2Points != null && m.team1Points !== m.team2Points) {
+                        return m.team1Points > m.team2Points ? 1 : 2;
+                      }
+                      return null;
+                    };
                     return (
                       <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
                         <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
@@ -659,11 +693,33 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               className="w-full bg-dark-card border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-padel-green"
                             >
                               <option value="">All matches ({matchAggStats.totalMatches})</option>
-                              {matchAggStats.matches.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  {formatDate(m.startDate)}{m.winner !== null ? (m.winner === m.playerTeam ? ' — Win' : ' — Loss') : ''}
-                                </option>
-                              ))}
+                              {(() => {
+                                // Count how many matches share the same display date so we can add rotation numbers
+                                const dateCounts = new Map<string, number>();
+                                const dateIndex = new Map<string, number>();
+                                matchAggStats.matches.forEach((m) => {
+                                  const d = formatDate(m.sessionDate ?? m.startDate);
+                                  dateCounts.set(d, (dateCounts.get(d) ?? 0) + 1);
+                                });
+                                return matchAggStats.matches.map((m) => {
+                                  const dateKey = formatDate(m.sessionDate ?? m.startDate);
+                                  const isMultiple = (dateCounts.get(dateKey) ?? 1) > 1;
+                                  const rotationIdx = isMultiple ? (dateIndex.get(dateKey) ?? 0) + 1 : null;
+                                  if (isMultiple) dateIndex.set(dateKey, rotationIdx!);
+
+                                  const derivedWinner = deriveWinner(m);
+                                  const winLabel = derivedWinner !== null
+                                    ? (derivedWinner === m.playerTeam ? ' — Win' : ' — Loss')
+                                    : '';
+                                  const rotationLabel = rotationIdx !== null ? ` (${rotationIdx})` : '';
+
+                                  return (
+                                    <option key={m.id} value={m.id}>
+                                      {dateKey}{rotationLabel}{winLabel}
+                                    </option>
+                                  );
+                                });
+                              })()}
                             </select>
                           </div>
                         )}
@@ -672,9 +728,17 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                         {selectedMatchId && (() => {
                           const sel = matchAggStats.matches?.find((m) => m.id === selectedMatchId);
                           if (!sel?.sets?.length) return null;
-                          const isWin = sel.winner !== null && sel.winner === sel.playerTeam;
-                          const myPlayers = sel.playerTeam === 1 ? sel.team1Players : sel.team2Players;
-                          const oppPlayers = sel.playerTeam === 1 ? sel.team2Players : sel.team1Players;
+                          const selWinner = deriveWinner(sel);
+                          const isWin = selWinner !== null && selWinner === sel.playerTeam;
+                          const initials = (name: string) => {
+                            const parts = name.trim().split(/\s+/);
+                            if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                            return name.trim().slice(0, 2).toUpperCase();
+                          };
+                          // Order: your team first, opponents second
+                          const myTeamPlayers = (sel.players ?? []).filter(p => p.team === sel.playerTeam);
+                          const oppPlayers = (sel.players ?? []).filter(p => p.team !== sel.playerTeam);
+                          const orderedPlayers = [...myTeamPlayers, ...oppPlayers];
                           const team1Games = sel.sets.reduce((acc, s) => acc + s.team1Games, 0);
                           const team2Games = sel.sets.reduce((acc, s) => acc + s.team2Games, 0);
                           const team1Sets = sel.sets.filter((s) => s.team1Games > s.team2Games).length;
@@ -716,22 +780,48 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                   <p className="text-sm font-bold text-white">{team1Sets}<span className="text-gray-600 mx-1">–</span>{team2Sets}</p>
                                 </div>
                               </div>
-                              {/* Teams row */}
-                              <div className="flex items-start gap-2 text-xs">
-                                <div className="flex-1">
-                                  <p className="text-padel-green font-semibold mb-1">Your team</p>
-                                  {myPlayers.map((p, i) => (
-                                    <p key={i} className="text-white truncate">{p.name}</p>
-                                  ))}
+                              {/* Player stats table */}
+                              {orderedPlayers.length > 0 && (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr>
+                                        <th className="text-left text-gray-500 font-normal pb-2 pr-2 w-24">Stat</th>
+                                        {orderedPlayers.map((p, i) => (
+                                          <th key={i} className={`text-center pb-2 px-1 font-bold ${p.team === sel.playerTeam ? 'text-padel-green' : 'text-gray-400'}`}>
+                                            {initials(p.name)}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-800">
+                                      {[
+                                        { label: 'Points won', fn: (p: MatchPlayerRow) => p.pointsWon },
+                                        { label: 'Contribution %', fn: (p: MatchPlayerRow) => p.contributionPct != null ? `${(p.contributionPct * 100).toFixed(0)}%` : '—' },
+                                        { label: 'On-serve win %', fn: (p: MatchPlayerRow) => p.onServeWinPct != null ? `${(p.onServeWinPct * 100).toFixed(0)}%` : '—' },
+                                        { label: 'On-return win %', fn: (p: MatchPlayerRow) => p.onReturnWinPct != null ? `${(p.onReturnWinPct * 100).toFixed(0)}%` : '—' },
+                                        { label: 'Server win %', fn: (p: MatchPlayerRow) => p.serverWinPct != null ? `${(p.serverWinPct * 100).toFixed(0)}%` : '—' },
+                                        { label: 'Game winners', fn: (p: MatchPlayerRow) => p.gameWinningPoints },
+                                        { label: 'Set winners', fn: (p: MatchPlayerRow) => p.setWinningPoints },
+                                        { label: 'Clutch points', fn: (p: MatchPlayerRow) => p.clutchPoints },
+                                        ...sel.sets.map((set) => ({
+                                          label: `Set ${set.setNumber} pts`,
+                                          fn: (p: MatchPlayerRow) => p.pointsBySet?.[String(set.setNumber)] ?? '—',
+                                        })),
+                                      ].map((row, ri) => (
+                                        <tr key={ri}>
+                                          <td className="text-gray-500 py-1.5 pr-2 whitespace-nowrap">{row.label}</td>
+                                          {orderedPlayers.map((p, pi) => (
+                                            <td key={pi} className={`text-center py-1.5 px-1 font-medium ${p.team === sel.playerTeam ? 'text-white' : 'text-gray-400'}`}>
+                                              {String(row.fn(p))}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
-                                <div className="text-gray-600 text-xs pt-4 px-1">vs</div>
-                                <div className="flex-1">
-                                  <p className="text-gray-400 font-semibold mb-1">Opponents</p>
-                                  {oppPlayers.map((p, i) => (
-                                    <p key={i} className="text-gray-300 truncate">{p.name}</p>
-                                  ))}
-                                </div>
-                              </div>
+                              )}
                             </div>
                           );
                         })()}
@@ -774,12 +864,18 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                         </div>
 
                         {/* Clutch & key points */}
-                        <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="grid grid-cols-2 gap-3 mb-4">
                           <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
                             <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
                               Clutch Pts<Info text="Points you won in high-pressure situations: deuce, advantage, or game point moments." />
                             </p>
                             <p className="text-xl font-bold text-purple-400">{s.totalClutchPoints}</p>
+                          </div>
+                          <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
+                            <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">
+                              Win Streak<Info text="The longest consecutive points won by your team in a single match." />
+                            </p>
+                            <p className="text-xl font-bold text-orange-400">{s.maxLongestWinStreak ?? '—'}</p>
                           </div>
                           <div className="bg-dark-card p-3 rounded-lg border border-gray-700 text-center">
                             <p className="text-xs text-gray-400 mb-1 flex items-center justify-center">

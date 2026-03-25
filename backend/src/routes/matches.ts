@@ -309,7 +309,13 @@ router.get('/player-stats/:userId', authenticateToken, async (req: Request, res:
           include: {
             teamStats: true,
             playerStats: {
-              select: { name: true, team: true, userId: true },
+              select: {
+                name: true, team: true, userId: true, code: true,
+                pointsWon: true, contributionPct: true,
+                onServeWinPct: true, onReturnWinPct: true, serverWinPct: true,
+                gameWinningPoints: true, setWinningPoints: true,
+                clutchPoints: true, pointsBySet: true,
+              },
             },
             sets: {
               orderBy: { setNumber: 'asc' },
@@ -328,6 +334,14 @@ router.get('/player-stats/:userId', authenticateToken, async (req: Request, res:
     if (allPlayerRows.length === 0) {
       return res.json({ totalMatches: 0, matches: [], stats: null });
     }
+
+    // Fetch session dates for all courts in one query
+    const courtIds = [...new Set(allPlayerRows.map((r) => r.match.courtId))];
+    const courts = await prisma.court.findMany({
+      where: { id: { in: courtIds } },
+      include: { session: { select: { date: true } } },
+    });
+    const sessionDateByCourtId = new Map(courts.map((c) => [c.id, c.session?.date ?? null]));
 
     // Build the match list for the filter UI (with per-set scores)
     const matches = allPlayerRows.map((r) => {
@@ -350,24 +364,32 @@ router.get('/player-stats/:userId', authenticateToken, async (req: Request, res:
         return { setNumber: set.setNumber, team1Games, team2Games };
       });
 
-      const team1Players = r.match.playerStats
-        .filter((p) => p.team === 1)
-        .map((p) => ({ name: p.name, userId: p.userId }));
-      const team2Players = r.match.playerStats
-        .filter((p) => p.team === 2)
-        .map((p) => ({ name: p.name, userId: p.userId }));
-
       const team1Stats = r.match.teamStats.find((t) => t.team === 1);
       const team2Stats = r.match.teamStats.find((t) => t.team === 2);
+
+      const players = r.match.playerStats.map((p) => ({
+        name: p.name,
+        userId: p.userId,
+        team: p.team,
+        pointsWon: p.pointsWon,
+        contributionPct: p.contributionPct != null ? Number(p.contributionPct) : null,
+        onServeWinPct: p.onServeWinPct != null ? Number(p.onServeWinPct) : null,
+        onReturnWinPct: p.onReturnWinPct != null ? Number(p.onReturnWinPct) : null,
+        serverWinPct: p.serverWinPct != null ? Number(p.serverWinPct) : null,
+        gameWinningPoints: p.gameWinningPoints,
+        setWinningPoints: p.setWinningPoints,
+        clutchPoints: p.clutchPoints,
+        pointsBySet: p.pointsBySet as Record<string, number>,
+      }));
 
       return {
         id: r.match.id,
         startDate: r.match.startDate,
+        sessionDate: sessionDateByCourtId.get(r.match.courtId) ?? r.match.startDate,
         winner: r.match.winner,
         playerTeam: r.team,
         sets,
-        team1Players,
-        team2Players,
+        players,
         team1Points: team1Stats?.pointsWon ?? null,
         team2Points: team2Stats?.pointsWon ?? null,
       };
