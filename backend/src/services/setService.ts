@@ -561,6 +561,7 @@ export const setService = {
       }
       validSetIdsByUser = new Map();
       for (const [userId, sets] of userSetsMap.entries()) {
+        if (sets.length < rolling) continue;
         const sorted = sets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const userValidSets = new Set<string>();
         for (const { setId } of sorted.slice(0, rolling)) {
