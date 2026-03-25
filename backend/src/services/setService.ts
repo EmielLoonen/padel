@@ -543,29 +543,28 @@ export const setService = {
       },
     });
 
-    // When rolling is set: compute valid set IDs per user (last N sessions)
-    // Users with fewer than `rolling` sessions are excluded entirely.
+    // When rolling is set: compute valid set IDs per user (last N matches per person)
     let validSetIdsByUser: Map<string, Set<string>> | null = null;
     if (rolling) {
-      // Build: userId -> Map<sessionId, { date, setIds[] }>
-      const userSessionMap = new Map<string, Map<string, { date: Date; setIds: string[] }>>();
+      // Build: userId -> [{ date, setId }] (one entry per unique set the user played in)
+      const userSetsMap = new Map<string, { date: Date; setId: string }[]>();
+      const seenUserSet = new Set<string>();
       for (const score of allScores) {
         if (!score.userId) continue;
         const session = score.set.court?.session;
         if (!session) continue;
-        if (!userSessionMap.has(score.userId)) userSessionMap.set(score.userId, new Map());
-        const sessions = userSessionMap.get(score.userId)!;
-        if (!sessions.has(session.id)) sessions.set(session.id, { date: session.date, setIds: [] });
-        sessions.get(session.id)!.setIds.push(score.setId);
+        const key = `${score.userId}:${score.setId}`;
+        if (seenUserSet.has(key)) continue;
+        seenUserSet.add(key);
+        if (!userSetsMap.has(score.userId)) userSetsMap.set(score.userId, []);
+        userSetsMap.get(score.userId)!.push({ date: session.date, setId: score.setId });
       }
       validSetIdsByUser = new Map();
-      for (const [userId, sessions] of userSessionMap.entries()) {
-        // Skip users who don't have enough sessions to meet the rolling threshold
-        if (sessions.size < rolling) continue;
-        const sorted = [...sessions.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      for (const [userId, sets] of userSetsMap.entries()) {
+        const sorted = sets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const userValidSets = new Set<string>();
-        for (const { setIds } of sorted.slice(0, rolling)) {
-          for (const id of setIds) userValidSets.add(id);
+        for (const { setId } of sorted.slice(0, rolling)) {
+          userValidSets.add(setId);
         }
         validSetIdsByUser.set(userId, userValidSets);
       }
