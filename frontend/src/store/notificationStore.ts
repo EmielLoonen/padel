@@ -17,6 +17,10 @@ interface Notification {
     venueName: string;
     date: string;
     time: string;
+    group?: {
+      id: string;
+      name: string;
+    } | null;
   };
 }
 
