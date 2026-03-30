@@ -158,6 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }));
 
       let activeGroupId: string | null = null;
+      let activeToken = token;
       let isAdmin = false;
       let canCreateSessions = false;
 
@@ -166,9 +167,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         activeGroupId = payload.groupId ?? null;
       } catch {}
 
-      // If token has no groupId but user already has memberships, auto-select the first group
+      // If token has no groupId but user already has memberships, exchange for a fresh token
       if (!activeGroupId && groups.length > 0) {
         activeGroupId = groups[0].id;
+        try {
+          const switchRes = await axios.post(
+            `${API_URL}/api/auth/switch-group`,
+            { groupId: activeGroupId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          activeToken = switchRes.data.token;
+          localStorage.setItem('token', activeToken);
+        } catch {}
       }
 
       const activeGroup = groups.find((g) => g.id === activeGroupId);
@@ -179,7 +189,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({
         user: { ...rawUser, groupId: activeGroupId, isAdmin, canCreateSessions, groups },
-        token,
+        token: activeToken,
         isAuthenticated: true,
         isInitializing: false,
       });
