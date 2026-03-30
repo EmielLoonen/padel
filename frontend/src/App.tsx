@@ -18,7 +18,7 @@ import MissedNotificationsModal from './components/MissedNotificationsModal';
 import './App.css';
 
 function App() {
-  const { isAuthenticated, isLoading: isAuthLoading, user, logout, initializeAuth } = useAuthStore();
+  const { isAuthenticated, isInitializing, user, logout, initializeAuth } = useAuthStore();
   const { sessions, fetchSessions, isLoading } = useSessionStore();
   const { fetchNotifications, fetchMissedNotifications, missedNotifications } = useNotificationStore();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -138,7 +138,7 @@ function App() {
     setIsPullingToRefresh(false);
   };
 
-  if (isAuthLoading) {
+  if (isInitializing) {
     return <LoadingSpinner />;
   }
 

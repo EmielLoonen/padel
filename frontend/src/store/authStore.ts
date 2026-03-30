@@ -28,6 +28,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isInitializing: boolean;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: localStorage.getItem('token'),
   isAuthenticated: false,
+  isInitializing: true,
   isLoading: false,
   error: null,
 
@@ -137,19 +139,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: async () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      set({ isAuthenticated: false, isLoading: false });
+      set({ isAuthenticated: false, isInitializing: false });
       return;
     }
 
-    set({ isLoading: true });
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // /api/auth/me returns raw user — merge with group data from token
-      // The token already carries groupId; we need to reconstruct isAdmin/canCreateSessions
-      // from the groups list. We'll rely on the token's embedded groupId.
       const rawUser = response.data.user;
       const groups: UserGroup[] = (rawUser.groups || []).map((ug: any) => ({
         id: ug.group.id,
@@ -159,8 +157,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         canCreateSessions: ug.canCreateSessions,
       }));
 
-      // Re-fetch a fresh token to get correct isAdmin/canCreateSessions for current group
-      // Instead, decode the existing token's groupId and find the matching group
       let activeGroupId: string | null = null;
       let isAdmin = false;
       let canCreateSessions = false;
@@ -191,11 +187,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
         token,
         isAuthenticated: true,
-        isLoading: false,
+        isInitializing: false,
       });
     } catch (error) {
       localStorage.removeItem('token');
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, token: null, isAuthenticated: false, isInitializing: false });
     }
   },
 }));
