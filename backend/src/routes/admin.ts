@@ -11,87 +11,65 @@ const prisma = new PrismaClient();
 // All admin routes require authentication
 router.use(authenticateToken);
 
-// Middleware to check if user is admin
-const requireAdmin = async (req: any, res: Response, next: any) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Admin check error:', error);
-    res.status(500).json({ error: 'Failed to verify admin status' });
+// Middleware to check if user is admin (resolved from UserGroup by auth middleware)
+const requireAdmin = (req: any, res: Response, next: any) => {
+  if (!req.user?.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
 };
 
-// Middleware to check if user is admin or Full Seat Player (can add Limited Seat Players to sessions)
-const requireAdminOrCanCreateSessions = async (req: any, res: Response, next: any) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true, canCreateSessions: true },
-    });
-
-    if (!user || (!user.isAdmin && !user.canCreateSessions)) {
-      return res.status(403).json({ error: 'Only admins and Full Seat Players can add users to sessions' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Permission check error:', error);
-    res.status(500).json({ error: 'Failed to verify permissions' });
+// Middleware to check if user is admin or Full Seat Player
+const requireAdminOrCanCreateSessions = (req: any, res: Response, next: any) => {
+  if (!req.user?.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+  if (!req.user.isAdmin && !req.user.canCreateSessions) {
+    return res.status(403).json({ error: 'Only admins and Full Seat Players can add users to sessions' });
+  }
+  next();
 };
 
-// Get all users (admin or Full Seat Players can fetch users to add to sessions)
+// Get all users in the group (admin sees all members; Full Seat Players see only Limited Seat Players)
 router.get('/users', requireAdminOrCanCreateSessions, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check if user is admin
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
+    const groupId = req.user.isSuperAdmin ? undefined : req.user.groupId;
+
+    // Query UserGroup, optionally filtered by canCreateSessions for non-admins
+    const memberships = await prisma.userGroup.findMany({
+      where: {
+        ...(groupId ? { groupId } : {}),
+        // Full Seat Players can only see Limited Seat Players (canCreateSessions: false)
+        ...(!req.user.isAdmin ? { canCreateSessions: false } : {}),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phone: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { user: { name: 'asc' } },
     });
 
-    // Admins can see all users, Full Seat Players can only see Limited Seat Players
-    const users = await prisma.user.findMany({
-      where: requestingUser?.isAdmin
-        ? {} // Admin sees all users
-        : { canCreateSessions: false }, // Full Seat Players only see Limited Seat Players
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        avatarUrl: true,
-        isAdmin: true,
-        canCreateSessions: true,
-        createdAt: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    // Flatten UserGroup + user data into the shape the frontend expects
+    const users = memberships.map((m) => ({
+      ...m.user,
+      isAdmin: m.role === 'admin',
+      canCreateSessions: m.canCreateSessions,
+    }));
 
     res.json({ users });
   } catch (error) {
@@ -119,7 +97,6 @@ router.post(
     try {
       const { userId, newPassword } = req.body;
 
-      // Check if user exists
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, name: true, email: true },
@@ -129,10 +106,8 @@ router.post(
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Hash the new password
       const passwordHash = await bcrypt.hash(newPassword, 10);
 
-      // Update password
       await prisma.user.update({
         where: { id: userId },
         data: { passwordHash },
@@ -198,33 +173,31 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const { sessionId, userId } = req.params;
-      const requestingUserId = req.user?.userId;
 
-      if (!requestingUserId) {
+      if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Check if requesting user is admin
-      const requestingUser = await prisma.user.findUnique({
-        where: { id: requestingUserId },
-        select: { isAdmin: true },
-      });
+      // If not admin, check if the user being removed is a Limited Seat Player in this group
+      if (!req.user.isAdmin) {
+        const groupId = req.user.groupId;
+        if (!groupId) {
+          return res.status(403).json({ error: 'No active group' });
+        }
 
-      // If not admin, check if the user being removed is a Limited Seat Player
-      if (!requestingUser?.isAdmin) {
-        const userToRemove = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { canCreateSessions: true, isAdmin: true },
+        const membershipToRemove = await prisma.userGroup.findUnique({
+          where: { userId_groupId: { userId, groupId } },
+          select: { role: true, canCreateSessions: true },
         });
 
-        if (!userToRemove) {
-          return res.status(404).json({ error: 'User not found' });
+        if (!membershipToRemove) {
+          return res.status(404).json({ error: 'User not found in group' });
         }
 
         // Full Seat Players can only remove Limited Seat Players
-        if (userToRemove.isAdmin || userToRemove.canCreateSessions) {
-          return res.status(403).json({ 
-            error: 'You can only remove Limited Seat Players from sessions' 
+        if (membershipToRemove.role === 'admin' || membershipToRemove.canCreateSessions) {
+          return res.status(403).json({
+            error: 'You can only remove Limited Seat Players from sessions',
           });
         }
       }
@@ -258,6 +231,11 @@ router.patch(
     try {
       const { userId } = req.params;
       const { canCreateSessions } = req.body;
+      const groupId = req.user?.groupId;
+
+      if (!groupId) {
+        return res.status(400).json({ error: 'No active group' });
+      }
 
       // Check if user exists
       const user = await prisma.user.findUnique({
@@ -269,9 +247,9 @@ router.patch(
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Update canCreateSessions
-      await prisma.user.update({
-        where: { id: userId },
+      // Update canCreateSessions on UserGroup
+      await prisma.userGroup.updateMany({
+        where: { userId, groupId },
         data: { canCreateSessions },
       });
 
@@ -287,4 +265,3 @@ router.patch(
 );
 
 export default router;
-

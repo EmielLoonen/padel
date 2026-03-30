@@ -23,13 +23,18 @@ export const courtService = {
       throw new Error('Court not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Check admin status via UserGroup for the session's group
+    let isAdmin = false;
+    if (court.session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: court.session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Check if user is the session creator or admin
-    if (court.session.createdById !== userId && !requestingUser?.isAdmin) {
+    if (court.session.createdById !== userId && !isAdmin) {
       throw new Error('Only the session creator can update courts');
     }
 
@@ -61,13 +66,18 @@ export const courtService = {
       throw new Error('Court not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Check admin status via UserGroup for the session's group
+    let isAdmin = false;
+    if (court.session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: court.session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Check if user is the session creator or admin
-    if (court.session.createdById !== userId && !requestingUser?.isAdmin) {
+    if (court.session.createdById !== userId && !isAdmin) {
       throw new Error('Only the session creator can delete courts');
     }
 

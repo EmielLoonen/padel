@@ -33,6 +33,7 @@ interface CreateSessionData {
   notes?: string;
   courts: CourtData[]; // Array of courts to create
   createdById: string;
+  groupId: string | null;
 }
 
 interface UpdateSessionData {
@@ -57,6 +58,7 @@ export const sessionService = {
         notes: data.notes,
         numberOfCourts: data.courts.length,
         createdById: data.createdById,
+        groupId: data.groupId,
         courts: {
           create: await Promise.all(
             data.courts.map(async (court) => ({
@@ -92,7 +94,7 @@ export const sessionService = {
     return session;
   },
 
-  async getAllSessions(filters?: { type?: 'upcoming' | 'past' | 'all' }) {
+  async getAllSessions(filters?: { type?: 'upcoming' | 'past' | 'all'; groupId?: string | null }) {
     // Get start of today (midnight) for date comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -101,14 +103,15 @@ export const sessionService = {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    let whereClause = {};
+    // undefined = superAdmin (no filter), null = no active group (show nothing), string = filter by group
+    const groupFilter = filters?.groupId !== undefined ? { groupId: filters.groupId } : {};
+
+    let whereClause: object = { ...groupFilter };
 
     if (filters?.type === 'upcoming') {
-      // Sessions from today onwards (includes today)
-      whereClause = { date: { gte: today } };
+      whereClause = { ...groupFilter, date: { gte: today } };
     } else if (filters?.type === 'past') {
-      // Sessions before today
-      whereClause = { date: { lt: today } };
+      whereClause = { ...groupFilter, date: { lt: today } };
     }
 
     // For past sessions, sort descending (newest first). For upcoming/all, sort ascending (oldest first)
@@ -286,12 +289,17 @@ export const sessionService = {
       throw new Error('Session not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Check admin status via UserGroup for the session's group
+    let isAdmin = false;
+    if (session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
-    if (session.createdById !== userId && !requestingUser?.isAdmin) {
+    if (session.createdById !== userId && !isAdmin) {
       throw new Error('Only the session creator can update this session');
     }
 
@@ -344,12 +352,17 @@ export const sessionService = {
       throw new Error('Session not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Check admin status via UserGroup for the session's group
+    let isAdmin = false;
+    if (session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
-    if (session.createdById !== userId && !requestingUser?.isAdmin) {
+    if (session.createdById !== userId && !isAdmin) {
       throw new Error('Only the session creator can delete this session');
     }
 

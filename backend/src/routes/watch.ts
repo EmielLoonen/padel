@@ -21,12 +21,12 @@ router.get('/:code', async (req: Request, res: Response) => {
       where: { watchCode: req.params.code.toUpperCase() },
       include: {
         session: {
-          select: { date: true, time: true, venueName: true },
+          select: { date: true, time: true, venueName: true, groupId: true },
         },
         rsvps: {
           where: { status: 'yes' },
           include: {
-            user: { select: { id: true, name: true, rating: true } },
+            user: { select: { id: true, name: true } },
           },
         },
         guests: {
@@ -40,6 +40,17 @@ router.get('/:code', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Court not found' });
     }
 
+    // Fetch ratings from UserGroup for registered players
+    const groupId = court.session.groupId;
+    const userIds = court.rsvps.map((r) => r.user.id);
+    const userGroupRatings = groupId && userIds.length > 0
+      ? await prisma.userGroup.findMany({
+          where: { groupId, userId: { in: userIds } },
+          select: { userId: true, rating: true },
+        })
+      : [];
+    const ratingMap = new Map(userGroupRatings.map((ug) => [ug.userId, ug.rating]));
+
     type Player = { id: string; initials: string; type: 'user' | 'guest'; rating: number | null };
 
     const players: Player[] = [
@@ -47,7 +58,7 @@ router.get('/:code', async (req: Request, res: Response) => {
         id: r.user.id,
         initials: toInitials(r.user.name),
         type: 'user' as const,
-        rating: r.user.rating ? Number(r.user.rating) : null,
+        rating: ratingMap.get(r.user.id) ? Number(ratingMap.get(r.user.id)) : null,
       })),
       ...court.guests.map((g) => ({
         id: g.id,

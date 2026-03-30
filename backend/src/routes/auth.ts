@@ -15,6 +15,7 @@ router.post(
       .withMessage('Password must be at least 8 characters'),
     body('name').trim().isLength({ min: 1 }).withMessage('Name is required'),
     body('phone').optional().trim(),
+    body('inviteCode').optional().trim(),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -23,14 +24,17 @@ router.post(
     }
 
     try {
-      const { email, password, name, phone } = req.body;
-      const result = await authService.signup({ email, password, name, phone });
+      const { email, password, name, phone, inviteCode } = req.body;
+      const result = await authService.signup({ email, password, name, phone, inviteCode });
       
       res.status(201).json(result);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('already exists')) {
           return res.status(409).json({ error: error.message });
+        }
+        if (error.message === 'Invalid invite code') {
+          return res.status(400).json({ error: error.message });
         }
       }
       console.error('Signup error:', error);
@@ -68,6 +72,29 @@ router.post(
     }
   }
 );
+
+// Switch active group — returns a new JWT with the selected groupId
+router.post('/switch-group', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { groupId } = req.body;
+    if (!groupId) {
+      return res.status(400).json({ error: 'groupId is required' });
+    }
+
+    const result = await authService.switchGroup(req.user.userId, groupId);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Not a member of this group') {
+      return res.status(403).json({ error: error.message });
+    }
+    console.error('Switch group error:', error);
+    res.status(500).json({ error: 'Failed to switch group' });
+  }
+});
 
 // Get current user
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {

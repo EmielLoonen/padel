@@ -12,7 +12,8 @@ router.use(authenticateToken);
 router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
     const rolling = req.query.rolling ? Number(req.query.rolling) : undefined;
-    const leaderboard = await setService.getLeaderboard(rolling);
+    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const leaderboard = await setService.getLeaderboard(rolling, groupId);
     res.json({ leaderboard });
   } catch (error) {
     console.error('Get leaderboard error:', error);
@@ -150,7 +151,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // Get player stats
 router.get('/stats/:userId', async (req: Request, res: Response) => {
   try {
-    const stats = await setService.getPlayerStats(req.params.userId);
+    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const stats = await setService.getPlayerStats(req.params.userId, groupId);
     res.json({ stats });
   } catch (error) {
     console.error('Get player stats error:', error);
@@ -161,7 +163,8 @@ router.get('/stats/:userId', async (req: Request, res: Response) => {
 // Get set history for a user
 router.get('/history/:userId', async (req: Request, res: Response) => {
   try {
-    const sets = await setService.getSetHistoryForUser(req.params.userId);
+    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const sets = await setService.getSetHistoryForUser(req.params.userId, groupId);
     res.json({ sets });
   } catch (error) {
     console.error('Get set history error:', error);

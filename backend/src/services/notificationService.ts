@@ -40,6 +40,12 @@ export const notificationService = {
             venueName: true,
             date: true,
             time: true,
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -113,13 +119,20 @@ export const notificationService = {
 
   // Helper functions to create specific notification types
   async notifySessionCreated(sessionId: string, creatorId: string, sessionDetails: any) {
-    // Get all users except the creator to notify them
-    const users = await prisma.user.findMany({
-      where: {
-        id: { not: creatorId },
-      },
-      select: { id: true },
+    // Get the session's groupId to scope notifications
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { groupId: true },
     });
+    const groupId = session?.groupId;
+
+    // Notify all members of the same group except the creator
+    const userGroupMembers = groupId ? await prisma.userGroup.findMany({
+      where: { groupId, userId: { not: creatorId } },
+      select: { userId: true },
+    }) : [];
+
+    const users = userGroupMembers.map((ug) => ({ id: ug.userId }));
 
     const notifications = users.map((user) =>
       this.createNotification({
@@ -207,6 +220,12 @@ export const notificationService = {
             venueName: true,
             date: true,
             time: true,
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -265,14 +284,14 @@ export const notificationService = {
     }
   },
 
-  async notifyNewUserSignup(userId: string, userName: string, userEmail: string) {
-    // Get all admin users to notify them
-    const admins = await prisma.user.findMany({
-      where: {
-        isAdmin: true,
-      },
-      select: { id: true },
-    });
+  async notifyNewUserSignup(userId: string, userName: string, userEmail: string, groupId?: string) {
+    // Notify admins in the same group
+    const adminMemberships = groupId ? await prisma.userGroup.findMany({
+      where: { groupId, role: 'admin', userId: { not: userId } },
+      select: { userId: true },
+    }) : [];
+
+    const admins = adminMemberships.map((ug) => ({ id: ug.userId }));
 
     const notifications = admins.map((admin) =>
       this.createNotification({

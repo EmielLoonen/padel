@@ -206,13 +206,23 @@ export const setService = {
       throw new Error('Set not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
+    // Check admin status via UserGroup for the set's group
+    const fullSet = await prisma.set.findUnique({
+      where: { id: setId },
+      include: { court: { select: { session: { select: { groupId: true } } } } },
     });
+    const setGroupId = fullSet?.court?.session?.groupId;
+    let isAdmin = false;
+    if (setGroupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: setGroupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Only the creator or admin can update the set
-    if (set.createdById !== userId && !requestingUser?.isAdmin) {
+    if (set.createdById !== userId && !isAdmin) {
       throw new Error('Only the set creator or admin can update this set');
     }
 
@@ -299,23 +309,35 @@ export const setService = {
   },
 
   async deleteSet(setId: string, userId: string) {
-    // Get the set to check permissions and capture matchId before deletion
+    // Get the set to check permissions and capture groupId + matchId before deletion
     const set = await prisma.set.findUnique({
       where: { id: setId },
-      select: { id: true, createdById: true, matchId: true },
+      select: {
+        id: true,
+        createdById: true,
+        matchId: true,
+        court: { select: { session: { select: { groupId: true } } } },
+      },
     });
 
     if (!set) {
       throw new Error('Set not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const setGroupId = set.court?.session?.groupId ?? null;
+
+    // Check admin status via UserGroup for the set's group
+    let isAdmin = false;
+    if (setGroupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: setGroupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Only the creator or admin can delete the set
-    if (set.createdById !== userId && !requestingUser?.isAdmin) {
+    if (set.createdById !== userId && !isAdmin) {
       throw new Error('Only the set creator or admin can delete this set');
     }
 
@@ -349,31 +371,40 @@ export const setService = {
 
     // Recalculate ratings for all affected players (async, don't wait)
     // Note: We need to recalculate each player individually since the set is already deleted
-    Promise.all(
-      affectedUserIds.map((userId) =>
-        import('./ratingService').then(({ recalculatePlayerRating }) =>
-          recalculatePlayerRating(userId).catch((error) => {
-            console.error(`Error recalculating rating for user ${userId} after set deletion:`, error);
-          })
+    if (setGroupId) {
+      Promise.all(
+        affectedUserIds.map((affectedUserId) =>
+          import('./ratingService').then(({ recalculatePlayerRating }) =>
+            recalculatePlayerRating(affectedUserId, setGroupId).catch((error) => {
+              console.error(`Error recalculating rating for user ${affectedUserId} after set deletion:`, error);
+            })
+          )
         )
-      )
-    ).catch((error) => {
-      console.error('Error recalculating ratings after set deletion:', error);
-    });
+      ).catch((error) => {
+        console.error('Error recalculating ratings after set deletion:', error);
+      });
+    }
 
     return { message: 'Set deleted successfully' };
   },
 
-  async getPlayerStats(userId: string) {
-    // Get user with rating
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { rating: true },
-    });
+  async getPlayerStats(userId: string, groupId?: string | null) {
+    // Get rating from UserGroup if groupId is provided
+    let rating: number | null = null;
+    if (groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId } },
+        select: { rating: true },
+      });
+      rating = membership?.rating ? Number(membership.rating) : null;
+    }
 
-    // Get all set scores for this user
+    // Get all set scores for this user, scoped to the group if provided
     const userScores = await prisma.setScore.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(groupId ? { set: { court: { session: { groupId } } } } : {}),
+      },
       include: {
         set: {
           include: {
@@ -514,20 +545,22 @@ export const setService = {
       setWinRate: Math.round(setWinRate * 10) / 10,
       gameWinRate: Math.round(gameWinRate * 10) / 10,
       teammateWinRates,
-      rating: user?.rating ? Number(user.rating) : null,
+      rating,
     };
   },
 
-  async getLeaderboard(rolling?: number) {
-    // Get all set scores
+  async getLeaderboard(rolling?: number, groupId?: string | null) {
+    // Get all set scores scoped to the group
     const allScores = await prisma.setScore.findMany({
+      where: groupId
+        ? { set: { court: { session: { groupId } } } }
+        : undefined,
       include: {
         user: {
           select: {
             id: true,
             name: true,
             avatarUrl: true,
-            rating: true,
           },
         },
         set: {
@@ -608,7 +641,7 @@ export const setService = {
         userId,
         userName,
         userAvatar,
-        rating: score.user?.rating ? Number(score.user.rating) : null,
+        rating: null as number | null,
         totalSets: 0,
         totalSetsIncludingIncomplete: 0,
         setsWon: 0,
@@ -671,6 +704,21 @@ export const setService = {
       playerStatsMap.set(userId, existing);
     });
 
+    // Backfill ratings from UserGroup for all players in the map
+    if (groupId && playerStatsMap.size > 0) {
+      const userIds = Array.from(playerStatsMap.keys());
+      const userGroupRatings = await prisma.userGroup.findMany({
+        where: { groupId, userId: { in: userIds } },
+        select: { userId: true, rating: true },
+      });
+      for (const ug of userGroupRatings) {
+        const entry = playerStatsMap.get(ug.userId);
+        if (entry) {
+          entry.rating = ug.rating ? Number(ug.rating) : null;
+        }
+      }
+    }
+
     // Convert to array and calculate win rates
     const leaderboard = Array.from(playerStatsMap.values())
       .filter((stats) => {
@@ -702,14 +750,11 @@ export const setService = {
     return leaderboard;
   },
 
-  async getSetHistoryForUser(userId: string) {
+  async getSetHistoryForUser(userId: string, groupId?: string | null) {
     const sets = await prisma.set.findMany({
       where: {
-        scores: {
-          some: {
-            userId,
-          },
-        },
+        scores: { some: { userId } },
+        ...(groupId ? { court: { session: { groupId } } } : {}),
       },
       include: {
         court: {

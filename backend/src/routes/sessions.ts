@@ -2,9 +2,7 @@ import express, { Request, Response } from 'express';
 import { body, validationResult, query } from 'express-validator';
 import { sessionService } from '../services/sessionService';
 import { authenticateToken } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // All session routes require authentication
@@ -17,7 +15,8 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const type = req.query.type as 'upcoming' | 'past' | 'all' | undefined;
-      const sessions = await sessionService.getAllSessions({ type });
+      const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+      const sessions = await sessionService.getAllSessions({ type, groupId });
       res.json({ sessions });
     } catch (error) {
       console.error('Get sessions error:', error);
@@ -71,18 +70,8 @@ router.post(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Check if user has permission to create sessions
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        select: { canCreateSessions: true, isAdmin: true },
-      });
-
-      if (!user) {
-        return res.status(401).json({ error: 'User not found' });
-      }
-
       // Only admins and Full Seat Players can create sessions
-      if (!user.isAdmin && !user.canCreateSessions) {
+      if (!req.user.isAdmin && !req.user.canCreateSessions) {
         return res.status(403).json({ error: 'As a Limited Seat Player, you cannot create sessions. Please contact an admin to upgrade your account.' });
       }
 
@@ -105,6 +94,7 @@ router.post(
         notes,
         courts,
         createdById: req.user.userId,
+        groupId: req.user.groupId,
       });
 
       res.status(201).json({ session });

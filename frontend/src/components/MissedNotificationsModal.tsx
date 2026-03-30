@@ -87,13 +87,18 @@ export default function MissedNotificationsModal({ onClose, onNotificationClick 
                     </div>
                     <p className="text-gray-300 text-sm mb-2">{notification.message}</p>
                     {notification.session && (
-                      <div className="text-xs text-gray-400 mt-2">
-                        <span className="text-padel-green">🎾</span> {notification.session.venueName} ·{' '}
+                      <div className="text-xs text-gray-400 mt-2 flex items-center gap-2 flex-wrap">
+                        <span><span className="text-padel-green">🎾</span> {notification.session.venueName} ·{' '}
                         {new Date(notification.session.date).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                         })}{' '}
-                        at {notification.session.time}
+                        at {notification.session.time}</span>
+                        {notification.session.group?.name && (
+                          <span className="bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded-full">
+                            {notification.session.group.name}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

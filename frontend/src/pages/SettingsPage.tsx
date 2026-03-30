@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useRef } from 'react';
+import { useState, type FormEvent, useRef, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 import Avatar from '../components/Avatar';
@@ -25,6 +25,27 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !user?.groupId) return;
+    axios
+      .get(`${API_URL}/api/groups/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        const active = res.data.groups?.find((g: any) => g.id === user.groupId);
+        if (active?.inviteCode) setInviteCode(active.inviteCode);
+      })
+      .catch(() => {});
+  }, [user?.groupId]);
+
+  const handleCopyCode = () => {
+    if (!inviteCode) return;
+    navigator.clipboard.writeText(inviteCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,9 +66,9 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
         },
       });
 
-      // Update local user state
+      // Update local user state (preserve groupId, isAdmin, canCreateSessions)
       if (setUser && response.data.user) {
-        setUser(response.data.user);
+        setUser({ ...user!, avatarUrl: response.data.user.avatarUrl ?? user!.avatarUrl });
       }
 
       setAvatarMessage({ type: 'success', text: 'Avatar updated successfully!' });
@@ -87,9 +108,9 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update local user state
+      // Update local user state (merge to preserve groupId, isAdmin, canCreateSessions)
       if (setUser && response.data.user) {
-        setUser(response.data.user);
+        setUser({ ...user!, email: response.data.user.email ?? user!.email, phone: response.data.user.phone ?? user!.phone, avatarUrl: response.data.user.avatarUrl ?? user!.avatarUrl });
       }
 
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -352,6 +373,27 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
               </button>
             </form>
           </div>
+
+          {/* Group Invite Code — visible to all members */}
+          {inviteCode && (
+            <div className="border-t border-gray-700 pt-6 mb-6">
+              <h2 className="text-xl font-bold text-white mb-1">Invite to Group</h2>
+              <p className="text-sm text-gray-400 mb-4">Share this code so others can join your group.</p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-dark-elevated border-2 border-padel-green/40 rounded-xl px-6 py-3 text-center">
+                  <span className="text-2xl font-mono font-bold tracking-widest text-padel-green">
+                    {inviteCode}
+                  </span>
+                </div>
+                <button
+                  onClick={handleCopyCode}
+                  className="bg-dark-elevated border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-semibold hover:border-gray-500 transition-colors text-sm"
+                >
+                  {codeCopied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Admin Panel Button (Admin Only) */}
           {user?.isAdmin && onShowAdmin && (

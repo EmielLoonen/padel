@@ -10,6 +10,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  avatarUrl   String?  @map("avatar_url")
+  inviteCode  String   @unique @map("invite_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members     UserGroup[]
+  sessions    Session[]
+
+  @@map("groups")
+}
+
+model UserGroup {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  groupId           String    @map("group_id")
+  role              String    @default("member") // "admin" | "member"
+  canCreateSessions Boolean   @default(false) @map("can_create_sessions")
+  rating            Decimal?  @db.Decimal(5, 2)
+  ratingUpdatedAt   DateTime? @map("rating_updated_at")
+  joinedAt          DateTime  @default(now()) @map("joined_at")
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group             Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@map("user_groups")
+}
+
 model User {
   id                   String    @id @default(uuid())
   email                String    @unique
@@ -17,17 +51,15 @@ model User {
   name                 String
   phone                String?
   avatarUrl            String?   @map("avatar_url") // URL or path to avatar image
-  isAdmin              Boolean   @default(false) @map("is_admin")
-  canCreateSessions    Boolean   @default(false) @map("can_create_sessions")
+  isSuperAdmin         Boolean   @default(false) @map("is_super_admin")
   resetToken           String?   @map("reset_token")
   resetTokenExpiry     DateTime? @map("reset_token_expiry")
   lastLogin            DateTime? @map("last_login")
-  rating               Decimal?  @db.Decimal(5, 2) // DSS rating
-  ratingUpdatedAt      DateTime? @map("rating_updated_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
   // Relations
+  groups               UserGroup[]
   createdSessions      Session[]      @relation("SessionCreator")
   rsvps                RSVP[]
   notifications        Notification[]
@@ -50,11 +82,13 @@ model Session {
   notes                   String?
   numberOfCourts          Int      @default(1) @map("number_of_courts")
   createdById             String   @map("created_by_id")
+  groupId                 String?  @map("group_id")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
   // Relations
   creator                 User           @relation("SessionCreator", fields: [createdById], references: [id])
+  group                   Group?         @relation(fields: [groupId], references: [id])
   courts                  Court[]
   rsvps                   RSVP[]
   guests                  Guest[]
@@ -62,6 +96,7 @@ model Session {
 
   @@index([date, time])
   @@index([createdById])
+  @@index([groupId])
   @@map("sessions")
 }
 
@@ -199,6 +234,7 @@ model SetScore {
 model RatingHistory {
   id                String   @id @default(uuid())
   userId            String   @map("user_id")
+  groupId           String?  @map("group_id")
   rating            Decimal  @db.Decimal(5, 2)
   previousRating    Decimal? @map("previous_rating") @db.Decimal(5, 2)
   setId             String?  @map("set_id")
@@ -210,6 +246,7 @@ model RatingHistory {
   set               Set?     @relation(fields: [setId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([groupId])
   @@index([createdAt])
   @@index([setId])
   @@map("rating_history")
@@ -219,6 +256,7 @@ model MatchRating {
   id                String   @id @default(uuid())
   userId            String   @map("user_id")
   setId             String   @map("set_id")
+  groupId           String?  @map("group_id")
   matchRating       Decimal  @map("match_rating") @db.Decimal(5, 2)
   expectedWinPct    Decimal  @map("expected_win_pct") @db.Decimal(5, 4)
   actualWinPct      Decimal  @map("actual_win_pct") @db.Decimal(5, 4)
@@ -231,6 +269,7 @@ model MatchRating {
 
   @@unique([userId, setId])
   @@index([userId])
+  @@index([groupId])
   @@index([setId])
   @@index([createdAt])
   @@map("match_ratings")

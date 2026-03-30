@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import Avatar from '../components/Avatar';
@@ -11,7 +11,7 @@ interface User {
   name: string;
   phone: string | null;
   avatarUrl: string | null;
-  isAdmin: boolean;
+  role: string;        // 'admin' | 'member'
   canCreateSessions: boolean;
   createdAt: string;
 }
@@ -21,7 +21,7 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ onBack }: AdminPageProps) {
-  const { token } = useAuthStore();
+  const { token, user, setUser, switchGroup } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -30,10 +30,137 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   const [updatingPermissions, setUpdatingPermissions] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [groupInfo, setGroupInfo] = useState<{ name: string; avatarUrl?: string | null; inviteCode?: string; _count: { users: number } } | null>(null);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [isRenamingGroup, setIsRenamingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
+  const [confirmDeleteName, setConfirmDeleteName] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchGroupInfo();
   }, []);
+
+  const fetchGroupInfo = async () => {
+    try {
+      // /api/groups/me returns { groups: [...] } — find the active group
+      const res = await axios.get(`${API_URL}/api/groups/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groups: any[] = res.data.groups ?? [];
+      const active = groups.find((g: any) => g.id === user?.groupId) ?? groups[0] ?? null;
+      if (active) {
+        setGroupInfo({
+          name: active.name,
+          avatarUrl: active.avatarUrl ?? null,
+          inviteCode: active.inviteCode,
+          // API returns _count.members (UserGroup rows) — map to expected shape
+          _count: { users: active._count?.members ?? 0 },
+        });
+      }
+    } catch (err: any) {
+      console.error('fetchGroupInfo failed:', err.response?.status, err.response?.data || err.message);
+    }
+  };
+
+  const handleRegenerateCode = async () => {
+    setIsRegeneratingCode(true);
+    try {
+      const res = await axios.patch(`${API_URL}/api/groups/invite-code`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGroupInfo((prev) => prev ? { ...prev, inviteCode: res.data.inviteCode } : prev);
+      setSuccess('Invite code regenerated');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to regenerate invite code');
+    } finally {
+      setIsRegeneratingCode(false);
+    }
+  };
+
+  const handleRenameGroup = async () => {
+    if (!newGroupName.trim()) return;
+    try {
+      const res = await axios.patch(`${API_URL}/api/groups/name`, { name: newGroupName.trim() }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGroupInfo((prev) => prev ? { ...prev, name: res.data.name } : prev);
+      setIsRenamingGroup(false);
+      setNewGroupName('');
+      setSuccess('Group renamed successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to rename group');
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await axios.patch(`${API_URL}/api/groups/avatar`, formData, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
+      });
+      setGroupInfo((prev) => prev ? { ...prev, avatarUrl: res.data.avatarUrl } : prev);
+      // Update the group avatar in the auth store so GroupSwitcher reflects it
+      if (user) {
+        setUser({
+          ...user,
+          groups: (user.groups ?? []).map((g) =>
+            g.id === user.groupId ? { ...g, avatarUrl: res.data.avatarUrl } : g
+          ),
+        });
+      }
+      setSuccess('Group avatar updated');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    const groupId = user?.groupId;
+    if (!groupId) return;
+    try {
+      await axios.delete(`${API_URL}/api/groups/${groupId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Remove the deleted group from the user's groups list
+      const remainingGroups = (user?.groups ?? []).filter((g) => g.id !== groupId);
+
+      if (remainingGroups.length > 0) {
+        // Switch to the first remaining group (issues a new token)
+        await switchGroup(remainingGroups[0].id);
+      } else {
+        // No groups left — clear groupId so App.tsx shows GroupSetupPage
+        if (user) {
+          setUser({ ...user, groupId: null, groups: [] });
+        }
+      }
+
+      onBack();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete group');
+      setIsDeletingGroup(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (groupInfo?.inviteCode) {
+      navigator.clipboard.writeText(groupInfo.inviteCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -147,6 +274,88 @@ export default function AdminPage({ onBack }: AdminPageProps) {
           </div>
         </div>
 
+        {/* Group Invite Code */}
+        {groupInfo && (
+          <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
+            {/* Group Avatar */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative group/avatar">
+                <Avatar src={groupInfo.avatarUrl} name={groupInfo.name} size="lg" shape="square" />
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  id="group-avatar-upload"
+                />
+                <label
+                  htmlFor="group-avatar-upload"
+                  className={`absolute inset-0 rounded-lg bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer text-white text-xs font-semibold ${isUploadingAvatar ? 'opacity-100' : ''}`}
+                >
+                  {isUploadingAvatar ? '...' : '📷'}
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">Click avatar to change</p>
+            </div>
+
+            {isRenamingGroup ? (
+              <div className="flex items-center gap-2 mb-1">
+                <input
+                  autoFocus
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleRenameGroup(); if (e.key === 'Escape') { setIsRenamingGroup(false); setNewGroupName(''); } }}
+                  className="flex-1 px-3 py-2 bg-dark-elevated border-2 border-padel-green text-white rounded-lg focus:outline-none font-bold text-xl"
+                  placeholder={groupInfo.name}
+                />
+                <button onClick={handleRenameGroup} className="bg-padel-green text-white px-3 py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors text-sm">Save</button>
+                <button onClick={() => { setIsRenamingGroup(false); setNewGroupName(''); }} className="bg-dark-elevated border border-gray-700 text-gray-300 px-3 py-2 rounded-lg text-sm hover:border-gray-500 transition-colors">Cancel</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  🏟️ {groupInfo.name}
+                </h2>
+                <button onClick={() => { setIsRenamingGroup(true); setNewGroupName(groupInfo.name); }} className="text-gray-500 hover:text-gray-300 transition-colors text-sm" title="Rename group">
+                  ✏️
+                </button>
+                <button onClick={() => setIsDeletingGroup(true)} className="text-gray-600 hover:text-red-400 transition-colors text-sm" title="Delete group">
+                  🗑️
+                </button>
+              </div>
+            )}
+            <p className="text-gray-400 text-sm mb-4">{groupInfo._count.users} member{groupInfo._count.users !== 1 ? 's' : ''}</p>
+            {groupInfo.inviteCode && (
+              <>
+                <p className="text-sm text-gray-400 mb-2">Share this code to invite new players:</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-dark-elevated border-2 border-padel-green/40 rounded-xl px-6 py-3 text-center">
+                    <span className="text-2xl font-mono font-bold tracking-widest text-padel-green">
+                      {groupInfo.inviteCode}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopyCode}
+                    className="bg-padel-green text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-600 transition-colors"
+                  >
+                    {codeCopied ? '✓ Copied' : 'Copy'}
+                  </button>
+                  <button
+                    onClick={handleRegenerateCode}
+                    disabled={isRegeneratingCode}
+                    className="bg-dark-elevated border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-semibold hover:border-gray-500 transition-colors disabled:opacity-50 text-sm"
+                    title="Generate a new invite code (invalidates the old one)"
+                  >
+                    {isRegeneratingCode ? '...' : '↻ New Code'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Messages */}
         {error && (
           <div className="mb-4 p-4 bg-red-500/20 border border-red-500 text-red-400 rounded-xl">
@@ -179,7 +388,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                         <h3 className="text-lg font-semibold text-white truncate">
                           {u.name}
                         </h3>
-                        {u.isAdmin && (
+                        {u.role === 'admin' && (
                           <span className="text-yellow-500 text-sm" title="Admin">
                             🛡️
                           </span>
@@ -200,7 +409,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                           type="checkbox"
                           checked={u.canCreateSessions === true}
                           onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions === true)}
-                          disabled={updatingPermissions.has(u.id) || u.isAdmin}
+                          disabled={updatingPermissions.has(u.id) || u.role === 'admin'}
                           className="w-5 h-5 rounded border-gray-600 bg-dark-elevated text-padel-green focus:ring-2 focus:ring-padel-green focus:ring-offset-2 focus:ring-offset-dark-card cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
@@ -226,6 +435,44 @@ export default function AdminPage({ onBack }: AdminPageProps) {
             ))}
           </div>
         </div>
+
+        {/* Delete Group Confirmation Modal */}
+        {isDeletingGroup && groupInfo && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-card rounded-2xl p-6 max-w-md w-full border border-red-800 shadow-2xl">
+              <h2 className="text-2xl font-bold text-white mb-2">Delete Group</h2>
+              <p className="text-gray-400 text-sm mb-4">
+                This will permanently delete <span className="text-white font-semibold">{groupInfo.name}</span> and remove all members. Sessions will be kept but unlinked from the group.
+              </p>
+              <p className="text-sm text-gray-300 mb-2">
+                Type <span className="font-mono text-red-400">{groupInfo.name}</span> to confirm:
+              </p>
+              <input
+                autoFocus
+                type="text"
+                value={confirmDeleteName}
+                onChange={(e) => setConfirmDeleteName(e.target.value)}
+                className="w-full px-4 py-3 bg-dark-elevated border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+                placeholder={groupInfo.name}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDeleteGroup}
+                  disabled={confirmDeleteName !== groupInfo.name}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-xl font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Delete Group
+                </button>
+                <button
+                  onClick={() => { setIsDeletingGroup(false); setConfirmDeleteName(''); }}
+                  className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Reset Password Modal */}
         {selectedUser && (

@@ -66,17 +66,21 @@ export const guestService = {
       throw new Error('Guest not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
-    });
+    // Check admin status via UserGroup for the group that owns the session
+    let isAdmin = false;
+    if (guest.session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: guest.session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Only the person who added the guest, the session creator, or an admin can remove them
     if (
       guest.addedById !== userId &&
       guest.session.createdById !== userId &&
-      !requestingUser?.isAdmin
+      !isAdmin
     ) {
       throw new Error('Only the person who added the guest, the session creator, or an admin can remove them');
     }
@@ -105,17 +109,21 @@ export const guestService = {
       throw new Error('Guest not found');
     }
 
-    // Fetch requesting user to check admin status
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
-    });
+    // Check admin status via UserGroup for the group that owns the session
+    let isAdmin = false;
+    if (guest.session.groupId) {
+      const membership = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId, groupId: guest.session.groupId } },
+        select: { role: true },
+      });
+      isAdmin = membership?.role === 'admin';
+    }
 
     // Only the person who added the guest, the session creator, or an admin can update them
     if (
       guest.addedById !== userId &&
       guest.session.createdById !== userId &&
-      !requestingUser?.isAdmin
+      !isAdmin
     ) {
       throw new Error('Only the person who added the guest, the session creator, or an admin can update them');
     }

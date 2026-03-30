@@ -9,6 +9,8 @@ import SessionDetailPage from './pages/SessionDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import PlayerStatsPage from './pages/PlayerStatsPage';
 import AdminPage from './pages/AdminPage';
+import GroupSetupPage from './pages/GroupSetupPage';
+import GroupSwitcher from './components/GroupSwitcher';
 import NotificationBell from './components/NotificationBell';
 import LoadingSpinner from './components/LoadingSpinner';
 import Avatar from './components/Avatar';
@@ -32,6 +34,7 @@ function App() {
   const [pullDistance, setPullDistance] = useState(0);
   const [showMissedNotifications, setShowMissedNotifications] = useState(false);
   const [hasCheckedMissedNotifications, setHasCheckedMissedNotifications] = useState(false);
+  const [showGroupSetup, setShowGroupSetup] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -142,6 +145,28 @@ function App() {
     return <LoginPage onShowSignup={() => setShowSignup(true)} />;
   }
 
+  // If authenticated but not in any group yet, show group setup
+  if (!user?.groupId && !user?.isSuperAdmin) {
+    return <GroupSetupPage onSuccess={() => fetchSessions('upcoming')} />;
+  }
+
+  // Overlay: user wants to create or join an additional group
+  if (showGroupSetup) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <button
+            onClick={() => setShowGroupSetup(false)}
+            className="mb-4 text-gray-400 hover:text-white flex items-center gap-2 transition-colors"
+          >
+            ← Back
+          </button>
+          <GroupSetupPage onSuccess={() => { setShowGroupSetup(false); fetchSessions(sessionTab); }} />
+        </div>
+      </div>
+    );
+  }
+
   if (showAdmin) {
     return <AdminPage onBack={() => setShowAdmin(false)} />;
   }
@@ -245,7 +270,7 @@ function App() {
               </div>
             </div>
             
-            {/* Bottom row: Welcome and Stats button */}
+            {/* Bottom row: Welcome + Stats */}
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-gray-400">
                 Hey <span className="font-semibold text-padel-green">{user?.name}</span>! 👋
@@ -257,6 +282,17 @@ function App() {
               >
                 📊 Stats
               </button>
+            </div>
+
+            {/* Group switcher: full width row on mobile */}
+            <div className="mt-2">
+              <GroupSwitcher
+                onGroupSwitched={() => {
+                  fetchSessions(sessionTab);
+                  fetchNotifications();
+                }}
+                onCreateOrJoin={() => setShowGroupSetup(true)}
+              />
             </div>
           </div>
 
@@ -273,6 +309,13 @@ function App() {
               </p>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
+              <GroupSwitcher
+                onGroupSwitched={() => {
+                  fetchSessions(sessionTab);
+                  fetchNotifications();
+                }}
+                onCreateOrJoin={() => setShowGroupSetup(true)}
+              />
               <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
               <button
                 onClick={() => setShowStats(true)}
@@ -323,7 +366,7 @@ function App() {
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
             >
-              📅 Booked Sessions
+              📅 Sessions
             </button>
             <button
               onClick={() => setSessionTab('past')}
@@ -339,7 +382,7 @@ function App() {
 
           <h2 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
             <span className="text-padel-green">{sessionTab === 'upcoming' ? '📅' : '🏆'}</span>
-            {sessionTab === 'upcoming' ? 'Booked Sessions' : 'Past Sessions'}
+            {sessionTab === 'upcoming' ? 'Sessions' : 'Past Sessions'}
           </h2>
 
           {isLoading ? (

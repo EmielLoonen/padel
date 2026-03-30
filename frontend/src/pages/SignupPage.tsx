@@ -11,6 +11,7 @@ export default function SignupPage({ onBackToLogin }: SignupPageProps) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const { signup, isLoading, error, clearError } = useAuthStore();
   const [localError, setLocalError] = useState('');
 
@@ -31,7 +32,7 @@ export default function SignupPage({ onBackToLogin }: SignupPageProps) {
     }
 
     try {
-      await signup(email, password, name, phone || undefined);
+      await signup(email, password, name, phone || undefined, inviteCode.trim() || undefined);
       // Redirect handled by App.tsx
     } catch (err) {
       // Error handled by store
@@ -102,6 +103,22 @@ export default function SignupPage({ onBackToLogin }: SignupPageProps) {
               className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
               placeholder="+31612345678"
             />
+          </div>
+
+          <div>
+            <label htmlFor="inviteCode" className="block text-sm font-semibold text-gray-300 mb-2">
+              Invite Code (optional)
+            </label>
+            <input
+              id="inviteCode"
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all tracking-widest font-mono"
+              placeholder="XXXXXXXX"
+              maxLength={8}
+            />
+            <p className="text-xs text-gray-500 mt-1">Have an invite code? Enter it to join your group automatically.</p>
           </div>
 
           <div>

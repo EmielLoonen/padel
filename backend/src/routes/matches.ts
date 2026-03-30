@@ -301,9 +301,13 @@ router.get('/player-stats/:userId', authenticateToken, async (req: Request, res:
     const { userId } = req.params;
     const { matchId: filterMatchId } = req.query;
 
-    // Fetch all player stats rows for this user across all matches
+    // Fetch all player stats rows for this user, scoped to the active group
+    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
     const allPlayerRows = await prisma.matchPlayerStats.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(groupId ? { match: { court: { session: { groupId } } } } : {}),
+      },
       include: {
         match: {
           include: {

@@ -56,3 +56,8 @@ backend/uploads/
 
 #Cursor
 .cursor/*.env.local
+
+# Database backups & dumps
+backups/
+*.sql
+*.sql.gz

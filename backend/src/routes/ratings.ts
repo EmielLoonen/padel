@@ -14,28 +14,15 @@ const prisma = new PrismaClient();
 // All rating routes require authentication
 router.use(authenticateToken);
 
-// Middleware to check if user is admin
-const requireAdmin = async (req: any, res: Response, next: any) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
-    });
-
-    if (!user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Admin check error:', error);
-    res.status(500).json({ error: 'Failed to verify admin status' });
+// Middleware to check if user is admin (uses req.user resolved by auth middleware)
+const requireAdmin = (req: any, res: Response, next: any) => {
+  if (!req.user?.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
 };
 
 // Check admin status (for debugging)
@@ -47,11 +34,11 @@ router.get('/check-admin', async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      select: { isAdmin: true, email: true, name: true },
+      select: { email: true, name: true },
     });
 
     res.json({
-      isAdmin: user?.isAdmin || false,
+      isAdmin: req.user.isAdmin,
       email: user?.email,
       name: user?.name,
     });
@@ -68,21 +55,24 @@ router.get('/check-admin', async (req: Request, res: Response) => {
 router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
   try {
     const DEFAULT_RATING = 5.0;
+    const groupId = req.user?.groupId;
 
     console.log('Reset ratings request received from user:', req.user?.userId);
 
-    // Get count before reset
-    const usersBeforeReset = await prisma.user.count({});
-    const usersWithRatingsBefore = await prisma.user.count({
+    // Get counts before reset
+    const ugBeforeReset = groupId
+      ? await prisma.userGroup.count({ where: { groupId } })
+      : await prisma.userGroup.count();
+    const ugWithRatingsBefore = await prisma.userGroup.count({
       where: {
-        rating: {
-          not: null,
-        },
+        ...(groupId ? { groupId } : {}),
+        rating: { not: null },
       },
     });
 
-    // Reset all player ratings to DEFAULT_RATING
-    const resetResult = await prisma.user.updateMany({
+    // Reset all player ratings to DEFAULT_RATING in UserGroup
+    const resetResult = await prisma.userGroup.updateMany({
+      where: groupId ? { groupId } : {},
       data: {
         rating: DEFAULT_RATING,
         ratingUpdatedAt: new Date(),
@@ -92,22 +82,21 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
     console.log('Reset result:', resetResult);
 
     // Verify the reset worked
-    const usersWithRatings = await prisma.user.count({
+    const ugWithRatingsAfter = await prisma.userGroup.count({
       where: {
-        rating: {
-          not: null,
-        },
+        ...(groupId ? { groupId } : {}),
+        rating: { not: null },
       },
     });
 
-    // Get a sample of updated users to verify
-    const sampleUsers = await prisma.user.findMany({
+    // Get a sample of updated UserGroup entries to verify
+    const sampleEntries = await prisma.userGroup.findMany({
+      where: groupId ? { groupId } : {},
       take: 5,
       select: {
-        id: true,
-        name: true,
-        email: true,
+        userId: true,
         rating: true,
+        user: { select: { name: true, email: true } },
       },
     });
 
@@ -119,10 +108,15 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
       message: 'All ratings reset to 5.0 (historical data preserved)',
       summary: {
         playersReset: resetResult.count,
-        totalUsers: usersBeforeReset,
-        usersWithRatingsBefore,
-        usersWithRatingsAfter: usersWithRatings,
-        sampleUsers,
+        totalUsers: ugBeforeReset,
+        usersWithRatingsBefore: ugWithRatingsBefore,
+        usersWithRatingsAfter: ugWithRatingsAfter,
+        sampleUsers: sampleEntries.map((e) => ({
+          id: e.userId,
+          name: e.user.name,
+          email: e.user.email,
+          rating: e.rating,
+        })),
         historicalDataPreserved: {
           ratingHistoryEntries: historyCount,
           matchRatingEntries: matchRatingsCount,
@@ -141,34 +135,25 @@ router.post('/reset', requireAdmin, async (req: Request, res: Response) => {
 });
 
 // Calculate historical ratings for all players (admin only - one-time setup)
-// This endpoint can be called via HTTP to calculate ratings without shell access
 router.post('/calculate-historical', async (req: Request, res: Response) => {
   try {
     console.log('Starting historical rating calculation via API...');
 
     // Get all sets ordered by creation date (oldest first)
     const sets = await prisma.set.findMany({
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         createdAt: true,
-        scores: {
-          select: {
-            userId: true,
-          },
-        },
+        scores: { select: { userId: true } },
       },
     });
 
     console.log(`Found ${sets.length} sets to process`);
 
-    // Process each set chronologically
     let processed = 0;
     for (const set of sets) {
       try {
-        // Get unique user IDs from this set
         const userIds = Array.from(
           new Set(
             set.scores
@@ -178,58 +163,45 @@ router.post('/calculate-historical', async (req: Request, res: Response) => {
         );
 
         if (userIds.length > 0) {
-          // Recalculate ratings for all players in this set
           await recalculateRatingsForSet(set.id);
           processed++;
-
           if (processed % 10 === 0) {
             console.log(`Processed ${processed}/${sets.length} sets...`);
           }
         }
       } catch (error) {
         console.error(`Error processing set ${set.id}:`, error);
-        // Continue with next set
       }
     }
 
     console.log(`\nCompleted! Processed ${processed} sets.`);
 
-    // Get summary statistics
-    const usersWithRatings = await prisma.user.count({
+    // Get summary statistics from UserGroup
+    const groupId = req.user?.groupId;
+    const ugWithRatings = await prisma.userGroup.findMany({
       where: {
-        rating: {
-          not: null,
-        },
+        ...(groupId ? { groupId } : {}),
+        rating: { not: null },
       },
-    });
-
-    const avgRating = await prisma.user.aggregate({
-      where: {
-        rating: {
-          not: null,
-        },
-      },
-      _avg: {
-        rating: true,
-      },
-    });
-
-    const topPlayers = await prisma.user.findMany({
-      where: {
-        rating: {
-          not: null,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        rating: true,
-      },
-      orderBy: {
-        rating: 'desc',
-      },
+      select: { rating: true, user: { select: { name: true } } },
+      orderBy: { rating: 'desc' },
       take: 10,
     });
+
+    const usersWithRatings = await prisma.userGroup.count({
+      where: {
+        ...(groupId ? { groupId } : {}),
+        rating: { not: null },
+      },
+    });
+
+    const ratings = ugWithRatings
+      .map((e) => (e.rating ? Number(e.rating) : null))
+      .filter((r): r is number => r !== null);
+    const avgRating =
+      ratings.length > 0
+        ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(2)
+        : 'N/A';
 
     res.json({
       success: true,
@@ -238,10 +210,10 @@ router.post('/calculate-historical', async (req: Request, res: Response) => {
         totalSets: sets.length,
         processedSets: processed,
         usersWithRatings,
-        averageRating: avgRating._avg.rating ? Number(avgRating._avg.rating).toFixed(2) : 'N/A',
-        topPlayers: topPlayers.map((p) => ({
-          name: p.name,
-          rating: p.rating ? Number(p.rating).toFixed(2) : null,
+        averageRating: avgRating,
+        topPlayers: ugWithRatings.map((e) => ({
+          name: e.user.name,
+          rating: e.rating ? Number(e.rating).toFixed(2) : null,
         })),
       },
     });
@@ -268,8 +240,13 @@ router.post('/predict-match', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Each team must have exactly 2 players' });
     }
 
+    const groupId = req.user?.groupId;
+    if (!groupId) {
+      return res.status(400).json({ error: 'No active group' });
+    }
+
     const { calculateMatchPrediction } = await import('../services/ratingService');
-    const prediction = await calculateMatchPrediction(team1PlayerIds, team2PlayerIds);
+    const prediction = await calculateMatchPrediction(team1PlayerIds, team2PlayerIds, groupId);
 
     if (!prediction) {
       return res.status(400).json({ error: 'Failed to calculate prediction' });
@@ -285,31 +262,27 @@ router.post('/predict-match', async (req: Request, res: Response) => {
 // Get leaderboard sorted by rating (must be before /:userId route)
 router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
-    const users = await prisma.user.findMany({
+    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+
+    const entries = await prisma.userGroup.findMany({
       where: {
-        rating: {
-          not: null,
-        },
-        name: {
-          not: 'Guest Player',
-        },
+        ...(groupId ? { groupId } : {}),
+        rating: { not: null },
+        user: { name: { not: 'Guest Player' } },
       },
       select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
+        userId: true,
         rating: true,
+        user: { select: { id: true, name: true, avatarUrl: true } },
       },
-      orderBy: {
-        rating: 'desc',
-      },
+      orderBy: { rating: 'desc' },
     });
 
-    const leaderboard = users.map((user) => ({
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatarUrl,
-      rating: user.rating ? Number(user.rating) : null,
+    const leaderboard = entries.map((e) => ({
+      userId: e.user.id,
+      userName: e.user.name,
+      userAvatar: e.user.avatarUrl,
+      rating: e.rating ? Number(e.rating) : null,
     }));
 
     res.json({ leaderboard });
@@ -323,30 +296,32 @@ router.get('/leaderboard', async (req: Request, res: Response) => {
 router.get('/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const groupId = req.user?.groupId ?? undefined;
 
-    // Get user with rating
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        rating: true,
-        ratingUpdatedAt: true,
-      },
+      select: { id: true, name: true },
     });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get rating history
-    const history = await getRatingHistory(userId);
+    // Get rating from UserGroup
+    const membership = groupId
+      ? await prisma.userGroup.findUnique({
+          where: { userId_groupId: { userId, groupId } },
+          select: { rating: true, ratingUpdatedAt: true },
+        })
+      : null;
+
+    const history = await getRatingHistory(userId, groupId);
 
     res.json({
       userId: user.id,
       name: user.name,
-      rating: user.rating ? Number(user.rating) : null,
-      ratingUpdatedAt: user.ratingUpdatedAt,
+      rating: membership?.rating ? Number(membership.rating) : null,
+      ratingUpdatedAt: membership?.ratingUpdatedAt ?? null,
       history,
     });
   } catch (error) {
@@ -359,8 +334,9 @@ router.get('/:userId', async (req: Request, res: Response) => {
 router.get('/:userId/history', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const groupId = req.user?.groupId ?? undefined;
 
-    const history = await getRatingHistory(userId);
+    const history = await getRatingHistory(userId, groupId);
 
     res.json({ history });
   } catch (error) {
@@ -395,18 +371,18 @@ router.post('/:userId/recalculate', async (req: Request, res: Response) => {
     }
 
     const { userId } = req.params;
+    const groupId = req.user.groupId;
 
     // Check if user is admin or requesting their own rating
-    const requestingUser = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: { isAdmin: true },
-    });
-
-    if (userId !== req.user.userId && !requestingUser?.isAdmin) {
+    if (userId !== req.user.userId && !req.user.isAdmin) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const newRating = await recalculatePlayerRating(userId);
+    if (!groupId) {
+      return res.status(400).json({ error: 'No active group' });
+    }
+
+    const newRating = await recalculatePlayerRating(userId, groupId);
 
     res.json({
       userId,
@@ -420,4 +396,3 @@ router.post('/:userId/recalculate', async (req: Request, res: Response) => {
 });
 
 export default router;
-

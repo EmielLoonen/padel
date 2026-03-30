@@ -3,6 +3,14 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+export interface UserGroup {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  role: 'admin' | 'member';
+  canCreateSessions: boolean;
+}
+
 interface User {
   id: string;
   email: string;
@@ -10,7 +18,10 @@ interface User {
   phone?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
   canCreateSessions?: boolean;
+  groupId?: string | null;
+  groups?: UserGroup[];
 }
 
 interface AuthState {
@@ -20,14 +31,15 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, phone?: string, inviteCode?: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
   clearError: () => void;
   initializeAuth: () => void;
+  switchGroup: (groupId: string) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: localStorage.getItem('token'),
   isAuthenticated: false,
@@ -44,12 +56,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const { user, token, previousLastLogin } = response.data;
       localStorage.setItem('token', token);
-      
-      // Store previousLastLogin temporarily for missed notifications check
+
       if (previousLastLogin) {
         localStorage.setItem('previousLastLogin', previousLastLogin);
       }
-      
+
       set({ user, token, isAuthenticated: true, isLoading: false });
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Login failed';
@@ -58,7 +69,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  signup: async (email: string, password: string, name: string, phone?: string) => {
+  signup: async (email: string, password: string, name: string, phone?: string, inviteCode?: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post(`${API_URL}/api/auth/signup`, {
@@ -66,6 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
         name,
         phone,
+        ...(inviteCode ? { inviteCode } : {}),
       });
 
       const { user, token } = response.data;
@@ -91,6 +103,37 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ error: null });
   },
 
+  switchGroup: async (groupId: string) => {
+    const token = get().token;
+    if (!token) return;
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/auth/switch-group`,
+        { groupId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const { token: newToken, isAdmin, canCreateSessions } = response.data;
+      localStorage.setItem('token', newToken);
+
+      set((state) => ({
+        token: newToken,
+        user: state.user
+          ? {
+              ...state.user,
+              groupId,
+              isAdmin,
+              canCreateSessions,
+            }
+          : null,
+      }));
+    } catch (error: any) {
+      console.error('Switch group failed:', error);
+      throw new Error(error.response?.data?.error || 'Failed to switch group');
+    }
+  },
+
   initializeAuth: async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -103,11 +146,48 @@ export const useAuthStore = create<AuthState>((set) => ({
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      set({ user: response.data.user, token, isAuthenticated: true });
+      // /api/auth/me returns raw user — merge with group data from token
+      // The token already carries groupId; we need to reconstruct isAdmin/canCreateSessions
+      // from the groups list. We'll rely on the token's embedded groupId.
+      const rawUser = response.data.user;
+      const groups: UserGroup[] = (rawUser.groups || []).map((ug: any) => ({
+        id: ug.group.id,
+        name: ug.group.name,
+        avatarUrl: ug.group.avatarUrl ?? null,
+        role: ug.role,
+        canCreateSessions: ug.canCreateSessions,
+      }));
+
+      // Re-fetch a fresh token to get correct isAdmin/canCreateSessions for current group
+      // Instead, decode the existing token's groupId and find the matching group
+      let activeGroupId: string | null = null;
+      let isAdmin = false;
+      let canCreateSessions = false;
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        activeGroupId = payload.groupId ?? null;
+        const activeGroup = groups.find((g) => g.id === activeGroupId);
+        if (activeGroup) {
+          isAdmin = activeGroup.role === 'admin';
+          canCreateSessions = activeGroup.canCreateSessions;
+        }
+      } catch {}
+
+      set({
+        user: {
+          ...rawUser,
+          groupId: activeGroupId,
+          isAdmin,
+          canCreateSessions,
+          groups,
+        },
+        token,
+        isAuthenticated: true,
+      });
     } catch (error) {
       localStorage.removeItem('token');
       set({ user: null, token: null, isAuthenticated: false });
     }
   },
 }));
-

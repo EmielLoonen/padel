@@ -5,7 +5,6 @@ import { authenticateToken } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-
 const router = express.Router();
 
 // All guest routes require authentication
@@ -30,20 +29,10 @@ router.post(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Check if user has permission to add guests (admins and Full Seat Players can add guests)
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        select: { canCreateSessions: true, isAdmin: true },
-      });
-
-      if (!user) {
-        return res.status(401).json({ error: 'User not found' });
-      }
-
       // Limited Seat Players cannot add guests
-      if (!user.isAdmin && !user.canCreateSessions) {
-        return res.status(403).json({ 
-          error: 'As a Limited Seat Player, you cannot add guest players. Please contact an admin or a Full Seat Player.' 
+      if (!req.user.isAdmin && !req.user.canCreateSessions) {
+        return res.status(403).json({
+          error: 'As a Limited Seat Player, you cannot add guest players. Please contact an admin or a Full Seat Player.'
         });
       }
 
@@ -90,20 +79,10 @@ router.post(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Check if user has permission to add guests (admins and Full Seat Players can add guests)
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        select: { canCreateSessions: true, isAdmin: true },
-      });
-
-      if (!user) {
-        return res.status(401).json({ error: 'User not found' });
-      }
-
       // Limited Seat Players cannot add guests
-      if (!user.isAdmin && !user.canCreateSessions) {
-        return res.status(403).json({ 
-          error: 'As a Limited Seat Player, you cannot add guest players. Please contact an admin or a Full Seat Player.' 
+      if (!req.user.isAdmin && !req.user.canCreateSessions) {
+        return res.status(403).json({
+          error: 'As a Limited Seat Player, you cannot add guest players. Please contact an admin or a Full Seat Player.'
         });
       }
 

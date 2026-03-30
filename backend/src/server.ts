@@ -1,6 +1,7 @@
+// Load environment variables FIRST — must be before any other import that reads process.env
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import sessionRoutes from './routes/sessions';
 import rsvpRoutes from './routes/rsvps';
@@ -13,9 +14,7 @@ import adminRoutes from './routes/admin';
 import ratingRoutes from './routes/ratings';
 import watchRoutes from './routes/watch';
 import matchRoutes from './routes/matches';
-
-// Load environment variables
-dotenv.config();
+import groupRoutes from './routes/groups';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +61,7 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/watch', watchRoutes);
 app.use('/api/matches', matchRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Start server
 app.listen(PORT, () => {

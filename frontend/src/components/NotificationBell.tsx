@@ -196,9 +196,16 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                         <p className="text-gray-600 text-sm mt-1">
                           {notification.message}
                         </p>
-                        <p className="text-gray-400 text-xs mt-2">
-                          {formatTime(notification.createdAt)}
-                        </p>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <p className="text-gray-400 text-xs">
+                            {formatTime(notification.createdAt)}
+                          </p>
+                          {notification.session?.group?.name && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                              {notification.session.group.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Actions */}
