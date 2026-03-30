@@ -137,10 +137,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: async () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      set({ isAuthenticated: false });
+      set({ isAuthenticated: false, isLoading: false });
       return;
     }
 
+    set({ isLoading: true });
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -184,10 +185,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
         token,
         isAuthenticated: true,
+        isLoading: false,
       });
     } catch (error) {
       localStorage.removeItem('token');
-      set({ user: null, token: null, isAuthenticated: false });
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));
