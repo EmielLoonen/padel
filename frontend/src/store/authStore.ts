@@ -168,12 +168,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         activeGroupId = payload.groupId ?? null;
-        const activeGroup = groups.find((g) => g.id === activeGroupId);
-        if (activeGroup) {
-          isAdmin = activeGroup.role === 'admin';
-          canCreateSessions = activeGroup.canCreateSessions;
-        }
       } catch {}
+
+      // If token has no groupId but user already has memberships, auto-select the first group
+      if (!activeGroupId && groups.length > 0) {
+        activeGroupId = groups[0].id;
+      }
+
+      const activeGroup = groups.find((g) => g.id === activeGroupId);
+      if (activeGroup) {
+        isAdmin = activeGroup.role === 'admin';
+        canCreateSessions = activeGroup.canCreateSessions;
+      }
 
       set({
         user: {
