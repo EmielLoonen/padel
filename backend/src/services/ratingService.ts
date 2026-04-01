@@ -414,12 +414,15 @@ export async function updatePlayerRating(
 
 /**
  * Recalculate ratings for all registered players in a set.
+ * Uses group-wide recalculation so opponent ratings are correct at each point in time.
  */
 export async function recalculateRatingsForSet(setId: string): Promise<void> {
   const set = await prisma.set.findUnique({
     where: { id: setId },
     include: {
-      scores: { select: { userId: true } },
+      scores: {
+        include: { user: { select: { id: true } } },
+      },
       court: { select: { session: { select: { groupId: true } } } },
     },
   });
@@ -433,14 +436,77 @@ export async function recalculateRatingsForSet(setId: string): Promise<void> {
     new Set(set.scores.map((s) => s.userId).filter((id): id is string => id !== null))
   );
 
-  await Promise.all(userIds.map((userId) => updatePlayerRating(userId, groupId, setId)));
+  // Capture ratings before recalculation for history entries
+  const previousRatings = new Map<string, number>();
+  for (const userId of userIds) {
+    previousRatings.set(userId, await getPlayerRating(userId, groupId));
+  }
+
+  // Recalculate ALL players in the group simultaneously so opponent ratings
+  // evolve correctly through history (fixes the bug where opponents were
+  // assigned the same rating as the player being calculated)
+  const newRatings = await recalculateAllRatings(groupId);
+
+  // Write matchRating + ratingHistory entries for players in the triggering set
+  const setWithRatings: SetWithScores = {
+    ...set,
+    scores: set.scores.map((s) => ({
+      userId: s.userId,
+      guestId: s.guestId,
+      gamesWon: s.gamesWon,
+      user: s.user ? { id: s.user.id, rating: null } : null,
+    })),
+  };
+
+  for (const userId of userIds) {
+    const previousRating = previousRatings.get(userId) ?? DEFAULT_RATING;
+    const newRating = newRatings.get(userId) ?? DEFAULT_RATING;
+
+    const matchRatingData = await calculateMatchRating(userId, setWithRatings, previousRating);
+    let matchRating: number | null = null;
+
+    if (matchRatingData) {
+      matchRating = matchRatingData.matchRating;
+      await prisma.matchRating.upsert({
+        where: { userId_setId: { userId, setId } },
+        create: {
+          userId,
+          setId,
+          groupId,
+          matchRating: matchRatingData.matchRating,
+          expectedWinPct: matchRatingData.expectedWinPct,
+          actualWinPct: matchRatingData.actualWinPct,
+          matchWeight: matchRatingData.matchWeight,
+        },
+        update: {
+          matchRating: matchRatingData.matchRating,
+          expectedWinPct: matchRatingData.expectedWinPct,
+          actualWinPct: matchRatingData.actualWinPct,
+          matchWeight: matchRatingData.matchWeight,
+        },
+      });
+    }
+
+    await prisma.ratingHistory.create({
+      data: {
+        userId,
+        groupId,
+        rating: newRating,
+        previousRating: previousRating !== DEFAULT_RATING ? previousRating : null,
+        setId,
+        matchRating,
+      },
+    });
+  }
 }
 
 /**
  * Recalculate rating for a specific player in a group.
+ * Runs group-wide recalculation to ensure opponent ratings are correct.
  */
 export async function recalculatePlayerRating(userId: string, groupId: string): Promise<number> {
-  return updatePlayerRating(userId, groupId);
+  const ratings = await recalculateAllRatings(groupId);
+  return ratings.get(userId) ?? DEFAULT_RATING;
 }
 
 /**
