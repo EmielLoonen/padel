@@ -527,6 +527,11 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
             <div>
               <h1 className="text-4xl font-bold text-white mb-2">{currentSession.venueName}</h1>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
+                  🎾 {currentSession.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
+                </span>
+              </div>
               <p className="text-gray-400 text-lg">
                 Created by{' '}
                 <span className="font-semibold text-padel-green">{currentSession.creator.name}</span>

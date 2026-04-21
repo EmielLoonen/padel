@@ -7,6 +7,7 @@ interface UpdateCourtData {
   startTime?: string;
   duration?: number;
   cost?: number;
+  maxPlayers?: number;
 }
 
 export const courtService = {
@@ -38,6 +39,42 @@ export const courtService = {
       throw new Error('Only the session creator can update courts');
     }
 
+    // If maxPlayers is being reduced, evict players over the new limit
+    if (data.maxPlayers !== undefined && data.maxPlayers < court.maxPlayers) {
+      const [rsvps, guests] = await Promise.all([
+        prisma.rSVP.findMany({
+          where: { courtId },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, createdAt: true },
+        }),
+        prisma.guest.findMany({
+          where: { courtId },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, createdAt: true },
+        }),
+      ]);
+
+      // Merge and sort by join time, keep first maxPlayers, move the rest to waitlist
+      const allPlayers = [
+        ...rsvps.map((r) => ({ id: r.id, type: 'rsvp' as const, createdAt: r.createdAt })),
+        ...guests.map((g) => ({ id: g.id, type: 'guest' as const, createdAt: g.createdAt })),
+      ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+      const toEvict = allPlayers.slice(data.maxPlayers);
+
+      const evictedRsvpIds = toEvict.filter((p) => p.type === 'rsvp').map((p) => p.id);
+      const evictedGuestIds = toEvict.filter((p) => p.type === 'guest').map((p) => p.id);
+
+      await prisma.$transaction([
+        ...(evictedRsvpIds.length > 0
+          ? [prisma.rSVP.updateMany({ where: { id: { in: evictedRsvpIds } }, data: { courtId: null } })]
+          : []),
+        ...(evictedGuestIds.length > 0
+          ? [prisma.guest.updateMany({ where: { id: { in: evictedGuestIds } }, data: { courtId: null } })]
+          : []),
+      ]);
+    }
+
     // Update the court
     const updatedCourt = await prisma.court.update({
       where: { id: courtId },
@@ -46,6 +83,7 @@ export const courtService = {
         ...(data.startTime !== undefined && { startTime: data.startTime }),
         ...(data.duration !== undefined && { duration: data.duration }),
         ...(data.cost !== undefined && { cost: data.cost }),
+        ...(data.maxPlayers !== undefined && { maxPlayers: data.maxPlayers }),
       },
     });
 

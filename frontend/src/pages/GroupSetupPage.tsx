@@ -12,6 +12,7 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
   const { token, setUser, user, switchGroup } = useAuthStore();
   const [view, setView] = useState<'choice' | 'create' | 'join'>('choice');
   const [groupName, setGroupName] = useState('');
+  const [groupSportType, setGroupSportType] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,8 +24,8 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
     setError('');
     setIsLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/api/groups`, { name: groupName }, { headers });
-      const newGroup: UserGroup = { id: res.data.group.id, name: res.data.group.name, role: 'admin', canCreateSessions: true };
+      const res = await axios.post(`${API_URL}/api/groups`, { name: groupName, sportType: groupSportType }, { headers });
+      const newGroup: UserGroup = { id: res.data.group.id, name: res.data.group.name, role: 'admin', canCreateSessions: true, sportType: res.data.group.sportType };
       // Add new group to user's list, then switch to it
       if (user) {
         setUser({ ...user, groups: [...(user.groups || []), newGroup] });
@@ -44,7 +45,7 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
     setIsLoading(true);
     try {
       const res = await axios.post(`${API_URL}/api/groups/join`, { inviteCode: inviteCode.trim() }, { headers });
-      const newGroup: UserGroup = { id: res.data.group.id, name: res.data.group.name, role: 'member', canCreateSessions: false };
+      const newGroup: UserGroup = { id: res.data.group.id, name: res.data.group.name, role: 'member', canCreateSessions: false, sportType: res.data.group.sportType ?? 'PADEL' };
       if (user) {
         setUser({ ...user, groups: [...(user.groups || []), newGroup] });
       }
@@ -63,7 +64,7 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
         <div className="text-center mb-8">
           <div className="text-7xl mb-4">🏟️</div>
           <h1 className="text-3xl font-bold text-white mb-2">Join or Create a Group</h1>
-          <p className="text-gray-400">Create a new padel group or join an existing one with an invite code.</p>
+          <p className="text-gray-400">Create a new group or join an existing one with an invite code.</p>
         </div>
 
         {error && (
@@ -92,6 +93,33 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
         {view === 'create' && (
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">Sport</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setGroupSportType('PADEL')}
+                  className={`py-3 px-4 rounded-xl border-2 font-semibold transition-all flex items-center justify-center gap-2 ${
+                    groupSportType === 'PADEL'
+                      ? 'border-padel-green bg-padel-green/20 text-white'
+                      : 'border-gray-700 bg-dark-elevated text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  🎾 Padel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGroupSportType('TENNIS')}
+                  className={`py-3 px-4 rounded-xl border-2 font-semibold transition-all flex items-center justify-center gap-2 ${
+                    groupSportType === 'TENNIS'
+                      ? 'border-padel-green bg-padel-green/20 text-white'
+                      : 'border-gray-700 bg-dark-elevated text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  🎾 Tennis
+                </button>
+              </div>
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">Group Name</label>
               <input
                 type="text"
@@ -99,7 +127,7 @@ export default function GroupSetupPage({ onSuccess }: GroupSetupPageProps = {}) 
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
-                placeholder="e.g. Padel Club Amsterdam"
+                placeholder={groupSportType === 'TENNIS' ? 'e.g. Tennis Club Amsterdam' : 'e.g. Padel Club Amsterdam'}
               />
             </div>
             <button

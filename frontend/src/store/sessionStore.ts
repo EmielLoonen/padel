@@ -43,6 +43,7 @@ interface Session {
   venueAddress?: string;
   totalCost?: number;
   notes?: string;
+  sportType?: 'PADEL' | 'TENNIS';
   numberOfCourts: number;
   creator: {
     id: string;
@@ -86,6 +87,7 @@ interface CourtInput {
   startTime: string;
   duration?: number;
   cost?: number;
+  maxPlayers?: number;
 }
 
 interface CreateSessionData {

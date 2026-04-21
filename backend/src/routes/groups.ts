@@ -51,7 +51,10 @@ router.get('/me', async (req: Request, res: Response) => {
 // POST /api/groups — create a new group (user becomes its admin)
 router.post(
   '/',
-  [body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Group name is required')],
+  [
+    body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Group name is required'),
+    body('sportType').optional().isIn(['PADEL', 'TENNIS']).withMessage('Sport type must be PADEL or TENNIS'),
+  ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -72,6 +75,7 @@ router.post(
         data: {
           name: req.body.name,
           inviteCode,
+          sportType: req.body.sportType || 'PADEL',
           members: {
             create: {
               userId,

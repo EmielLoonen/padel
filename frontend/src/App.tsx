@@ -445,6 +445,11 @@ function App() {
                     <h3 className="text-base sm:text-2xl font-bold text-white group-hover:text-padel-green transition-colors truncate flex-1 min-w-0">
                       {session.venueName}
                     </h3>
+                    {session.sportType === 'TENNIS' && (
+                      <span className="hidden sm:inline text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap flex-shrink-0">
+                        Tennis
+                      </span>
+                    )}
                     <span className="text-base sm:text-2xl text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
                       {session.time}
                     </span>

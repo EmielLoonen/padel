@@ -19,6 +19,7 @@ router.put(
       .withMessage('Start time must be in HH:MM format'),
     body('duration').optional().isInt({ min: 30, max: 180 }).withMessage('Duration must be 30-180 minutes'),
     body('cost').optional().isFloat({ min: 0 }).withMessage('Cost must be a positive number'),
+    body('maxPlayers').optional().isInt({ min: 2, max: 4 }).withMessage('Max players must be 2 or 4'),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -31,12 +32,13 @@ router.put(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { courtNumber, startTime, duration, cost } = req.body;
+      const { courtNumber, startTime, duration, cost, maxPlayers } = req.body;
       const court = await courtService.updateCourt(req.params.id, req.user.userId, {
         courtNumber,
         startTime,
         duration,
         cost,
+        maxPlayers,
       });
 
       res.json({ court });

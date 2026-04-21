@@ -10,13 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SportType {
+  PADEL
+  TENNIS
+}
+
 model Group {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  avatarUrl   String?  @map("avatar_url")
-  inviteCode  String   @unique @map("invite_code")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  avatarUrl   String?   @map("avatar_url")
+  inviteCode  String    @unique @map("invite_code")
+  sportType   SportType @default(PADEL) @map("sport_type")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
   members     UserGroup[]
@@ -80,6 +86,7 @@ model Session {
   venueAddress            String?  @map("venue_address")
   totalCost               Decimal? @map("total_cost") @db.Decimal(10, 2)
   notes                   String?
+  sportType               SportType @default(PADEL) @map("sport_type")
   numberOfCourts          Int      @default(1) @map("number_of_courts")
   createdById             String   @map("created_by_id")
   groupId                 String?  @map("group_id")

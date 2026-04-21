@@ -1,60 +1,42 @@
 import { useState, type FormEvent } from 'react';
 import { useSessionStore, type CourtInput } from '../store/sessionStore';
+import { useAuthStore } from '../store/authStore';
 
 export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => void }) {
+  const { user } = useAuthStore();
+  const activeGroup = user?.groups?.find((g) => g.id === user.groupId);
+  const sportType = activeGroup?.sportType ?? 'PADEL';
+
   const [date, setDate] = useState('');
   const [venueName, setVenueName] = useState('Padel Next');
   const [notes, setNotes] = useState('');
-  const [numberOfCourts, setNumberOfCourts] = useState(1);
-  const [courts, setCourts] = useState<CourtInput[]>([
-    { courtNumber: 1, startTime: '20:30', duration: 60 },
-  ]);
+  const [maxPlayers, setMaxPlayers] = useState(sportType === 'TENNIS' ? 2 : 4);
+  const [court, setCourt] = useState<CourtInput>({ courtNumber: 1, startTime: '20:30', duration: 60 });
 
   const { createSession, isLoading, error } = useSessionStore();
 
-  const handleNumberOfCourtsChange = (num: number) => {
-    setNumberOfCourts(num);
-    
-    // Update courts array
-    const newCourts: CourtInput[] = [];
-    for (let i = 1; i <= num; i++) {
-      const existing = courts.find((c) => c.courtNumber === i);
-      newCourts.push(
-        existing || { courtNumber: i, startTime: '20:30', duration: 60 }
-      );
-    }
-    setCourts(newCourts);
-  };
-
-  const updateCourt = (courtNumber: number, field: keyof CourtInput, value: string | number) => {
-    setCourts((prev) =>
-      prev.map((court) =>
-        court.courtNumber === courtNumber ? { ...court, [field]: value } : court
-      )
-    );
+  const updateCourt = (field: keyof CourtInput, value: string | number) => {
+    setCourt((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
-      // Use the first court's start time as the session time
-      const sessionTime = courts[0]?.startTime || '20:30';
-      
       await createSession({
         date,
-        time: sessionTime,
+        time: court.startTime,
         venueName,
         notes: notes || undefined,
-        courts,
+        courts: [{ ...court, maxPlayers }],
       });
 
       // Reset form
       setDate('');
       setVenueName('Padel Next');
       setNotes('');
-      setNumberOfCourts(1);
-      setCourts([{ courtNumber: 1, startTime: '20:30', duration: 60 }]);
+      setMaxPlayers(sportType === 'TENNIS' ? 2 : 4);
+      setCourt({ courtNumber: 1, startTime: '20:30', duration: 60 });
 
       if (onSuccess) {
         onSuccess();
@@ -66,7 +48,6 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
     }
   };
 
-  // Get today's date in YYYY-MM-DD format for min date
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -84,8 +65,43 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Date */}
+          {/* Sport (from group) + format toggle */}
           <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-gray-300">Sport</span>
+              <span className="text-sm font-semibold px-3 py-1 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
+                🎾 {sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
+              </span>
+            </div>
+            <label className="block text-xs text-gray-400 mb-1.5">Format</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMaxPlayers(4)}
+                className={`flex-1 py-2 rounded-lg border font-medium text-sm transition-all ${
+                  maxPlayers === 4
+                    ? 'border-padel-green bg-padel-green/20 text-white'
+                    : 'border-gray-700 bg-dark-elevated text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                4 — Doubles
+              </button>
+              <button
+                type="button"
+                onClick={() => setMaxPlayers(2)}
+                className={`flex-1 py-2 rounded-lg border font-medium text-sm transition-all ${
+                  maxPlayers === 2
+                    ? 'border-padel-green bg-padel-green/20 text-white'
+                    : 'border-gray-700 bg-dark-elevated text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                2 — Singles
+              </button>
+            </div>
+          </div>
+
+          {/* Date */}
+          <div className="overflow-hidden">
             <label htmlFor="date" className="block text-sm font-semibold text-gray-300 mb-2">
               Date *
             </label>
@@ -96,7 +112,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
               min={today}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
+              className="w-full min-w-0 max-w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
             />
           </div>
 
@@ -117,91 +133,49 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
             />
           </div>
 
-          {/* Number of Courts */}
-          <div>
-            <label htmlFor="numberOfCourts" className="block text-sm font-semibold text-gray-300 mb-2">
-              Number of Courts *
-            </label>
-            <select
-              id="numberOfCourts"
-              value={numberOfCourts}
-              onChange={(e) => handleNumberOfCourtsChange(parseInt(e.target.value))}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
-            >
-              {[1, 2, 3, 4].map((num) => (
-                <option key={num} value={num}>
-                  {num} {num === 1 ? 'Court' : 'Courts'}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Court Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white">Court Times & Durations</h3>
-            {courts.map((court) => (
-                <div
-                  key={court.courtNumber}
-                  className="p-4 bg-dark-elevated rounded-xl border border-gray-700"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-padel-green">Court {court.courtNumber}</h4>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Court #</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={court.courtNumber}
-                        onChange={(e) =>
-                          updateCourt(court.courtNumber, 'courtNumber', parseInt(e.target.value) || 1)
-                        }
-                        className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Start Time</label>
-                      <input
-                        type="time"
-                        value={court.startTime}
-                        onChange={(e) =>
-                          updateCourt(court.courtNumber, 'startTime', e.target.value)
-                        }
-                        className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Duration (min)</label>
-                      <select
-                        value={court.duration}
-                        onChange={(e) =>
-                          updateCourt(court.courtNumber, 'duration', parseInt(e.target.value))
-                        }
-                        className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
-                      >
-                        <option value="60">60 min</option>
-                        <option value="90">90 min</option>
-                        <option value="120">120 min</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Cost (€)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={court.cost || ''}
-                      onChange={(e) =>
-                        updateCourt(court.courtNumber, 'cost', e.target.value ? parseFloat(e.target.value) : 0)
-                      }
-                      className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
-                      placeholder="20.00"
-                    />
-                  </div>
+          <div className="p-4 bg-dark-elevated rounded-xl border border-gray-700 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-300">Court Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="overflow-hidden">
+                <label className="block text-xs text-gray-400 mb-1">Start Time</label>
+                <input
+                  type="time"
+                  value={court.startTime}
+                  onChange={(e) => updateCourt('startTime', e.target.value)}
+                  className="w-full min-w-0 max-w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Duration (min)</label>
+                <div className="relative">
+                  <select
+                    value={court.duration}
+                    onChange={(e) => updateCourt('duration', parseInt(e.target.value))}
+                    className="w-full appearance-none px-3 py-2 pr-9 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+                  >
+                    <option value="60">60 min</option>
+                    <option value="90">90 min</option>
+                    <option value="120">120 min</option>
+                  </select>
+                  <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
-              ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Cost (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={court.cost || ''}
+                onChange={(e) => updateCourt('cost', e.target.value ? parseFloat(e.target.value) : 0)}
+                className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+                placeholder="20.00"
+              />
+            </div>
           </div>
 
           {/* Notes */}

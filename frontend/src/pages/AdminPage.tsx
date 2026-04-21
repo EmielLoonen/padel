@@ -140,6 +140,9 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       if (remainingGroups.length > 0) {
         // Switch to the first remaining group (issues a new token)
         await switchGroup(remainingGroups[0].id);
+        // switchGroup doesn't update the groups array — patch it now using fresh store state
+        const freshUser = useAuthStore.getState().user;
+        if (freshUser) setUser({ ...freshUser, groups: remainingGroups });
       } else {
         // No groups left — clear groupId so App.tsx shows GroupSetupPage
         if (user) {
@@ -321,9 +324,6 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                 <button onClick={() => { setIsRenamingGroup(true); setNewGroupName(groupInfo.name); }} className="text-gray-500 hover:text-gray-300 transition-colors text-sm" title="Rename group">
                   ✏️
                 </button>
-                <button onClick={() => setIsDeletingGroup(true)} className="text-gray-600 hover:text-red-400 transition-colors text-sm" title="Delete group">
-                  🗑️
-                </button>
               </div>
             )}
             <p className="text-gray-400 text-sm mb-4">{groupInfo._count.users} member{groupInfo._count.users !== 1 ? 's' : ''}</p>
@@ -353,6 +353,14 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                 </div>
               </>
             )}
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <button
+                onClick={() => setIsDeletingGroup(true)}
+                className="bg-gradient-to-r from-red-500 to-red-600 text-white py-2.5 px-6 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg hover:shadow-xl font-medium text-sm"
+              >
+                Delete group
+              </button>
+            </div>
           </div>
         )}
 

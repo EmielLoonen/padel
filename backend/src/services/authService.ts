@@ -84,7 +84,7 @@ export const authService = {
             groupId: true,
             role: true,
             canCreateSessions: true,
-            group: { select: { id: true, name: true, avatarUrl: true } },
+            group: { select: { id: true, name: true, avatarUrl: true, sportType: true } },
           },
         },
       },
@@ -119,6 +119,7 @@ export const authService = {
           avatarUrl: ug.group.avatarUrl ?? null,
           role: ug.role,
           canCreateSessions: ug.canCreateSessions,
+          sportType: ug.group.sportType ?? 'PADEL',
         })),
       },
       token,
@@ -131,7 +132,7 @@ export const authService = {
       where: { email: data.email },
       include: {
         groups: {
-          include: { group: { select: { id: true, name: true, avatarUrl: true } } },
+          include: { group: { select: { id: true, name: true, avatarUrl: true, sportType: true } } },
         },
       },
     });
@@ -228,7 +229,7 @@ export const authService = {
         isSuperAdmin: true,
         createdAt: true,
         groups: {
-          include: { group: { select: { id: true, name: true, avatarUrl: true } } },
+          include: { group: { select: { id: true, name: true, avatarUrl: true, sportType: true } } },
         },
       },
     });

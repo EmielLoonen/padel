@@ -9,6 +9,7 @@ export interface UserGroup {
   avatarUrl?: string | null;
   role: 'admin' | 'member';
   canCreateSessions: boolean;
+  sportType?: 'PADEL' | 'TENNIS';
 }
 
 interface User {
@@ -155,6 +156,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         avatarUrl: ug.group.avatarUrl ?? null,
         role: ug.role,
         canCreateSessions: ug.canCreateSessions,
+        sportType: ug.group.sportType ?? 'PADEL',
       }));
 
       let activeGroupId: string | null = null;

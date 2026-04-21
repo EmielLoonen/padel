@@ -30,6 +30,7 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
         startTime: court.startTime,
         duration: court.duration,
         cost: court.cost || '',
+        maxPlayers: court.maxPlayers ?? 4,
       },
     });
   };
@@ -53,8 +54,9 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
         courtNumber: parseInt(edits.courtNumber),
         startTime: edits.startTime,
         duration: parseInt(edits.duration),
+        maxPlayers: edits.maxPlayers,
       };
-      
+
       if (edits.cost) {
         payload.cost = parseFloat(edits.cost);
       }
@@ -234,6 +236,33 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
                               />
                             </div>
                           </div>
+                          <div className="col-span-2">
+                            <label className="block text-xs text-gray-600 mb-1">Format</label>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleCourtEditChange(court.id, 'maxPlayers', 4)}
+                                className={`flex-1 py-1 px-2 rounded text-sm border font-medium transition-all ${edits.maxPlayers === 4 ? 'bg-padel-green text-white border-padel-green' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
+                              >
+                                4 — Doubles
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCourtEditChange(court.id, 'maxPlayers', 2)}
+                                className={`flex-1 py-1 px-2 rounded text-sm border font-medium transition-all ${edits.maxPlayers === 2 ? 'bg-padel-green text-white border-padel-green' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
+                              >
+                                2 — Singles
+                              </button>
+                            </div>
+                          </div>
+                          {(() => {
+                            const totalPlayers = (court.rsvps?.length || 0) + (court.guests?.length || 0);
+                            return edits.maxPlayers < totalPlayers ? (
+                              <div className="col-span-2 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-700">
+                                ⚠️ There are currently {totalPlayers} players assigned to this court. Reducing to {edits.maxPlayers} will leave {totalPlayers - edits.maxPlayers} player{totalPlayers - edits.maxPlayers !== 1 ? 's' : ''} over the limit.
+                              </div>
+                            ) : null;
+                          })()}
                           <div className="flex gap-2">
                             <button
                               type="button"

@@ -22,6 +22,7 @@ interface CourtData {
   startTime: string;
   duration?: number; // default 60 minutes
   cost?: number;
+  maxPlayers?: number;
 }
 
 interface CreateSessionData {
@@ -31,7 +32,7 @@ interface CreateSessionData {
   venueAddress?: string;
   totalCost?: number;
   notes?: string;
-  courts: CourtData[]; // Array of courts to create
+  courts: CourtData[];
   createdById: string;
   groupId: string | null;
 }
@@ -47,7 +48,12 @@ interface UpdateSessionData {
 
 export const sessionService = {
   async createSession(data: CreateSessionData) {
-    // Create session with courts in a transaction
+    // Look up the group's sport type to use as the session sport type
+    const group = data.groupId
+      ? await prisma.group.findUnique({ where: { id: data.groupId }, select: { sportType: true } })
+      : null;
+    const sportType = group?.sportType ?? 'PADEL';
+
     const session = await prisma.session.create({
       data: {
         date: data.date,
@@ -56,6 +62,7 @@ export const sessionService = {
         venueAddress: data.venueAddress,
         totalCost: data.totalCost,
         notes: data.notes,
+        sportType,
         numberOfCourts: data.courts.length,
         createdById: data.createdById,
         groupId: data.groupId,
@@ -65,7 +72,7 @@ export const sessionService = {
               courtNumber: court.courtNumber,
               startTime: court.startTime,
               duration: court.duration || 60,
-              maxPlayers: 4,
+              maxPlayers: court.maxPlayers ?? (sportType === 'TENNIS' ? 2 : 4),
               cost: court.cost,
               watchCode: await generateUniqueWatchCode(),
             }))
