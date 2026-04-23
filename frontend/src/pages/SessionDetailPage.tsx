@@ -817,8 +817,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       <p className="text-gray-500 italic text-sm">No players yet</p>
                     )}
 
-                    {/* Smart Balance Suggestion - Only show if exactly 4 players */}
+                    {/* Smart Balance Suggestion - Only show if exactly 4 players and session is upcoming */}
                     {(() => {
+                      if (new Date(currentSession.date) < new Date()) return null;
                       const totalPlayers = (court.rsvps?.length || 0) + (court.guests?.filter((g: any) => g.status === 'yes').length || 0);
                       if (totalPlayers !== 4) return null;
                       
