@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useRef, useEffect } from 'react';
+import { useState, type FormEvent, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 import Avatar from '../components/Avatar';
