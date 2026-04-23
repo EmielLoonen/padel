@@ -15,6 +15,7 @@ import ratingRoutes from './routes/ratings';
 import watchRoutes from './routes/watch';
 import matchRoutes from './routes/matches';
 import groupRoutes from './routes/groups';
+import superAdminRoutes from './routes/superadmin';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +63,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/watch', watchRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/superadmin', superAdminRoutes);
 
 // Start server
 app.listen(PORT, () => {
