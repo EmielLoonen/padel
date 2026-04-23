@@ -25,7 +25,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -34,7 +33,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
       .get(`${API_URL}/api/groups/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
         const active = res.data.groups?.find((g: any) => g.id === user.groupId);
-        if (active?.inviteCode) setInviteCode(active.inviteCode);
       })
       .catch(() => {});
   }, [user?.groupId]);
