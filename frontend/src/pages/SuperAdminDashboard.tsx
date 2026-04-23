@@ -39,10 +39,10 @@ interface Props {
   onLogout: () => void;
 }
 
-type Tab = 'overview' | 'groups' | 'users';
+type Tab = 'groups' | 'users';
 
 export default function SuperAdminDashboard({ token, onLogout }: Props) {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('groups');
   const [stats, setStats] = useState<Stats | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -142,13 +142,15 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email.toLowerCase().includes(userSearch.toLowerCase());
-    const matchesGroup = !userGroupFilter || u.groups.some((m) => m.group.id === userGroupFilter);
-    return matchesSearch && matchesGroup;
-  });
+  const filteredUsers = users
+    .filter((u) => {
+      const matchesSearch =
+        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email.toLowerCase().includes(userSearch.toLowerCase());
+      const matchesGroup = !userGroupFilter || u.groups.some((m) => m.group.id === userGroupFilter);
+      return matchesSearch && matchesGroup;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const filteredGroups = groups
     .filter((g) => g.name.toLowerCase().includes(groupSearch.toLowerCase()))
@@ -182,7 +184,7 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-dark-card rounded-xl p-1 border border-gray-800 w-fit">
-          {(['overview', 'groups', 'users'] as Tab[]).map((t) => (
+          {(['groups', 'users'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -203,59 +205,6 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
           </div>
         ) : (
           <>
-            {/* Overview tab */}
-            {tab === 'overview' && stats && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { label: 'Groups', value: stats.totalGroups, icon: '🏟️' },
-                    { label: 'Users', value: stats.totalUsers, icon: '👤' },
-                    { label: 'Sessions', value: stats.totalSessions, icon: '🎾' },
-                    { label: 'Courts', value: stats.totalCourts, icon: '🏓' },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-dark-card rounded-xl p-5 border border-gray-800">
-                      <div className="text-2xl mb-2">{s.icon}</div>
-                      <div className="text-3xl font-bold text-white">{s.value}</div>
-                      <div className="text-sm text-gray-400 mt-1">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Recent groups */}
-                <div className="bg-dark-card rounded-xl border border-gray-800 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-800">
-                    <h2 className="text-white font-semibold">Recent Groups</h2>
-                  </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-gray-500 text-xs uppercase border-b border-gray-800">
-                        <th className="text-left px-6 py-3">Name</th>
-                        <th className="text-left px-6 py-3">Sport</th>
-                        <th className="text-left px-6 py-3">Members</th>
-                        <th className="text-left px-6 py-3">Sessions</th>
-                        <th className="text-left px-6 py-3">Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...groups].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 5).map((g) => (
-                        <tr key={g.id} className="border-b border-gray-800/50 hover:bg-dark-elevated/50 transition-colors">
-                          <td className="px-6 py-3 text-white font-medium">{g.name}</td>
-                          <td className="px-6 py-3">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
-                              {g.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-gray-300">{g._count.members}</td>
-                          <td className="px-6 py-3 text-gray-300">{g._count.sessions}</td>
-                          <td className="px-6 py-3 text-gray-500">{formatDate(g.createdAt)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
             {/* Groups tab */}
             {tab === 'groups' && (
               <div className="bg-dark-card rounded-xl border border-gray-800 overflow-hidden">
@@ -283,7 +232,11 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                     </thead>
                     <tbody>
                       {filteredGroups.map((g) => (
-                        <tr key={g.id} className="border-b border-gray-800/50 hover:bg-dark-elevated/50 transition-colors">
+                        <tr
+                          key={g.id}
+                          onClick={() => { setUserGroupFilter(g.id); setTab('users'); }}
+                          className="border-b border-gray-800/50 hover:bg-dark-elevated/50 transition-colors cursor-pointer"
+                        >
                           <td className="px-6 py-3 text-white font-medium">{g.name}</td>
                           <td className="px-6 py-3">
                             <span className="text-xs px-2 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
@@ -331,88 +284,91 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                   </div>
                 </div>
 
-                {filteredUsers.length === 0 && (
-                  <p className="text-center text-gray-500 py-8">No users found</p>
-                )}
-
-                {filteredUsers.map((u) => (
-                  <div key={u.id} className="bg-dark-card rounded-xl border border-gray-800 p-5">
-                    {/* User header */}
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-white font-semibold">{u.name}</span>
-                          {u.isSuperAdmin && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">super</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-400">{u.email}</div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          Joined {formatDate(u.createdAt)} · Last login {formatDate(u.lastLogin)}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => openResetModal(u.id, u.name)}
-                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-dark-elevated border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-all"
-                      >
-                        Reset password
-                      </button>
-                    </div>
-
-                    {/* Group memberships */}
-                    {u.groups.length === 0 ? (
-                      <p className="text-xs text-gray-600">No groups</p>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-gray-500 text-xs uppercase border-b border-gray-800">
-                            <th className="text-left py-2 pr-4">Group</th>
-                            <th className="text-left py-2 pr-4">Type</th>
-                            <th className="text-left py-2">Full seat access</th>
+                <div className="bg-dark-card rounded-xl border border-gray-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-gray-500 text-xs uppercase border-b border-gray-800">
+                          <th className="text-left px-6 py-3">Name</th>
+                          <th className="text-left px-6 py-3">Email</th>
+                          <th className="text-left px-6 py-3">Phone</th>
+                          <th className="text-left px-6 py-3">Group</th>
+                          <th className="text-left px-6 py-3">Full seat</th>
+                          <th className="text-left px-6 py-3">Reset</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center text-gray-500 py-8">No users found</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                        {u.groups.map((m) => {
-                          const key = `${u.id}:${m.group.id}`;
-                          const toggling = togglingKey === key;
-                          return (
-                            <tr key={m.group.id} className="border-b border-gray-800/40 last:border-0">
-                              <td className="py-2.5 pr-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-200">{m.group.name}</span>
-                                  {m.role === 'admin' && (
-                                    <span className="text-xs text-padel-green">★</span>
+                        )}
+                        {filteredUsers.flatMap((u) => {
+                          const rows = u.groups.length > 0 ? u.groups : [null];
+                          return rows.map((m, i) => {
+                            const key = m ? `${u.id}:${m.group.id}` : u.id;
+                            const toggling = m ? togglingKey === key : false;
+                            return (
+                              <tr key={key} className="border-b border-gray-800/50 hover:bg-dark-elevated/40 transition-colors">
+                                {/* Name — only show on first row for this user */}
+                                <td className="px-6 py-3">
+                                  {i === 0 && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-white font-medium">{u.name}</span>
+                                      {u.isSuperAdmin && (
+                                        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">super</span>
+                                      )}
+                                    </div>
                                   )}
-                                </div>
-                              </td>
-                              <td className="py-2.5 pr-4">
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
-                                  {m.group.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
-                                </span>
-                              </td>
-                              <td className="py-2.5">
-                                <button
-                                  onClick={() => handleToggleCanCreate(u.id, m.group.id, m.canCreateSessions)}
-                                  disabled={toggling}
-                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-                                    m.canCreateSessions ? 'bg-padel-green' : 'bg-gray-700'
-                                  } ${toggling ? 'opacity-50' : ''}`}
-                                >
-                                  <span
-                                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-                                      m.canCreateSessions ? 'translate-x-4' : 'translate-x-1'
-                                    }`}
-                                  />
-                                </button>
-                              </td>
-                            </tr>
-                          );
+                                </td>
+                                <td className="px-6 py-3 text-gray-400">{i === 0 ? u.email : ''}</td>
+                                <td className="px-6 py-3 text-gray-400">{i === 0 ? (u.phone ?? '—') : ''}</td>
+                                <td className="px-6 py-3">
+                                  {m ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-200">{m.group.name}</span>
+                                      {m.role === 'admin' && <span className="text-xs text-padel-green">★</span>}
+                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
+                                        {m.group.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-600 text-xs">No groups</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-3">
+                                  {m && (
+                                    <button
+                                      onClick={() => handleToggleCanCreate(u.id, m.group.id, m.canCreateSessions)}
+                                      disabled={toggling}
+                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                                        m.canCreateSessions ? 'bg-padel-green' : 'bg-gray-700'
+                                      } ${toggling ? 'opacity-50' : ''}`}
+                                    >
+                                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                                        m.canCreateSessions ? 'translate-x-4' : 'translate-x-1'
+                                      }`} />
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="px-6 py-3">
+                                  {i === 0 && (
+                                    <button
+                                      onClick={() => openResetModal(u.id, u.name)}
+                                      className="text-xs px-3 py-1.5 rounded-lg bg-dark-elevated border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-all"
+                                    >
+                                      Reset
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
                         })}
-                        </tbody>
-                      </table>
-                    )}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
