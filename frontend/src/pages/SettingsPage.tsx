@@ -26,7 +26,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,12 +39,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
       .catch(() => {});
   }, [user?.groupId]);
 
-  const handleCopyCode = () => {
-    if (!inviteCode) return;
-    navigator.clipboard.writeText(inviteCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
-  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

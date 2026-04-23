@@ -3,12 +3,6 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface Stats {
-  totalGroups: number;
-  totalUsers: number;
-  totalSessions: number;
-  totalCourts: number;
-}
 
 interface Group {
   id: string;
@@ -43,7 +37,7 @@ type Tab = 'groups' | 'users';
 
 export default function SuperAdminDashboard({ token, onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('groups');
-  const [stats, setStats] = useState<Stats | null>(null);
+
   const [groups, setGroups] = useState<Group[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,12 +60,10 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
       setIsLoading(true);
       setError('');
       try {
-        const [statsRes, groupsRes, usersRes] = await Promise.all([
-          axios.get(`${API_URL}/api/superadmin/stats`, { headers }),
+        const [groupsRes, usersRes] = await Promise.all([
           axios.get(`${API_URL}/api/superadmin/groups`, { headers }),
           axios.get(`${API_URL}/api/superadmin/users`, { headers }),
         ]);
-        setStats(statsRes.data);
         setGroups(groupsRes.data.groups);
         setUsers(usersRes.data.users);
       } catch {
