@@ -26,16 +26,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token || !user?.groupId) return;
-    axios
-      .get(`${API_URL}/api/groups/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        const active = res.data.groups?.find((g: any) => g.id === user.groupId);
-      })
-      .catch(() => {});
-  }, [user?.groupId]);
 
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
