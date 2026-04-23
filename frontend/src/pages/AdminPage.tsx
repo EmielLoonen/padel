@@ -261,26 +261,22 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                <span className="text-4xl">🛡️</span>
-                Group Admin Panel
-              </h1>
-              <p className="text-gray-400">Manage users and reset passwords</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <GroupSwitcher
-                onGroupSwitched={() => {}}
-                onCreateOrJoin={() => {}}
-              />
-              <button
-                onClick={onBack}
-                className="bg-dark-elevated hover:bg-gray-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors font-medium"
-              >
-                ← Back
-              </button>
-            </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1 flex items-center gap-3">
+            <span className="text-4xl">🛡️</span>
+            Group Admin Panel
+          </h1>
+          <p className="text-gray-400 mb-3">Manage users and reset passwords</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <GroupSwitcher
+              onGroupSwitched={() => {}}
+              onCreateOrJoin={() => {}}
+            />
+            <button
+              onClick={onBack}
+              className="bg-dark-elevated hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+            >
+              ← Back
+            </button>
           </div>
         </div>
 
@@ -337,26 +333,28 @@ export default function AdminPage({ onBack }: AdminPageProps) {
             {groupInfo.inviteCode && (
               <>
                 <p className="text-sm text-gray-400 mb-2">Share this code to invite new players:</p>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                   <div className="flex-1 bg-dark-elevated border-2 border-padel-green/40 rounded-xl px-6 py-3 text-center">
                     <span className="text-2xl font-mono font-bold tracking-widest text-padel-green">
                       {groupInfo.inviteCode}
                     </span>
                   </div>
-                  <button
-                    onClick={handleCopyCode}
-                    className="bg-padel-green text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-600 transition-colors"
-                  >
-                    {codeCopied ? '✓ Copied' : 'Copy'}
-                  </button>
-                  <button
-                    onClick={handleRegenerateCode}
-                    disabled={isRegeneratingCode}
-                    className="bg-dark-elevated border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-semibold hover:border-gray-500 transition-colors disabled:opacity-50 text-sm"
-                    title="Generate a new invite code (invalidates the old one)"
-                  >
-                    {isRegeneratingCode ? '...' : '↻ New Code'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopyCode}
+                      className="flex-1 sm:flex-none bg-padel-green text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      {codeCopied ? '✓ Copied' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={handleRegenerateCode}
+                      disabled={isRegeneratingCode}
+                      className="flex-1 sm:flex-none bg-dark-elevated border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-semibold hover:border-gray-500 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+                      title="Generate a new invite code (invalidates the old one)"
+                    >
+                      {isRegeneratingCode ? '...' : '↻ New Code'}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -401,7 +399,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {[...users].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((u) => (
                   <tr key={u.id} className="border-b border-gray-800/50 hover:bg-dark-elevated/40 transition-colors">
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
