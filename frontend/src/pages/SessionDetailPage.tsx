@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useSessionStore } from '../store/sessionStore';
 import { useRSVPStore } from '../store/sessionStore';
 import { useAuthStore } from '../store/authStore';
-import CourtSelector from '../components/CourtSelector';
 import EditSessionModal from '../components/EditSessionModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddGuestModal from '../components/AddGuestModal';
@@ -351,47 +350,6 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
-  const handleCourtSelection = async (courtId: string | null) => {
-    // Don't process if not initialized yet
-    if (!hasInitialized.current) {
-      return;
-    }
-    
-    // Prevent if already processing
-    if (isProcessingRSVP.current || isLoadingRSVP) {
-      return;
-    }
-    
-    setSelectedCourtId(courtId);
-    
-    // Submit RSVP with court selection
-    if (rsvpStatus === 'yes' && courtId) {
-      isProcessingRSVP.current = true;
-      try {
-        const result = await createOrUpdateRSVP(sessionId, rsvpStatus, courtId);
-        
-        // Check for overlaps
-        if (result?.overlaps && result.overlaps.length > 0) {
-          // Store overlaps and show warning modal
-          setOverlaps(result.overlaps);
-          setPendingRSVP({ status: rsvpStatus, courtId });
-          setShowOverlapWarning(true);
-          // Revert court selection until user confirms
-          setSelectedCourtId(null);
-          return;
-        }
-        
-        await fetchSessionById(sessionId); // Refresh to get updated courts
-      } catch (error: any) {
-        const errorMessage = error?.response?.data?.error || 'Failed to update RSVP';
-        // Only show alert for user-initiated actions (court selection is always user-initiated)
-        alert(errorMessage);
-        setSelectedCourtId(null);
-      } finally {
-        isProcessingRSVP.current = false;
-      }
-    }
-  };
 
   const handleOverlapProceed = async () => {
     if (!pendingRSVP) return;
@@ -570,21 +528,32 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 {' at '}
                 <span className="text-padel-green">{currentSession.time}</span>
               </p>
+              {courtsInfo?.[0]?.duration && (
+                <p className="text-gray-400 text-sm mt-1">⏱ {courtsInfo[0].duration} min</p>
+              )}
             </div>
 
-            {currentSession.totalCost && (
+            {courtsInfo?.[0] && (
               <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
-                <p className="text-gray-400 text-sm mb-1">💰 Total Cost</p>
-                <p className="text-white font-bold text-lg">€{currentSession.totalCost}</p>
+                <p className="text-gray-400 text-sm mb-1">🎾 Court</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-white font-bold text-lg">Court {courtsInfo[0].courtNumber}</p>
+                  {courtsInfo[0].watchCode && (
+                    <span className="font-mono text-sm font-bold bg-gray-700 text-gray-200 px-2 py-0.5 rounded tracking-widest">
+                      {courtsInfo[0].watchCode}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
-              <p className="text-gray-400 text-sm mb-1">🎾 Number of Courts</p>
-              <p className="text-white font-bold text-lg">
-                {currentSession.numberOfCourts} {currentSession.numberOfCourts === 1 ? 'Court' : 'Courts'}
-              </p>
-            </div>
+            {courtsInfo?.[0]?.cost && (
+              <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
+                <p className="text-gray-400 text-sm mb-1">💰 Cost</p>
+                <p className="text-white font-bold text-lg">€{courtsInfo[0].cost}</p>
+                <p className="text-gray-400 text-sm mt-0.5">€{(Number(courtsInfo[0].cost) / courtsInfo[0].maxPlayers).toFixed(2)} per person</p>
+              </div>
+            )}
 
             <div className="bg-dark-elevated p-3 sm:p-4 rounded-xl border border-gray-700">
               <p className="text-gray-400 text-sm mb-1">👥 Attendance</p>
@@ -622,17 +591,16 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
               courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
             const userHasCourt = selectedCourtId !== null;
             
-            // If user is already on a court, only show "Can't Make It"
+            // If user is confirmed on a court, only show "Can't Make It"
             if (userHasCourt && rsvpStatus === 'yes') {
               return (
                 <div className="mb-6">
                   <div className="bg-green-500/10 border-l-4 border-green-500 p-4 rounded-lg mb-4">
                     <p className="text-green-400 font-semibold mb-2">✓ You're Confirmed!</p>
                     <p className="text-gray-300 text-sm">
-                      You're already assigned to a court. If you can't make it, click below to cancel.
+                      If you can't make it, click below to cancel.
                     </p>
                   </div>
-                  
                   <button
                     type="button"
                     onClick={(e) => handleRSVPChange('no', e)}
@@ -735,121 +703,46 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             );
           })()}
 
-          {/* Court Selection (only shown if user said "yes" and courts are available) */}
-          {rsvpStatus === 'yes' && courtsInfo && courtsInfo.length > 0 && (() => {
-            const allCourtsFull = courtsInfo.every((court) => court.isFull || (court.rsvps?.length || 0) >= court.maxPlayers);
-            
-            // Don't show court selector if all courts are full (user is on waitlist)
-            if (allCourtsFull && !selectedCourtId) {
-              return (
-                <div className="mt-6">
-                  <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg">
-                    <p className="text-yellow-400 font-semibold">⏳ You're on the waitlist</p>
-                    <p className="text-gray-300 text-sm mt-1">
-                      You'll be notified if a spot opens up on any court.
-                    </p>
-                  </div>
-                </div>
-              );
-            }
-            
-            // Show court selector if user has a court or if courts are available
-            return (
-              <div className="mt-6">
-                {selectedCourtId && rsvpStatus === 'yes' && (
-                  <p className="text-sm text-gray-400 mb-3">
-                    ✓ You're confirmed! You can change your court selection below if needed.
-                  </p>
-                )}
-                <CourtSelector
-                  courts={courtsInfo}
-                  selectedCourtId={selectedCourtId}
-                  onSelectCourt={(courtId) => {
-                    // Only allow court selection if initialized and not processing
-                    if (hasInitialized.current && !isProcessingRSVP.current && !isLoadingRSVP) {
-                      handleCourtSelection(courtId);
-                    }
-                  }}
-                  disabled={isLoadingRSVP || !hasInitialized.current || isProcessingRSVP.current}
-                />
-              </div>
-            );
-          })()}
           </>
           )}
         </div>
 
-        {/* Courts Overview */}
+        {/* Players Overview */}
         {courtsInfo && courtsInfo.length > 0 && (
           <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Courts Overview</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Players Overview</h2>
             <div className="grid gap-4">
               {courtsInfo.map((court) => (
                 <div
                   key={court.id}
                   className="bg-dark-elevated p-4 sm:p-6 rounded-xl border-2 border-gray-700"
                 >
-                  {/* Header - Mobile: Stack, Desktop: Row */}
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-lg sm:text-xl font-bold text-padel-green">
-                          Court {court.courtNumber}
-                        </h3>
-                        {court.watchCode && (
-                          <span className="font-mono text-sm font-bold bg-gray-700 text-gray-200 px-2 py-0.5 rounded tracking-widest">
-                            {court.watchCode}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm sm:text-base text-gray-400">
-                        🕐 {court.startTime} ({court.duration} min)
-                      </p>
-                      {court.cost && (
-                        <p className="text-padel-green font-semibold mt-1 text-sm sm:text-base">
-                          💰 €{court.cost} <span className="text-xs sm:text-sm text-gray-400">(€{(court.cost / 4).toFixed(2)}/person)</span>
-                        </p>
-                      )}
+                  {/* Actions */}
+                  {(user?.isAdmin || user?.canCreateSessions !== false) && (
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={() => {
+                          setSelectedCourtForAddUser({ id: court.id, number: court.courtNumber });
+                          setShowAddUserModal(true);
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                      >
+                        + Player
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
+                          setShowAddGuestModal(true);
+                        }}
+                        className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                      >
+                        + Guest
+                      </button>
+                      <span className={`ml-auto text-sm font-bold self-center ${(court.availableSpots ?? 0) === 0 ? 'text-red-400' : 'text-padel-green'}`}>
+                        {court.availableSpots ?? 0}/{court.maxPlayers} spots
+                      </span>
                     </div>
-                    
-                    {/* Mobile: Row layout for status and button */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3">
-                      <div className="flex items-center gap-2">
-                        <p className={`font-bold text-base sm:text-lg ${
-                          (court.availableSpots ?? 0) === 0 ? 'text-red-400' : 'text-padel-green'
-                        }`}>
-                          {court.availableSpots ?? 0}/{court.maxPlayers}
-                        </p>
-                        <p className="text-xs text-gray-500">spots</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {(user?.isAdmin || user?.canCreateSessions !== false) && (
-                          <button
-                            onClick={() => {
-                              setSelectedCourtForAddUser({ id: court.id, number: court.courtNumber });
-                              setShowAddUserModal(true);
-                            }}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                            title="Add user"
-                          >
-                            + User
-                          </button>
-                        )}
-                        {(user?.isAdmin || user?.canCreateSessions !== false) && (
-                          <button
-                            onClick={() => {
-                              setSelectedCourtForGuest({ id: court.id, number: court.courtNumber });
-                              setShowAddGuestModal(true);
-                            }}
-                            className="bg-padel-blue hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-                            title="Add guest player"
-                          >
-                            + Guest
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Players and Guests on this court */}
                   <div className="space-y-3">
@@ -992,39 +885,36 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                             </div>
                           </div>
                           
-                          {/* Match Prediction */}
+                          {/* Win probability */}
                           {prediction && (
                             <div className="mt-3 pt-3 border-t border-purple-500/30">
-                              <p className="text-xs text-gray-400 mb-2 font-semibold">Expected Match Outcome (3 sets):</p>
-                              <div className="space-y-1.5">
-                                {prediction.expectedSetScores.map((set: any, index: number) => (
-                                  <div key={index} className="flex items-center justify-between text-xs bg-dark-card px-2 py-1 rounded">
-                                    <span className="text-gray-400">Set {index + 1}:</span>
-                                    <span className="text-white">
-                                      <span className={set.team1Games > set.team2Games ? 'text-green-400 font-bold' : 'text-gray-300'}>
-                                        {set.team1Games}
-                                      </span>
-                                      {' - '}
-                                      <span className={set.team2Games > set.team1Games ? 'text-green-400 font-bold' : 'text-gray-300'}>
-                                        {set.team2Games}
-                                      </span>
-                                    </span>
-                                  </div>
-                                ))}
+                              <p className="text-xs text-gray-400 mb-2 font-semibold">Win Probability</p>
+                              <div className="flex items-center gap-2 text-xs mb-1">
+                                <span className="text-white w-12 text-right">Team 1</span>
+                                <div className="flex-1 h-3 bg-dark-card rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                                    style={{ width: `${(prediction.team1ExpectedWinPct * 100).toFixed(0)}%` }}
+                                  />
+                                </div>
+                                <span className="text-purple-300 font-semibold w-8">{(prediction.team1ExpectedWinPct * 100).toFixed(0)}%</span>
                               </div>
-                              <div className="mt-2 flex items-center justify-between text-xs">
-                                <span className="text-gray-400">
-                                  Team 1 Win Probability: <span className="text-purple-300 font-semibold">{(prediction.team1ExpectedWinPct * 100).toFixed(1)}%</span>
-                                </span>
-                                <span className="text-gray-400">
-                                  Match Weight: <span className="text-purple-300 font-semibold">{prediction.matchWeight.toFixed(2)}</span>
-                                </span>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-white w-12 text-right">Team 2</span>
+                                <div className="flex-1 h-3 bg-dark-card rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                                    style={{ width: `${(prediction.team2ExpectedWinPct * 100).toFixed(0)}%` }}
+                                  />
+                                </div>
+                                <span className="text-purple-300 font-semibold w-8">{(prediction.team2ExpectedWinPct * 100).toFixed(0)}%</span>
                               </div>
+                              <p className="text-xs text-gray-500 mt-2 italic">DSS rating impact scales with score margin — a dominant win gains more than a close one.</p>
                             </div>
                           )}
                           
                           <p className="text-xs text-gray-400 mt-2 italic">
-                            Based on DSS ratings{prediction ? ' with match prediction' : ''}
+                            Based on current DSS ratings · updates after every set
                           </p>
                         </div>
                       );

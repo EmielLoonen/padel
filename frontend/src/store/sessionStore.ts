@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface Court {
+export interface Court {
   id: string;
   courtNumber: number;
   startTime: string;
@@ -254,7 +254,7 @@ interface RSVPState {
 }
 
 // Export types for components
-export type { Session, Court, CourtInput, CreateSessionData, RSVP };
+export type { Session, CourtInput, CreateSessionData, RSVP };
 
 export const useRSVPStore = create<RSVPState>((set) => ({
   rsvps: [],

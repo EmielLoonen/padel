@@ -350,6 +350,14 @@ export const sessionService = {
       },
     });
 
+    // Sync all courts' startTime to match the new session time
+    if (data.time) {
+      await prisma.court.updateMany({
+        where: { sessionId },
+        data: { startTime: data.time },
+      });
+    }
+
     // Notify users about the update if there are RSVPs
     if (changes.length > 0) {
       await notificationService.notifySessionUpdated(

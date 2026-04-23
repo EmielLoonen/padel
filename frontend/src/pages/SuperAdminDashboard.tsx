@@ -285,6 +285,7 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                           <th className="text-left px-6 py-3">Email</th>
                           <th className="text-left px-6 py-3">Phone</th>
                           <th className="text-left px-6 py-3">Group</th>
+                          <th className="text-left px-6 py-3">Sport</th>
                           <th className="text-left px-6 py-3">Full seat</th>
                           <th className="text-left px-6 py-3">Reset</th>
                         </tr>
@@ -292,7 +293,7 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                       <tbody>
                         {filteredUsers.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="text-center text-gray-500 py-8">No users found</td>
+                            <td colSpan={7} className="text-center text-gray-500 py-8">No users found</td>
                           </tr>
                         )}
                         {filteredUsers.flatMap((u) => {
@@ -320,12 +321,16 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                                     <div className="flex items-center gap-2">
                                       <span className="text-gray-200">{m.group.name}</span>
                                       {m.role === 'admin' && <span className="text-xs text-padel-green">★</span>}
-                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
-                                        {m.group.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
-                                      </span>
                                     </div>
                                   ) : (
                                     <span className="text-gray-600 text-xs">No groups</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-3">
+                                  {m && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30">
+                                      {m.group.sportType === 'TENNIS' ? 'Tennis' : 'Padel'}
+                                    </span>
                                   )}
                                 </td>
                                 <td className="px-6 py-3">
