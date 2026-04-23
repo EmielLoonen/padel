@@ -73,21 +73,24 @@ export default function GroupSwitcher({ onGroupSwitched, onCreateOrJoin, allGrou
               <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Your Groups</p>
             </div>
 
-            {/* All groups option */}
-            <button
-              onClick={handleAllGroups}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-dark-elevated transition-colors ${
-                allGroupsMode ? 'text-padel-green' : 'text-white'
-              }`}
-            >
-              <span className="w-6 h-6 flex items-center justify-center text-base shrink-0">⊞</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">All groups</p>
-              </div>
-              {allGroupsMode && <span className="text-padel-green text-sm">✓</span>}
-            </button>
-
-            <div className="border-t border-gray-700/50" />
+            {/* All groups option — only shown when handler is provided */}
+            {onAllGroups !== undefined && (
+              <>
+                <button
+                  onClick={handleAllGroups}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-dark-elevated transition-colors ${
+                    allGroupsMode ? 'text-padel-green' : 'text-white'
+                  }`}
+                >
+                  <span className="w-6 h-6 flex items-center justify-center text-base shrink-0">⊞</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">All groups</p>
+                  </div>
+                  {allGroupsMode && <span className="text-padel-green text-sm">✓</span>}
+                </button>
+                <div className="border-t border-gray-700/50" />
+              </>
+            )}
 
             {groups.map((g) => (
               <button

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import GroupSwitcher from '../components/GroupSwitcher';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -135,7 +136,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     fetchMatchHistory();
     fetchRatingHistory();
     fetchMatchAggStats();
-  }, []);
+  }, [user?.groupId]);
 
   const fetchStats = async () => {
     try {
@@ -469,10 +470,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
             if (latestRatingInSession !== null) {
               sessionRating = latestRatingInSession;
             } else if (firstSet?.date) {
-              // Debug: log if we're not finding ratings for sets
-              if (setIdsInSession.size > 0) {
-                console.log(`No rating found for sets in session ${sessionIndex + 1}, setIds:`, Array.from(setIdsInSession));
-              }
               // If no rating found for sets in this session, use the most recent rating before or at this session date
               const sessionDate = new Date(firstSet.date).getTime();
               // Find the latest rating entry before or at this session date
@@ -525,13 +522,17 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
           <button
             onClick={onBack}
             className="bg-dark-card text-gray-300 hover:bg-dark-elevated hover:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl flex items-center gap-2 font-medium shadow-lg border border-gray-800 transition-all text-sm sm:text-base"
           >
             ← Back to Dashboard
           </button>
+          <GroupSwitcher
+            onGroupSwitched={() => {}}
+            onCreateOrJoin={() => {}}
+          />
         </div>
 
         {/* Tab Navigation */}

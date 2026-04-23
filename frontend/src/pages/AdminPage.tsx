@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import Avatar from '../components/Avatar';
+import GroupSwitcher from '../components/GroupSwitcher';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -43,7 +44,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   useEffect(() => {
     fetchUsers();
     fetchGroupInfo();
-  }, []);
+  }, [user?.groupId]);
 
   const fetchGroupInfo = async () => {
     try {
@@ -260,20 +261,26 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-dark-card rounded-2xl shadow-2xl p-4 sm:p-8 mb-6 border border-gray-800">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
                 <span className="text-4xl">🛡️</span>
-                Admin Panel
+                Group Admin Panel
               </h1>
               <p className="text-gray-400">Manage users and reset passwords</p>
             </div>
-            <button
-              onClick={onBack}
-              className="bg-dark-elevated hover:bg-gray-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors font-medium"
-            >
-              ← Back
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <GroupSwitcher
+                onGroupSwitched={() => {}}
+                onCreateOrJoin={() => {}}
+              />
+              <button
+                onClick={onBack}
+                className="bg-dark-elevated hover:bg-gray-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors font-medium"
+              >
+                ← Back
+              </button>
+            </div>
           </div>
         </div>
 
