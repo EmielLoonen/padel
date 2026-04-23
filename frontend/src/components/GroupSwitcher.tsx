@@ -73,8 +73,8 @@ export default function GroupSwitcher({ onGroupSwitched, onCreateOrJoin, allGrou
               <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Your Groups</p>
             </div>
 
-            {/* All groups option — only shown when handler is provided */}
-            {onAllGroups !== undefined && (
+            {/* All groups option — only shown when handler is provided and user has multiple groups */}
+            {onAllGroups !== undefined && groups.length > 1 && (
               <>
                 <button
                   onClick={handleAllGroups}
