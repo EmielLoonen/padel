@@ -125,7 +125,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
   const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number | null; setId?: string | null }>>([]);
-  const [trendFilter, setTrendFilter] = useState<'all' | 'last5Sessions'>('all');
+  const [trendFilter, setTrendFilter] = useState<'all' | 'last10Sessions'>('last10Sessions');
   const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [leaderboardRolling, setLeaderboardRolling] = useState<5 | 10 | 20 | null>(5);
@@ -301,8 +301,8 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
       });
 
       // Filter to last 5 sessions if needed (before calculating baseline)
-      if (trendFilter === 'last5Sessions') {
-        sessions = sessions.slice(-5);
+      if (trendFilter === 'last10Sessions') {
+        sessions = sessions.slice(-10);
       }
 
       if (sessions.length === 0) return [];
@@ -975,8 +975,18 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                   {trendData.length > 0 && (
                     <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Games Trend Over Time</h3>
+                        <h3 className="text-lg font-semibold text-white">Session Trend</h3>
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => setTrendFilter('last10Sessions')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                              trendFilter === 'last10Sessions'
+                                ? 'bg-padel-green text-white'
+                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
+                            }`}
+                          >
+                            Last 10 Sessions
+                          </button>
                           <button
                             onClick={() => setTrendFilter('all')}
                             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
@@ -986,16 +996,6 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                             }`}
                           >
                             All Sessions
-                          </button>
-                          <button
-                            onClick={() => setTrendFilter('last5Sessions')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                              trendFilter === 'last5Sessions'
-                                ? 'bg-padel-green text-white'
-                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
-                            }`}
-                          >
-                            Last 5 Sessions
                           </button>
                         </div>
                       </div>
