@@ -17,7 +17,6 @@ interface User {
   id: string;
   name: string;
   email: string;
-  phone: string | null;
   isSuperAdmin: boolean;
   lastLogin: string | null;
   createdAt: string;
@@ -283,7 +282,6 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                         <tr className="text-gray-500 text-xs uppercase border-b border-gray-800">
                           <th className="text-left px-6 py-3">Name</th>
                           <th className="text-left px-6 py-3">Email</th>
-                          <th className="text-left px-6 py-3">Phone</th>
                           <th className="text-left px-6 py-3">Group</th>
                           <th className="text-left px-6 py-3">Sport</th>
                           <th className="text-left px-6 py-3">Full seat</th>
@@ -315,7 +313,6 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                                   )}
                                 </td>
                                 <td className="px-6 py-3 text-gray-400">{i === 0 ? u.email : ''}</td>
-                                <td className="px-6 py-3 text-gray-400">{i === 0 ? (u.phone ?? '—') : ''}</td>
                                 <td className="px-6 py-3">
                                   {m ? (
                                     <div className="flex items-center gap-2">

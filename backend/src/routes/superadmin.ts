@@ -62,7 +62,6 @@ router.get('/users', async (_req: Request, res: Response) => {
         id: true,
         name: true,
         email: true,
-        phone: true,
         avatarUrl: true,
         isSuperAdmin: true,
         lastLogin: true,

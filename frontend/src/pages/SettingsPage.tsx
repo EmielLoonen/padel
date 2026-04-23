@@ -13,7 +13,6 @@ interface SettingsPageProps {
 export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps) {
   const { user, setUser, logout } = useAuthStore();
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phone || '');
   const [emailPassword, setEmailPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -81,9 +80,8 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
       const token = localStorage.getItem('token');
       const response = await axios.put(
         `${API_URL}/api/users/profile`,
-        { 
+        {
           email: emailChanged ? email : undefined,
-          phone,
           currentPassword: emailChanged ? emailPassword : undefined
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -91,7 +89,7 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
 
       // Update local user state (merge to preserve groupId, isAdmin, canCreateSessions)
       if (setUser && response.data.user) {
-        setUser({ ...user!, email: response.data.user.email ?? user!.email, phone: response.data.user.phone ?? user!.phone, avatarUrl: response.data.user.avatarUrl ?? user!.avatarUrl });
+        setUser({ ...user!, email: response.data.user.email ?? user!.email, avatarUrl: response.data.user.avatarUrl ?? user!.avatarUrl });
       }
 
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -238,20 +236,6 @@ export default function SettingsPage({ onBack, onShowAdmin }: SettingsPageProps)
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
                   placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phone" className="block text-sm font-semibold text-gray-300 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
-                  placeholder="+31612345678"
                 />
               </div>
 

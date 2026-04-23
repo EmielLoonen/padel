@@ -8,7 +8,6 @@ interface SignupPageProps {
 export default function SignupPage({ onBackToLogin }: SignupPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -32,7 +31,7 @@ export default function SignupPage({ onBackToLogin }: SignupPageProps) {
     }
 
     try {
-      await signup(email, password, name, phone || undefined, inviteCode.trim() || undefined);
+      await signup(email, password, name, inviteCode.trim() || undefined);
       // Redirect handled by App.tsx
     } catch (err) {
       // Error handled by store
@@ -88,20 +87,6 @@ export default function SignupPage({ onBackToLogin }: SignupPageProps) {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
               placeholder="john@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="phone" className="block text-sm font-semibold text-gray-300 mb-2">
-              Phone (optional)
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-elevated border-2 border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-padel-green focus:border-padel-green transition-all"
-              placeholder="+31612345678"
             />
           </div>
 

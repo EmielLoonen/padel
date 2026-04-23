@@ -55,7 +55,6 @@ router.put(
   '/profile',
   [
     body('name').optional().isString().trim().isLength({ min: 1, max: 100 }),
-    body('phone').optional().isString().trim(),
     body('email').optional().isEmail().withMessage('Valid email is required'),
     body('currentPassword').optional().isString(),
   ],
@@ -70,11 +69,11 @@ router.put(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { name, phone, email, currentPassword } = req.body;
+      const { name, email, currentPassword } = req.body;
 
       const user = await userService.updateProfile(
         req.user.userId,
-        { name, phone, email },
+        { name, email },
         currentPassword
       );
 

@@ -55,7 +55,6 @@ router.get('/users', requireAdminOrCanCreateSessions, async (req: Request, res: 
             id: true,
             email: true,
             name: true,
-            phone: true,
             avatarUrl: true,
             createdAt: true,
           },

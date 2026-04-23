@@ -28,7 +28,7 @@ export const userService = {
     return { message: 'Password changed successfully' };
   },
 
-  async updateProfile(userId: string, data: { name?: string; phone?: string; email?: string; avatarUrl?: string }, currentPassword?: string) {
+  async updateProfile(userId: string, data: { name?: string; email?: string; avatarUrl?: string }, currentPassword?: string) {
     if (data.email) {
       const user = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -55,7 +55,6 @@ export const userService = {
       where: { id: userId },
       data: {
         ...(data.name && { name: data.name }),
-        ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.email && { email: data.email }),
         ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
       },
@@ -63,7 +62,6 @@ export const userService = {
         id: true,
         email: true,
         name: true,
-        phone: true,
         avatarUrl: true,
         isSuperAdmin: true,
         groups: {

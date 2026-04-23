@@ -10,7 +10,6 @@ interface User {
   id: string;
   email: string;
   name: string;
-  phone: string | null;
   avatarUrl: string | null;
   role: string;        // 'admin' | 'member'
   canCreateSessions: boolean;
@@ -393,7 +392,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                 <tr className="text-gray-500 text-xs uppercase border-b border-gray-700">
                   <th className="text-left py-3 pr-4">Name</th>
                   <th className="text-left py-3 pr-4">Email</th>
-                  <th className="text-left py-3 pr-4">Phone</th>
+
                   <th className="text-left py-3 pr-4">Full seat</th>
                   <th className="text-left py-3">Reset</th>
                 </tr>
@@ -411,7 +410,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                       </div>
                     </td>
                     <td className="py-3 pr-4 text-gray-400">{u.email}</td>
-                    <td className="py-3 pr-4 text-gray-400">{u.phone ?? '—'}</td>
+
                     <td className="py-3 pr-4">
                       <input
                         type="checkbox"

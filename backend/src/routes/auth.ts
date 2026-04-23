@@ -14,7 +14,6 @@ router.post(
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters'),
     body('name').trim().isLength({ min: 1 }).withMessage('Name is required'),
-    body('phone').optional().trim(),
     body('inviteCode').optional().trim(),
   ],
   async (req: Request, res: Response) => {
@@ -24,8 +23,8 @@ router.post(
     }
 
     try {
-      const { email, password, name, phone, inviteCode } = req.body;
-      const result = await authService.signup({ email, password, name, phone, inviteCode });
+      const { email, password, name, inviteCode } = req.body;
+      const result = await authService.signup({ email, password, name, inviteCode });
       
       res.status(201).json(result);
     } catch (error) {

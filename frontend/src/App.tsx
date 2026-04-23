@@ -267,14 +267,15 @@ function App() {
                 <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="hover:opacity-80 transition-opacity"
+                  className="relative hover:opacity-80 transition-opacity"
                   title="Settings"
                 >
                   <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
+                  <span className="absolute -bottom-1 -right-1 bg-dark-card border border-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">⚙️</span>
                 </button>
               </div>
             </div>
-            
+
             {/* Bottom row: Welcome + Stats */}
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-gray-400">
@@ -337,10 +338,11 @@ function App() {
               </button>
               <button
                 onClick={() => setShowSettings(true)}
-                className="hover:opacity-80 transition-opacity"
+                className="relative hover:opacity-80 transition-opacity"
                 title="Settings"
               >
                 <Avatar src={user?.avatarUrl} name={user?.name || ''} size="md" />
+                <span className="absolute -bottom-1 -right-1 bg-dark-card border border-gray-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">⚙️</span>
               </button>
               <button
                 onClick={logout}
@@ -402,11 +404,6 @@ function App() {
               🏆 Past Events
             </button>
           </div>
-
-          <h2 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
-            <span className="text-padel-green">{sessionTab === 'upcoming' ? '📅' : '🏆'}</span>
-            {sessionTab === 'upcoming' ? 'Events' : 'Past Events'}
-          </h2>
 
           {isLoading ? (
             <div className="py-12">

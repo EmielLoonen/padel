@@ -12,7 +12,6 @@ interface SignupData {
   email: string;
   password: string;
   name: string;
-  phone?: string;
   inviteCode?: string;
 }
 
@@ -60,7 +59,6 @@ export const authService = {
         email: data.email,
         passwordHash,
         name: data.name,
-        phone: data.phone,
         ...(group ? {
           groups: {
             create: {
@@ -75,7 +73,6 @@ export const authService = {
         id: true,
         email: true,
         name: true,
-        phone: true,
         avatarUrl: true,
         isSuperAdmin: true,
         createdAt: true,
@@ -107,7 +104,6 @@ export const authService = {
         id: user.id,
         email: user.email,
         name: user.name,
-        phone: user.phone,
         avatarUrl: user.avatarUrl,
         isSuperAdmin: user.isSuperAdmin,
         isAdmin: false,
@@ -176,7 +172,6 @@ export const authService = {
         id: user.id,
         email: user.email,
         name: user.name,
-        phone: user.phone,
         avatarUrl: user.avatarUrl,
         isSuperAdmin: user.isSuperAdmin,
         isAdmin: activeUg?.role === 'admin',
@@ -224,7 +219,6 @@ export const authService = {
         id: true,
         email: true,
         name: true,
-        phone: true,
         avatarUrl: true,
         isSuperAdmin: true,
         createdAt: true,

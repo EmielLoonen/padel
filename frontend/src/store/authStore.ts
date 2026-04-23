@@ -16,7 +16,6 @@ interface User {
   id: string;
   email: string;
   name: string;
-  phone?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
@@ -33,7 +32,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string, inviteCode?: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, inviteCode?: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
   clearError: () => void;
@@ -72,14 +71,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signup: async (email: string, password: string, name: string, phone?: string, inviteCode?: string) => {
+  signup: async (email: string, password: string, name: string, inviteCode?: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post(`${API_URL}/api/auth/signup`, {
         email,
         password,
         name,
-        phone,
         ...(inviteCode ? { inviteCode } : {}),
       });
 
