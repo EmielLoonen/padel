@@ -682,7 +682,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                       <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700 mb-6">
                         <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
                           <span>⌚</span>
-                          Watch Stats
+                          In-game Stats
                         </h3>
 
                         {/* Match filter dropdown */}
