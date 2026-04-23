@@ -382,65 +382,58 @@ export default function AdminPage({ onBack }: AdminPageProps) {
             All Users ({users.length})
           </h2>
           
-          <div className="space-y-3">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="bg-dark-elevated p-4 rounded-xl border border-gray-700 hover:border-padel-green transition-all"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Avatar src={u.avatarUrl} name={u.name} size="md" />
-                    <div className="flex-1 min-w-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-500 text-xs uppercase border-b border-gray-700">
+                  <th className="text-left py-3 pr-4">Name</th>
+                  <th className="text-left py-3 pr-4">Email</th>
+                  <th className="text-left py-3 pr-4">Phone</th>
+                  <th className="text-left py-3 pr-4">Full seat</th>
+                  <th className="text-left py-3">Reset</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id} className="border-b border-gray-800/50 hover:bg-dark-elevated/40 transition-colors">
+                    <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-white truncate">
-                          {u.name}
-                        </h3>
+                        <Avatar src={u.avatarUrl} name={u.name} size="sm" />
+                        <span className="text-white font-medium">{u.name}</span>
                         {u.role === 'admin' && (
-                          <span className="text-yellow-500 text-sm" title="Admin">
-                            🛡️
-                          </span>
+                          <span className="text-yellow-500 text-xs" title="Admin">🛡️</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 truncate">{u.email}</p>
-                      {u.phone && (
-                        <p className="text-xs text-gray-500">{u.phone}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {/* Player Type Toggle */}
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 cursor-pointer" title={u.canCreateSessions ? 'Full Seat Player - Can create events and RSVP' : 'Limited Seat Player - Cannot create events or RSVP'}>
-                        <input
-                          type="checkbox"
-                          checked={u.canCreateSessions === true}
-                          onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions === true)}
-                          disabled={updatingPermissions.has(u.id) || u.role === 'admin'}
-                          className="w-5 h-5 rounded border-gray-600 bg-dark-elevated text-padel-green focus:ring-2 focus:ring-padel-green focus:ring-offset-2 focus:ring-offset-dark-card cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
-                          {u.canCreateSessions === true ? 'Full Seat Player' : 'Limited Seat Player'}
-                        </span>
-                      </label>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        setSelectedUser(u);
-                        setNewPassword('');
-                        setError(null);
-                        setSuccess(null);
-                      }}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
-                    >
-                      Reset Password
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-400">{u.email}</td>
+                    <td className="py-3 pr-4 text-gray-400">{u.phone ?? '—'}</td>
+                    <td className="py-3 pr-4">
+                      <input
+                        type="checkbox"
+                        checked={u.canCreateSessions === true}
+                        onChange={() => handleToggleCanCreateSessions(u.id, u.canCreateSessions === true)}
+                        disabled={updatingPermissions.has(u.id) || u.role === 'admin'}
+                        title={u.canCreateSessions ? 'Full Seat Player' : 'Limited Seat Player'}
+                        className="w-4 h-4 rounded border-gray-600 bg-dark-elevated text-padel-green focus:ring-2 focus:ring-padel-green focus:ring-offset-2 focus:ring-offset-dark-card cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </td>
+                    <td className="py-3">
+                      <button
+                        onClick={() => {
+                          setSelectedUser(u);
+                          setNewPassword('');
+                          setError(null);
+                          setSuccess(null);
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-dark-elevated border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-all"
+                      >
+                        Reset
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

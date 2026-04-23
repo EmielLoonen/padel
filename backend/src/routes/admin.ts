@@ -40,7 +40,7 @@ router.get('/users', requireAdminOrCanCreateSessions, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const groupId = req.user.isSuperAdmin ? undefined : req.user.groupId;
+    const groupId = req.user.groupId;
 
     // Query UserGroup, optionally filtered by canCreateSessions for non-admins
     const memberships = await prisma.userGroup.findMany({

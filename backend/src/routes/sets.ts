@@ -12,7 +12,7 @@ router.use(authenticateToken);
 router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
     const rolling = req.query.rolling ? Number(req.query.rolling) : undefined;
-    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const groupId = req.user?.groupId;
     const leaderboard = await setService.getLeaderboard(rolling, groupId);
     res.json({ leaderboard });
   } catch (error) {
@@ -151,7 +151,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // Get player stats
 router.get('/stats/:userId', async (req: Request, res: Response) => {
   try {
-    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const groupId = req.user?.groupId;
     const stats = await setService.getPlayerStats(req.params.userId, groupId);
     res.json({ stats });
   } catch (error) {
@@ -163,7 +163,7 @@ router.get('/stats/:userId', async (req: Request, res: Response) => {
 // Get set history for a user
 router.get('/history/:userId', async (req: Request, res: Response) => {
   try {
-    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const groupId = req.user?.groupId;
     const sets = await setService.getSetHistoryForUser(req.params.userId, groupId);
     res.json({ sets });
   } catch (error) {

@@ -35,6 +35,7 @@ function App() {
   const [showMissedNotifications, setShowMissedNotifications] = useState(false);
   const [hasCheckedMissedNotifications, setHasCheckedMissedNotifications] = useState(false);
   const [showGroupSetup, setShowGroupSetup] = useState(false);
+  const [allGroupsMode, setAllGroupsMode] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -85,9 +86,9 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchSessions(sessionTab);
+      fetchSessions(sessionTab, allGroupsMode);
     }
-  }, [sessionTab]);
+  }, [sessionTab, allGroupsMode]);
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -119,7 +120,7 @@ function App() {
       // Full app refresh - reload all data
       try {
         await Promise.all([
-          fetchSessions(sessionTab),
+          fetchSessions(sessionTab, allGroupsMode),
           fetchNotifications(),
           // Refresh user data by re-initializing auth
           initializeAuth()
@@ -291,10 +292,13 @@ function App() {
             {/* Group switcher: full width row on mobile */}
             <div className="mt-2">
               <GroupSwitcher
+                allGroupsMode={allGroupsMode}
                 onGroupSwitched={() => {
-                  fetchSessions(sessionTab);
+                  setAllGroupsMode(false);
+                  fetchSessions(sessionTab, false);
                   fetchNotifications();
                 }}
+                onAllGroups={() => setAllGroupsMode(true)}
                 onCreateOrJoin={() => setShowGroupSetup(true)}
               />
             </div>
@@ -314,10 +318,13 @@ function App() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <GroupSwitcher
+                allGroupsMode={allGroupsMode}
                 onGroupSwitched={() => {
-                  fetchSessions(sessionTab);
+                  setAllGroupsMode(false);
+                  fetchSessions(sessionTab, false);
                   fetchNotifications();
                 }}
+                onAllGroups={() => setAllGroupsMode(true)}
                 onCreateOrJoin={() => setShowGroupSetup(true)}
               />
               <NotificationBell onNotificationClick={(sessionId) => sessionId && setSelectedSessionId(sessionId)} />
@@ -347,15 +354,27 @@ function App() {
 
         {/* Create Session Button - Only show if user has permission */}
         {(user?.isAdmin || user?.canCreateSessions !== false) && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="w-full bg-gradient-to-r from-padel-orange to-orange-500 text-white py-3 sm:py-5 px-6 sm:px-8 rounded-xl sm:rounded-2xl hover:from-orange-600 hover:to-orange-600 transition-all font-bold text-base sm:text-xl mb-4 sm:mb-8 shadow-2xl hover:shadow-orange-500/50 active:scale-95 sm:hover:scale-[1.02] transform"
-          >
-            <span className="flex items-center justify-center gap-2 sm:gap-3">
-              <span className="text-xl sm:text-2xl">+</span>
-              Create New Session
-            </span>
-          </button>
+          <>
+            <button
+              onClick={() => !allGroupsMode && setShowCreateForm(true)}
+              disabled={allGroupsMode}
+              className={`w-full bg-gradient-to-r from-padel-orange to-orange-500 text-white py-3 sm:py-5 px-6 sm:px-8 rounded-xl sm:rounded-2xl font-bold text-base sm:text-xl mb-2 shadow-2xl transform transition-all ${
+                allGroupsMode
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:from-orange-600 hover:to-orange-600 hover:shadow-orange-500/50 active:scale-95 sm:hover:scale-[1.02]'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2 sm:gap-3">
+                <span className="text-xl sm:text-2xl">+</span>
+                Create New Session
+              </span>
+            </button>
+            {allGroupsMode && (
+              <p className="text-center text-xs text-gray-500 mb-4 sm:mb-8">
+                Select a group first to create a session.
+              </p>
+            )}
+          </>
         )}
 
         {/* Sessions List */}
@@ -448,6 +467,11 @@ function App() {
                     {session.sportType === 'TENNIS' && (
                       <span className="hidden sm:inline text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap flex-shrink-0">
                         Tennis
+                      </span>
+                    )}
+                    {allGroupsMode && session.group && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-padel-green/20 text-padel-green border border-padel-green/30 whitespace-nowrap flex-shrink-0">
+                        {session.group.name}
                       </span>
                     )}
                     <span className="text-base sm:text-2xl text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">

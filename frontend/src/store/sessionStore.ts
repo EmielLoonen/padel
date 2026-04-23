@@ -45,6 +45,7 @@ interface Session {
   notes?: string;
   sportType?: 'PADEL' | 'TENNIS';
   numberOfCourts: number;
+  group?: { id: string; name: string } | null;
   creator: {
     id: string;
     name: string;
@@ -105,7 +106,7 @@ interface SessionState {
   currentSession: Session | null;
   isLoading: boolean;
   error: string | null;
-  fetchSessions: (type?: 'upcoming' | 'past' | 'all') => Promise<void>;
+  fetchSessions: (type?: 'upcoming' | 'past' | 'all', allGroups?: boolean) => Promise<void>;
   fetchSessionById: (id: string) => Promise<void>;
   createSession: (data: CreateSessionData) => Promise<Session>;
   updateSession: (id: string, data: Partial<CreateSessionData>) => Promise<Session>;
@@ -119,11 +120,13 @@ export const useSessionStore = create<SessionState>((set) => ({
   isLoading: false,
   error: null,
 
-  fetchSessions: async (type = 'all') => {
+  fetchSessions: async (type = 'all', allGroups = false) => {
     set({ isLoading: true, error: null });
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/sessions?type=${type}`, {
+      const params = new URLSearchParams({ type });
+      if (allGroups) params.set('allGroups', 'true');
+      const response = await axios.get(`${API_URL}/api/sessions?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

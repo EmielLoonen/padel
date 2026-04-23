@@ -101,17 +101,27 @@ export const sessionService = {
     return session;
   },
 
-  async getAllSessions(filters?: { type?: 'upcoming' | 'past' | 'all'; groupId?: string | null }) {
+  async getAllSessions(filters?: { type?: 'upcoming' | 'past' | 'all'; groupId?: string | null; userId?: string }) {
     // Get start of today (midnight) for date comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Get start of tomorrow (midnight)
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    // undefined = superAdmin (no filter), null = no active group (show nothing), string = filter by group
-    const groupFilter = filters?.groupId !== undefined ? { groupId: filters.groupId } : {};
+
+    // When userId is provided, return sessions from all groups the user belongs to
+    let groupFilter: object = {};
+    if (filters?.userId) {
+      const memberships = await prisma.userGroup.findMany({
+        where: { userId: filters.userId },
+        select: { groupId: true },
+      });
+      groupFilter = { groupId: { in: memberships.map((m) => m.groupId) } };
+    } else if (filters?.groupId !== undefined) {
+      // undefined = no filter, null = no active group (show nothing), string = filter by group
+      groupFilter = { groupId: filters.groupId };
+    }
 
     let whereClause: object = { ...groupFilter };
 
@@ -133,6 +143,9 @@ export const sessionService = {
             name: true,
             email: true,
           },
+        },
+        group: {
+          select: { id: true, name: true },
         },
         courts: {
           include: {

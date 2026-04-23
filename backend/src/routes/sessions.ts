@@ -15,8 +15,16 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const type = req.query.type as 'upcoming' | 'past' | 'all' | undefined;
-      const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
-      const sessions = await sessionService.getAllSessions({ type, groupId });
+      const allGroups = req.query.allGroups === 'true';
+
+      let filters: Parameters<typeof sessionService.getAllSessions>[0];
+      if (allGroups && req.user?.userId) {
+        filters = { type, userId: req.user.userId };
+      } else {
+        filters = { type, groupId: req.user?.groupId };
+      }
+
+      const sessions = await sessionService.getAllSessions(filters);
       res.json({ sessions });
     } catch (error) {
       console.error('Get sessions error:', error);

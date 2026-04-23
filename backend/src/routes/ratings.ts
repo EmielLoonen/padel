@@ -262,7 +262,7 @@ router.post('/predict-match', async (req: Request, res: Response) => {
 // Get leaderboard sorted by rating (must be before /:userId route)
 router.get('/leaderboard', async (req: Request, res: Response) => {
   try {
-    const groupId = req.user?.isSuperAdmin ? undefined : req.user?.groupId;
+    const groupId = req.user?.groupId;
 
     const entries = await prisma.userGroup.findMany({
       where: {
