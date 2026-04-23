@@ -218,7 +218,7 @@ export default function SuperAdminDashboard({ token, onLogout }: Props) {
                         <th className="text-left px-6 py-3">Sport</th>
                         <th className="text-left px-6 py-3">Invite Code</th>
                         <th className="text-left px-6 py-3">Members</th>
-                        <th className="text-left px-6 py-3">Sessions</th>
+                        <th className="text-left px-6 py-3">Events</th>
                         <th className="text-left px-6 py-3">Created</th>
                       </tr>
                     </thead>

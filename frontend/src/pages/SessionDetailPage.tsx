@@ -260,7 +260,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
           console.error('No courts available');
           // Only show alert if this was a user-initiated action
           if (event) {
-            alert('No courts available for this session');
+            alert('No courts available for this event');
           }
           setRSVPStatus(previousStatus);
           return;
@@ -430,7 +430,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   };
 
   const handleAdminRemoveUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this user from the session?')) {
+    if (!confirm('Are you sure you want to remove this user from the event?')) {
       return;
     }
     try {
@@ -442,7 +442,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       await fetchRSVPs(sessionId);
       await fetchSessionById(sessionId);
     } catch (error: any) {
-      alert(error?.response?.data?.error || 'Failed to remove user from session');
+      alert(error?.response?.data?.error || 'Failed to remove user from event');
     }
   };
 
@@ -451,7 +451,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       await deleteSession(sessionId);
       onBack(); // Go back to list after deletion
     } catch (error) {
-      alert('Failed to delete session');
+      alert('Failed to delete event');
     }
   };
 
@@ -462,7 +462,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       <div className="min-h-screen bg-dark-bg p-2 sm:p-8">
         <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
           <div className="bg-dark-card rounded-2xl shadow-2xl p-8 border border-gray-800">
-            <LoadingSpinner size="lg" text="Loading session..." />
+            <LoadingSpinner size="lg" text="Loading event..." />
           </div>
         </div>
       </div>
@@ -580,7 +580,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg">
               <p className="text-yellow-400 font-semibold mb-2">⚠️ Limited Seat Player</p>
               <p className="text-gray-300 text-sm">
-                As a Limited Seat Player, you cannot create events, RSVP to sessions, or add guest players. Please contact an admin or a Full Seat Player to be added to a session.
+                As a Limited Seat Player, you cannot create events, RSVP to events, or add guest players. Please contact an admin or a Full Seat Player to be added to an event.
               </p>
             </div>
           ) : (
@@ -623,7 +623,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 <div className="bg-yellow-500/10 border-l-4 border-yellow-500 p-4 rounded-lg mb-4">
                   <p className="text-yellow-400 font-semibold mb-2">⚠️ All Courts Are Full</p>
                   <p className="text-gray-300 text-sm">
-                    All courts for this session are currently full. You can join the waitlist below and you'll be notified if a spot opens up.
+                    All courts for this event are currently full. You can join the waitlist below and you'll be notified if a spot opens up.
                   </p>
                 </div>
                 
@@ -1338,9 +1338,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-dark-card rounded-2xl p-8 max-w-md w-full border border-gray-800">
-              <h3 className="text-2xl font-bold text-white mb-4">Delete Session?</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Delete Event?</h3>
               <p className="text-gray-400 mb-6">
-                Are you sure you want to delete this session? This action cannot be undone.
+                Are you sure you want to delete this event? This action cannot be undone.
               </p>
               <div className="flex gap-3">
                 <button

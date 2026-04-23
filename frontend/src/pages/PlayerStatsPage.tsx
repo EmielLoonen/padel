@@ -128,7 +128,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [trendFilter, setTrendFilter] = useState<'all' | 'last10Sessions'>('last10Sessions');
   const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
-  const [leaderboardRolling, setLeaderboardRolling] = useState<5 | 10 | 20 | null>(5);
+  const [leaderboardRolling, setLeaderboardRolling] = useState<5 | 10 | 20 | null>(10);
 
   useEffect(() => {
     fetchStats();
@@ -975,7 +975,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                   {trendData.length > 0 && (
                     <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Session Trend</h3>
+                        <h3 className="text-lg font-semibold text-white">Event Trend</h3>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setTrendFilter('last10Sessions')}
@@ -985,7 +985,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
                             }`}
                           >
-                            Last 10 Sessions
+                            Last 10 Events
                           </button>
                           <button
                             onClick={() => setTrendFilter('all')}
@@ -995,7 +995,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                                 : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
                             }`}
                           >
-                            All Sessions
+                            All Events
                           </button>
                         </div>
                       </div>

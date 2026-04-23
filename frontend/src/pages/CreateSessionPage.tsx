@@ -18,7 +18,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
       courts: [{ courtNumber: 1, startTime: values.startTime, duration: values.duration, cost: values.cost || undefined, maxPlayers: values.maxPlayers }],
     });
 
-    alert('Session created successfully! 🎾');
+    alert('Event created successfully! 🎾');
     onSuccess?.();
   };
 

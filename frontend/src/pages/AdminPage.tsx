@@ -450,7 +450,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
             <div className="bg-dark-card rounded-2xl p-6 max-w-md w-full border border-red-800 shadow-2xl">
               <h2 className="text-2xl font-bold text-white mb-2">Delete Group</h2>
               <p className="text-gray-400 text-sm mb-4">
-                This will permanently delete <span className="text-white font-semibold">{groupInfo.name}</span> and remove all members. Sessions will be kept but unlinked from the group.
+                This will permanently delete <span className="text-white font-semibold">{groupInfo.name}</span> and remove all members. Events will be kept but unlinked from the group.
               </p>
               <p className="text-sm text-gray-300 mb-2">
                 Type <span className="font-mono text-red-400">{groupInfo.name}</span> to confirm:

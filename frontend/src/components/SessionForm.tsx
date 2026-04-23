@@ -60,7 +60,7 @@ export default function SessionForm({
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl font-bold text-white flex items-center gap-2">
           <span className="text-4xl">🎾</span>
-          {mode === 'create' ? 'Create New Session' : 'Edit Session'}
+          {mode === 'create' ? 'Create New Event' : 'Edit Event'}
         </h2>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
@@ -215,7 +215,7 @@ export default function SessionForm({
           >
             {isLoading
               ? mode === 'create' ? 'Creating…' : 'Saving…'
-              : mode === 'create' ? 'Create Session 🎾' : 'Save Changes'}
+              : mode === 'create' ? 'Create Event 🎾' : 'Save Changes'}
           </button>
         </div>
       </form>

@@ -366,12 +366,12 @@ function App() {
             >
               <span className="flex items-center justify-center gap-2 sm:gap-3">
                 <span className="text-xl sm:text-2xl">+</span>
-                Create New Session
+                Create New Event
               </span>
             </button>
             {allGroupsMode && (
               <p className="text-center text-xs text-gray-500 mb-4 sm:mb-8">
-                Select a group first to create a session.
+                Select a group first to create an event.
               </p>
             )}
           </>
@@ -389,7 +389,7 @@ function App() {
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
             >
-              📅 Sessions
+              📅 Events
             </button>
             <button
               onClick={() => setSessionTab('past')}
@@ -399,27 +399,27 @@ function App() {
                   : 'bg-dark-elevated text-gray-400 hover:text-white'
               }`}
             >
-              🏆 Past Sessions
+              🏆 Past Events
             </button>
           </div>
 
           <h2 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
             <span className="text-padel-green">{sessionTab === 'upcoming' ? '📅' : '🏆'}</span>
-            {sessionTab === 'upcoming' ? 'Sessions' : 'Past Sessions'}
+            {sessionTab === 'upcoming' ? 'Events' : 'Past Events'}
           </h2>
 
           {isLoading ? (
             <div className="py-12">
-              <LoadingSpinner text="Loading sessions..." />
+              <LoadingSpinner text="Loading events..." />
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <p className="text-6xl mb-4">{sessionTab === 'upcoming' ? '🎾' : '🏆'}</p>
               <p className="text-xl font-semibold mb-2 text-white">
-                {sessionTab === 'upcoming' ? 'No booked sessions!' : 'No past sessions yet!'}
+                {sessionTab === 'upcoming' ? 'No booked events!' : 'No past events yet!'}
               </p>
               <p className="text-sm">
-                {sessionTab === 'upcoming' ? 'Create your first padel session above' : 'Past sessions will appear here'}
+                {sessionTab === 'upcoming' ? 'Create your first padel event above' : 'Past events will appear here'}
               </p>
             </div>
           ) : (
@@ -445,7 +445,7 @@ function App() {
                           day: 'numeric',
                         })}
                         {dateSessions.length > 1 && (
-                          <span className="ml-2 text-gray-500 font-normal">({dateSessions.length} sessions)</span>
+                          <span className="ml-2 text-gray-500 font-normal">({dateSessions.length} events)</span>
                         )}
                       </span>
                       <div className="h-px flex-1 bg-gray-700" />
