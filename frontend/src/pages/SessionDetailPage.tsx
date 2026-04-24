@@ -44,13 +44,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [showOverlapWarning, setShowOverlapWarning] = useState(false);
   const [overlaps, setOverlaps] = useState<Array<{ sessionId: string; sessionName: string; date: string; courtNumber: number; startTime: string; endTime: string }>>([]);
   const [pendingRSVP, setPendingRSVP] = useState<{ status: 'yes' | 'no' | 'maybe'; courtId: string | null } | null>(null);
-  const isProcessingRSVP = useRef(false);
+  const [isProcessingRSVP, setIsProcessingRSVP] = useState(false);
+  const isProcessingRSVPRef = useRef(false);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
     // Reset initialization flag when session changes
     hasInitialized.current = false;
-    isProcessingRSVP.current = false;
+    isProcessingRSVPRef.current = false;
+    setIsProcessingRSVP(false);
     
     fetchSessionById(sessionId);
     fetchRSVPs(sessionId);
@@ -175,7 +177,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
 
   useEffect(() => {
     // Only update RSVP status from rsvps if we're not currently processing an RSVP change
-    if (!isProcessingRSVP.current) {
+    if (!isProcessingRSVPRef.current) {
       const userRSVP = rsvps.find((r) => r.userId === user?.id);
       if (userRSVP) {
         // Only update if status actually changed to prevent unnecessary updates
@@ -221,7 +223,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
     
     // Prevent multiple simultaneous requests
-    if (isLoadingRSVP || isProcessingRSVP.current) {
+    if (isLoadingRSVP || isProcessingRSVPRef.current) {
       console.warn('handleRSVPChange called while processing - ignoring');
       return;
     }
@@ -232,7 +234,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
     
     // Set processing flag
-    isProcessingRSVP.current = true;
+    isProcessingRSVPRef.current = true;
+    setIsProcessingRSVP(true);
     const previousStatus = rsvpStatus;
     setRSVPStatus(status);
     
@@ -346,7 +349,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       }
     } finally {
       // Always clear processing flag
-      isProcessingRSVP.current = false;
+      isProcessingRSVPRef.current = false;
+      setIsProcessingRSVP(false);
     }
   };
 
@@ -355,8 +359,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     if (!pendingRSVP) return;
     
     setShowOverlapWarning(false);
-    isProcessingRSVP.current = true;
-    
+    isProcessingRSVPRef.current = true;
+    setIsProcessingRSVP(true);
+
     try {
       // RSVP was already created, just refresh the data
       setSelectedCourtId(pendingRSVP.courtId);
@@ -367,7 +372,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       const errorMessage = error?.response?.data?.error || 'Failed to refresh session data';
       alert(errorMessage);
     } finally {
-      isProcessingRSVP.current = false;
+      isProcessingRSVPRef.current = false;
+      setIsProcessingRSVP(false);
       setPendingRSVP(null);
       setOverlaps([]);
     }
@@ -377,8 +383,9 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     if (!pendingRSVP) return;
     
     setShowOverlapWarning(false);
-    isProcessingRSVP.current = true;
-    
+    isProcessingRSVPRef.current = true;
+    setIsProcessingRSVP(true);
+
     try {
       // Delete the RSVP that was just created
       const token = localStorage.getItem('token');
@@ -395,7 +402,8 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
       const errorMessage = error?.response?.data?.error || 'Failed to cancel RSVP';
       alert(errorMessage);
     } finally {
-      isProcessingRSVP.current = false;
+      isProcessingRSVPRef.current = false;
+      setIsProcessingRSVP(false);
       setPendingRSVP(null);
       setOverlaps([]);
     }
@@ -604,7 +612,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                   <button
                     type="button"
                     onClick={(e) => handleRSVPChange('no', e)}
-                    disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                    disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                     className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                       (rsvpStatus as string) === 'no'
                         ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
@@ -632,12 +640,12 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                   <button
                     type="button"
                     onClick={(e) => handleRSVPChange('yes', e)}
-                    disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current || rsvpStatus === 'yes'}
+                    disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current || rsvpStatus === 'yes'}
                     className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all border-2 ${
                       rsvpStatus === 'yes'
                         ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
                         : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-gray-700 hover:border-yellow-500'
-                    } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${(isLoadingRSVP || isProcessingRSVP || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-2xl">⏳</span>
@@ -650,7 +658,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 <button
                   type="button"
                   onClick={(e) => handleRSVPChange('no', e)}
-                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                   className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                     rsvpStatus === 'no'
                       ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'
@@ -666,31 +674,31 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 <button
                   type="button"
                   onClick={(e) => handleRSVPChange('yes', e)}
-                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                   className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                     rsvpStatus === 'yes'
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-2xl shadow-green-500/50'
                       : 'bg-dark-elevated text-gray-300 hover:bg-green-500/20 border-2 border-gray-700 hover:border-green-500'
-                  } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${(isLoadingRSVP || isProcessingRSVP || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   ✅ I'm Coming
                 </button>
                 <button
                   type="button"
                   onClick={(e) => handleRSVPChange('maybe', e)}
-                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                   className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                     rsvpStatus === 'maybe'
                       ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-2xl shadow-yellow-500/50'
                       : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-2 border-gray-700 hover:border-yellow-500'
-                  } ${(isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${(isLoadingRSVP || isProcessingRSVP || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   🤔 Maybe
                 </button>
                 <button
                   type="button"
                   onClick={(e) => handleRSVPChange('no', e)}
-                  disabled={isLoadingRSVP || isProcessingRSVP.current || !hasInitialized.current}
+                  disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                   className={`flex-1 min-w-[120px] py-4 px-6 rounded-xl font-bold text-lg transition-all ${
                     rsvpStatus === 'no'
                       ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-2xl shadow-red-500/50'

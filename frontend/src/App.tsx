@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useSessionStore } from './store/sessionStore';
+import { useRSVPStore } from './store/sessionStore';
 import { useNotificationStore } from './store/notificationStore';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -20,7 +21,9 @@ import './App.css';
 function App() {
   const { isAuthenticated, isInitializing, user, logout, initializeAuth } = useAuthStore();
   const { sessions, fetchSessions, isLoading } = useSessionStore();
+  const { createOrUpdateRSVP } = useRSVPStore();
   const { fetchNotifications, fetchMissedNotifications, missedNotifications } = useNotificationStore();
+  const [rsvpLoadingIds, setRsvpLoadingIds] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -137,6 +140,20 @@ function App() {
     setPullStartY(0);
     setPullDistance(0);
     setIsPullingToRefresh(false);
+  };
+
+  const handleQuickRSVP = async (e: React.MouseEvent, sessionId: string, status: 'yes' | 'no') => {
+    e.stopPropagation();
+    e.preventDefault();
+    setRsvpLoadingIds(prev => new Set(prev).add(sessionId));
+    try {
+      await createOrUpdateRSVP(sessionId, status, null);
+      await fetchSessions(sessionTab, allGroupsMode);
+    } catch (err) {
+      console.error('Quick RSVP failed:', err);
+    } finally {
+      setRsvpLoadingIds(prev => { const s = new Set(prev); s.delete(sessionId); return s; });
+    }
   };
 
   if (isInitializing) {
@@ -649,6 +666,24 @@ function App() {
                     </div>
                   )}
                   
+                  {/* Quick RSVP - only for upcoming events with no response yet */}
+                  {sessionTab === 'upcoming' && !session.rsvps?.find(r => r.user.id === user?.id) && !rsvpLoadingIds.has(session.id) && (
+                    <div className="mt-2 pt-2 border-t border-gray-800 flex gap-2" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => handleQuickRSVP(e, session.id, 'yes')}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-padel-green/20 border border-padel-green/50 text-padel-green hover:bg-padel-green hover:text-white transition-all"
+                      >
+                        I'm coming
+                      </button>
+                      <button
+                        onClick={(e) => handleQuickRSVP(e, session.id, 'no')}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        Can't make it
+                      </button>
+                    </div>
+                  )}
+
                   {/* Footer - Creator */}
                   <div className="mt-2 pt-2 border-t border-gray-800">
                     <span className="text-xs text-gray-500">

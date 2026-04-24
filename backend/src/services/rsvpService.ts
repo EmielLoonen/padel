@@ -143,6 +143,22 @@ export const rsvpService = {
 
     let overlaps: OverlapInfo[] = [];
 
+    // If status is "yes" and no courtId provided, auto-assign the first available court
+    if (status === 'yes' && !courtId) {
+      for (const court of session.courts) {
+        const courtRSVPs = await prisma.rSVP.count({
+          where: { courtId: court.id, status: 'yes', userId: { not: userId } },
+        });
+        const courtGuests = await prisma.guest.count({
+          where: { courtId: court.id },
+        });
+        if (courtRSVPs + courtGuests < court.maxPlayers) {
+          courtId = court.id;
+          break;
+        }
+      }
+    }
+
     // If status is "yes" and courtId is provided, validate it and check for overlaps
     if (status === 'yes' && courtId) {
       const court = session.courts.find((c) => c.id === courtId);
