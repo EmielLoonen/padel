@@ -434,7 +434,7 @@ export const setService = {
     let setsLost = 0;
     let gamesWon = 0;
     let gamesLost = 0;
-    const totalSets = userScores.length;
+    let totalSets = 0;
 
     // Map to track teammate stats: teammateId -> { gamesWon, gamesLost, totalGames }
     const teammateStatsMap = new Map<string, {
@@ -481,10 +481,13 @@ export const setService = {
       const userWon = userGamesWon === maxScore && userGamesWon >= 6;
       if (userWon) {
         setsWon++;
+        totalSets++;
       } else if (maxScore >= 6) {
         // Someone else won with 6+ games
         setsLost++;
+        totalSets++;
       }
+      // Sets where nobody reached 6 games are excluded from sets played entirely
 
       if (teammateScore && teammateScore.userId && teammateScore.user) {
         const teammateId = teammateScore.userId;
