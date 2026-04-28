@@ -14,6 +14,7 @@ import GroupSetupPage from './pages/GroupSetupPage';
 import GroupSwitcher from './components/GroupSwitcher';
 import NotificationBell from './components/NotificationBell';
 import LoadingSpinner from './components/LoadingSpinner';
+import SponsorCarousel from './components/SponsorCarousel';
 import Avatar from './components/Avatar';
 import MissedNotificationsModal from './components/MissedNotificationsModal';
 import './App.css';
@@ -157,7 +158,7 @@ function App() {
   };
 
   if (isInitializing) {
-    return <LoadingSpinner />;
+    return <SponsorCarousel fullscreen />;
   }
 
   if (!isAuthenticated) {
@@ -423,9 +424,7 @@ function App() {
           </div>
 
           {isLoading ? (
-            <div className="py-12">
-              <LoadingSpinner text="Loading events..." />
-            </div>
+            <SponsorCarousel fullscreen={false} />
           ) : sessions.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <p className="text-6xl mb-4">{sessionTab === 'upcoming' ? '🎾' : '🏆'}</p>
@@ -667,7 +666,12 @@ function App() {
                   )}
                   
                   {/* Quick RSVP - only for upcoming events with no response yet */}
-                  {sessionTab === 'upcoming' && !session.rsvps?.find(r => r.user.id === user?.id) && !rsvpLoadingIds.has(session.id) && (
+                  {sessionTab === 'upcoming' && !session.rsvps?.find(r => r.user.id === user?.id) && !rsvpLoadingIds.has(session.id) &&
+                    (() => {
+                      const confirmed = session.courts?.reduce((sum, c) => sum + (c.rsvps?.filter((r: any) => r.status === 'yes').length || 0) + (c.guests?.filter((g: any) => g.status === 'yes').length || 0), 0) ?? 0;
+                      const capacity = session.courts?.reduce((sum, c) => sum + (c.maxPlayers || 4), 0) ?? 4;
+                      return confirmed < capacity;
+                    })() && (
                     <div className="mt-2 pt-2 border-t border-gray-800 flex gap-2" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={(e) => handleQuickRSVP(e, session.id, 'yes')}
