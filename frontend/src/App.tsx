@@ -13,7 +13,6 @@ import AdminPage from './pages/AdminPage';
 import GroupSetupPage from './pages/GroupSetupPage';
 import GroupSwitcher from './components/GroupSwitcher';
 import NotificationBell from './components/NotificationBell';
-import LoadingSpinner from './components/LoadingSpinner';
 import SponsorCarousel from './components/SponsorCarousel';
 import Avatar from './components/Avatar';
 import MissedNotificationsModal from './components/MissedNotificationsModal';
