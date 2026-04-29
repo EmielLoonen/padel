@@ -487,29 +487,19 @@ function App() {
                       </span>
                     )}
                     <span className="text-base sm:text-2xl text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
-                      {session.courts && session.courts.length > 0 && (
-                        <span className="mr-1">
-                          Court {session.courts.length === 1
-                            ? session.courts[0].courtNumber
-                            : session.courts.map(c => c.courtNumber).join(' & ')} ·
-                        </span>
+                      {session.courts?.[0] && (
+                        <span className="mr-1">Court {session.courts[0].courtNumber} ·</span>
                       )}
                       {session.time}
                     </span>
                   </div>
 
                   {/* Cost only (date is shown in the group header) */}
-                  {(() => {
-                    const totalCourtCost = session.courts?.reduce((sum, court) => {
-                      const cost = court.cost ? Number(court.cost) : 0;
-                      return sum + cost;
-                    }, 0) || 0;
-                    return totalCourtCost > 0 ? (
-                      <p className="text-xs sm:text-base text-gray-400 mb-2 sm:mb-3">
-                        €{totalCourtCost.toFixed(2)}
-                      </p>
-                    ) : null;
-                  })()}
+                  {session.courts?.[0]?.cost && (
+                    <p className="text-xs sm:text-base text-gray-400 mb-2 sm:mb-3">
+                      €{Number(session.courts[0].cost).toFixed(2)}
+                    </p>
+                  )}
 
                   {session.notes && (
                     <p className="text-xs text-gray-400 italic mb-2 truncate sm:mb-3">
@@ -531,9 +521,6 @@ function App() {
                             {/* Court header - single compact line */}
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs sm:text-sm font-bold text-padel-green">
-                                  Court {court.courtNumber}
-                                </span>
                                 <span className="text-[10px] sm:text-xs text-gray-500">
                                   {court.duration}min
                                   {court.cost && <span className="ml-1">• €{(court.cost / 4).toFixed(2)}/p</span>}
@@ -674,9 +661,9 @@ function App() {
                   {/* Quick RSVP - only for upcoming events with no response yet */}
                   {sessionTab === 'upcoming' && !session.rsvps?.find(r => r.user.id === user?.id) && !rsvpLoadingIds.has(session.id) &&
                     (() => {
-                      const confirmed = session.courts?.reduce((sum, c) => sum + (c.rsvps?.filter((r: any) => r.status === 'yes').length || 0) + (c.guests?.filter((g: any) => g.status === 'yes').length || 0), 0) ?? 0;
-                      const capacity = session.courts?.reduce((sum, c) => sum + (c.maxPlayers || 4), 0) ?? 4;
-                      return confirmed < capacity;
+                      const court = session.courts?.[0];
+                      const confirmed = (court?.rsvps?.filter((r: any) => r.status === 'yes').length || 0) + (court?.guests?.filter((g: any) => g.status === 'yes').length || 0);
+                      return confirmed < (court?.maxPlayers || 4);
                     })() && (
                     <div className="mt-2 pt-2 border-t border-gray-800 flex gap-2" onClick={e => e.stopPropagation()}>
                       <button
