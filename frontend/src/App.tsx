@@ -522,7 +522,7 @@ function App() {
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] sm:text-xs text-gray-500">
-                                  {court.duration}min
+                                  <span className="text-white">{court.duration}min</span>
                                   {court.cost && <span className="ml-1">• €{(court.cost / 4).toFixed(2)}/p</span>}
                                 </span>
                               </div>
