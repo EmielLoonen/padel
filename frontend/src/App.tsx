@@ -487,6 +487,13 @@ function App() {
                       </span>
                     )}
                     <span className="text-base sm:text-2xl text-padel-green font-bold whitespace-nowrap flex-shrink-0 ml-auto">
+                      {session.courts && session.courts.length > 0 && (
+                        <span className="mr-1">
+                          Court {session.courts.length === 1
+                            ? session.courts[0].courtNumber
+                            : session.courts.map(c => c.courtNumber).join(' & ')} ·
+                        </span>
+                      )}
                       {session.time}
                     </span>
                   </div>
