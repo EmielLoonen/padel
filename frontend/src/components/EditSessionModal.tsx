@@ -37,6 +37,7 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
     if (court) {
       const token = localStorage.getItem('token');
       const payload: any = {
+        courtNumber: values.courtNumber,
         startTime: values.startTime,
         duration: values.duration,
         maxPlayers: values.maxPlayers,
@@ -66,6 +67,7 @@ export default function EditSessionModal({ session, onClose, onSuccess }: EditSe
             venueName: session.venueName,
             notes: session.notes ?? '',
             maxPlayers: court?.maxPlayers ?? 4,
+            courtNumber: court?.courtNumber ?? 1,
           }}
           onSubmit={handleSubmit}
           onClose={onClose}

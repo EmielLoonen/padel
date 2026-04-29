@@ -15,7 +15,7 @@ export default function CreateSessionPage({ onSuccess }: { onSuccess?: () => voi
       time: values.startTime,
       venueName: values.venueName,
       notes: values.notes || undefined,
-      courts: [{ courtNumber: 1, startTime: values.startTime, duration: values.duration, cost: values.cost || undefined, maxPlayers: values.maxPlayers }],
+      courts: [{ courtNumber: values.courtNumber, startTime: values.startTime, duration: values.duration, cost: values.cost || undefined, maxPlayers: values.maxPlayers }],
     });
 
     alert('Event created successfully! 🎾');

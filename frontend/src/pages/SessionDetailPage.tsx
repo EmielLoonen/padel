@@ -1231,6 +1231,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
             onSuccess={() => {
               setShowEditModal(false);
               fetchSessionById(sessionId);
+              fetchRSVPs(sessionId);
             }}
           />
         )}

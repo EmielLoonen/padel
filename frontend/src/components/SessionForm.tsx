@@ -8,6 +8,7 @@ export interface SessionFormValues {
   venueName: string;
   notes: string;
   maxPlayers: number;
+  courtNumber: number;
 }
 
 interface SessionFormProps {
@@ -38,6 +39,7 @@ export default function SessionForm({
   const [venueName, setVenueName] = useState(initialValues?.venueName ?? (mode === 'create' ? 'Padel Next' : ''));
   const [notes, setNotes] = useState(initialValues?.notes ?? '');
   const [maxPlayers, setMaxPlayers] = useState(initialValues?.maxPlayers ?? (sportType === 'TENNIS' ? 2 : 4));
+  const [courtNumber, setCourtNumber] = useState(initialValues?.courtNumber ?? 1);
 
   useEffect(() => {
     if (!initialValues) return;
@@ -48,11 +50,12 @@ export default function SessionForm({
     if (initialValues.venueName !== undefined) setVenueName(initialValues.venueName);
     if (initialValues.notes !== undefined) setNotes(initialValues.notes);
     if (initialValues.maxPlayers !== undefined) setMaxPlayers(initialValues.maxPlayers);
+    if (initialValues.courtNumber !== undefined) setCourtNumber(initialValues.courtNumber);
   }, [initialValues?.date, initialValues?.startTime, initialValues?.venueName]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await onSubmit({ date, startTime, duration, cost, venueName, notes, maxPlayers });
+    await onSubmit({ date, startTime, duration, cost, venueName, notes, maxPlayers, courtNumber });
   };
 
   return (
@@ -139,7 +142,17 @@ export default function SessionForm({
         {/* Court Details */}
         <div className="p-4 bg-dark-elevated rounded-xl border border-gray-700 space-y-3">
           <h3 className="text-sm font-semibold text-gray-300">Court Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Court Number</label>
+              <input
+                type="number"
+                min="1"
+                value={courtNumber}
+                onChange={(e) => setCourtNumber(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 bg-dark-card border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-padel-green text-sm"
+              />
+            </div>
             <div className="overflow-hidden">
               <label className="block text-xs text-gray-400 mb-1">Start Time</label>
               <input
