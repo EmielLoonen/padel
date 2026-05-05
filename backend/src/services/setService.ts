@@ -471,9 +471,10 @@ export const setService = {
         s.userId !== userId && 
         s.gamesWon !== userGamesWon  // Exclude teammate (who has same score)
       );
-      const maxOpponentScore = opponentScores.length > 0 
+      // If no opponents found (tied set where all scores equal), opponent score equals user score
+      const maxOpponentScore = opponentScores.length > 0
         ? Math.max(...opponentScores.map((s) => s.gamesWon))
-        : 0;
+        : userGamesWon;
       gamesLost += maxOpponentScore;
 
       // Determine if user won this set
@@ -676,14 +677,15 @@ export const setService = {
         const playerTeamScore = score.gamesWon;
         
         // Find opponent team (the team with a different score)
+        // If only one score group exists (tied set), opponent score equals player score
         let maxOpponentScore = 0;
         scoreGroups.forEach((count, teamScore) => {
           if (teamScore !== playerTeamScore) {
-            // This is the opponent team, take their score
             maxOpponentScore = Math.max(maxOpponentScore, teamScore);
           }
         });
-        
+        if (scoreGroups.size === 1) maxOpponentScore = playerTeamScore;
+
         existing.gamesLost += maxOpponentScore;
         
         existing.processedSets.add(setId);
