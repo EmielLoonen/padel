@@ -1119,7 +1119,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
             {/* Rolling window filter */}
             <div className="mb-4">
-              <p className="text-sm text-gray-400 mb-2">Matches:</p>
+              <p className="text-sm text-gray-400 mb-2">Sets:</p>
               <div className="flex gap-2">
                 {([5, 10, 20, null] as const).map((r) => (
                   <button
