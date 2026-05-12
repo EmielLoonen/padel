@@ -16,6 +16,7 @@ import watchRoutes from './routes/watch';
 import matchRoutes from './routes/matches';
 import groupRoutes from './routes/groups';
 import superAdminRoutes from './routes/superadmin';
+import liveScoreRoutes from './routes/liveScore';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,6 +65,9 @@ app.use('/api/watch', watchRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/superadmin', superAdminRoutes);
+
+// Live score endpoints (no auth, no /api prefix — court code acts as access token)
+app.use('/courts', liveScoreRoutes);
 
 // Start server
 app.listen(PORT, () => {
