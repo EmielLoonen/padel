@@ -12,6 +12,7 @@ import EditSetModal from '../components/EditSetModal';
 import Avatar from '../components/Avatar';
 import RatingDisplay from '../components/RatingDisplay';
 import OverlapWarningModal from '../components/OverlapWarningModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -42,6 +43,7 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedCourtForAddUser, setSelectedCourtForAddUser] = useState<{ id: string; number: number } | null>(null);
   const [showOverlapWarning, setShowOverlapWarning] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [overlaps, setOverlaps] = useState<Array<{ sessionId: string; sessionName: string; date: string; courtNumber: number; startTime: string; endTime: string }>>([]);
   const [pendingRSVP, setPendingRSVP] = useState<{ status: 'yes' | 'no' | 'maybe'; courtId: string | null } | null>(null);
   const [isProcessingRSVP, setIsProcessingRSVP] = useState(false);
@@ -547,9 +549,27 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 <div className="flex items-center gap-3">
                   <p className="text-white font-bold text-lg">Court {courtsInfo[0].courtNumber}</p>
                   {courtsInfo[0].watchCode && (
-                    <span className="font-mono text-sm font-bold bg-gray-700 text-gray-200 px-2 py-0.5 rounded tracking-widest">
-                      {courtsInfo[0].watchCode}
-                    </span>
+                    <div className="relative">
+                      <button
+                        onClick={() => setQrCode(qrCode === courtsInfo[0].watchCode ? null : courtsInfo[0].watchCode!)}
+                        className="font-mono text-sm font-bold bg-gray-700 hover:bg-gray-600 text-gray-200 px-2 py-0.5 rounded tracking-widest transition-colors"
+                      >
+                        {courtsInfo[0].watchCode}
+                      </button>
+                      {qrCode === courtsInfo[0].watchCode && (
+                        <div className="absolute left-0 top-full mt-2 z-10 bg-white p-3 rounded-xl shadow-2xl flex flex-col items-center gap-2">
+                          <QRCodeSVG value={`${API_URL}/courts/${courtsInfo[0].watchCode}`} size={160} />
+                          <a
+                            href={`${API_URL}/courts/${courtsInfo[0].watchCode}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-500 underline"
+                          >
+                            Open scoreboard
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
