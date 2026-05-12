@@ -658,12 +658,27 @@ function App() {
                     </div>
                   )}
                   
-                  {/* Quick RSVP - only for upcoming events with no response yet */}
+                  {/* Quick RSVP - only for upcoming events with no response yet and no time conflict */}
                   {sessionTab === 'upcoming' && !session.rsvps?.find(r => r.user.id === user?.id) && !rsvpLoadingIds.has(session.id) &&
                     (() => {
                       const court = session.courts?.[0];
                       const confirmed = (court?.rsvps?.filter((r: any) => r.status === 'yes').length || 0) + (court?.guests?.filter((g: any) => g.status === 'yes').length || 0);
-                      return confirmed < (court?.maxPlayers || 4);
+                      if (confirmed >= (court?.maxPlayers || 4)) return false;
+                      if (!court) return true;
+                      const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+                      const sessionDate = new Date(session.date).toDateString();
+                      const start = toMins(court.startTime);
+                      const end = start + court.duration;
+                      const hasConflict = sessions.some(other => {
+                        if (other.id === session.id) return false;
+                        if (new Date(other.date).toDateString() !== sessionDate) return false;
+                        if (!other.rsvps?.some((r: any) => r.user.id === user?.id && r.status === 'yes')) return false;
+                        const otherCourt = other.courts?.[0];
+                        if (!otherCourt) return false;
+                        const otherStart = toMins(otherCourt.startTime);
+                        return start < otherStart + otherCourt.duration && end > otherStart;
+                      });
+                      return !hasConflict;
                     })() && (
                     <div className="mt-2 pt-2 border-t border-gray-800 flex gap-2" onClick={e => e.stopPropagation()}>
                       <button
