@@ -557,7 +557,10 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                         {courtsInfo[0].watchCode}
                       </button>
                       {qrCode === courtsInfo[0].watchCode && (
-                        <div className="absolute left-0 top-full mt-2 z-10 bg-white p-3 rounded-xl shadow-2xl flex flex-col items-center gap-2">
+                        <div className="absolute left-0 top-full mt-2 z-10 bg-white p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                          <span className="font-mono text-5xl font-bold text-gray-900 tracking-widest">
+                            {courtsInfo[0].watchCode}
+                          </span>
                           <QRCodeSVG value={`${API_URL}/courts/${courtsInfo[0].watchCode}`} size={160} />
                           <a
                             href={`${API_URL}/courts/${courtsInfo[0].watchCode}`}
