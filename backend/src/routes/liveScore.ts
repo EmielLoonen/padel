@@ -109,119 +109,177 @@ function buildScoreboardHtml(code: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PadelScore — ${code}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0f1117;
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      background: #08080d;
       color: #f0f0f0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100dvh;
+    }
+    #waiting {
+      width: 1920px;
+      height: 1080px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
+      gap: 24px;
+      color: #444;
+      font-size: 36px;
     }
-    #waiting {
-      text-align: center;
-      color: #888;
-      font-size: 1.1rem;
+    #waiting .code { color: #fff; font-weight: 700; font-size: 52px; letter-spacing: .2em; }
+    #board {
+      width: 1920px;
+      height: 1080px;
+      display: none;
+      flex-direction: column;
     }
-    #waiting .code { color: #fff; font-weight: 700; font-size: 1.4rem; margin-top: .5rem; }
-    #scoreboard { width: 100%; max-width: 520px; display: none; flex-direction: column; gap: 1.5rem; }
-    .teams-row {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: .5rem;
-      text-align: center;
-    }
-    .team { display: flex; flex-direction: column; align-items: center; gap: .25rem; }
-    .team-name {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: .03em;
-    }
-    .team-label { font-size: .7rem; color: #888; text-transform: uppercase; letter-spacing: .1em; }
-    .serve-dot {
-      display: inline-block;
-      width: .6rem;
-      height: .6rem;
-      background: #4ade80;
-      border-radius: 50%;
-      margin-right: .35rem;
-      vertical-align: middle;
-    }
-    .divider { color: #555; font-size: 1.1rem; }
-    .score-block {
-      background: #1a1d27;
-      border-radius: 1rem;
-      padding: 1.25rem 1rem;
-    }
-    .score-row {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      text-align: center;
-      gap: .5rem;
-    }
-    .score-value { font-size: 3.5rem; font-weight: 800; line-height: 1; }
-    .score-dash { color: #555; font-size: 1.5rem; }
-    .score-label {
-      text-align: center;
-      font-size: .7rem;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      margin-top: .5rem;
-    }
-    .sets-row {
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 88px;
       display: flex;
-      gap: .75rem;
-      flex-wrap: wrap;
-      justify-content: center;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 80px;
+      border-bottom: 1px solid #161620;
     }
-    .set-chip {
-      background: #1a1d27;
-      border-radius: .5rem;
-      padding: .4rem .9rem;
-      font-size: .9rem;
+    .court-code {
+      font-size: 26px;
       font-weight: 600;
-      color: #ccc;
-      position: relative;
-    }
-    .set-chip.winner1 { color: #4ade80; }
-    .set-chip.winner2 { color: #f87171; }
-    .completed-banner {
-      background: #1a1d27;
-      border-radius: 1rem;
-      padding: 1rem 1.5rem;
-      text-align: center;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #4ade80;
+      color: #333;
+      letter-spacing: .25em;
+      text-transform: uppercase;
     }
     .status-bar {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: .4rem;
-      font-size: .75rem;
-      color: #555;
+      gap: 10px;
+      font-size: 24px;
+      color: #444;
     }
     .status-dot {
-      width: .5rem;
-      height: .5rem;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       background: #4ade80;
       animation: pulse 2s ease-in-out infinite;
     }
     .status-dot.offline { background: #f87171; animation: none; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .3; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+    /* ── Team names ── */
+    .teams {
+      height: 156px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 100px;
+    }
+    .team-name {
+      font-size: 68px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      line-height: 1;
+    }
+    .serve-dot {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      background: #4ade80;
+      border-radius: 50%;
+      margin-right: 14px;
+      vertical-align: middle;
+      position: relative;
+      top: -4px;
+    }
+
+    /* ── Game score (dominant) ── */
+    .game-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+    }
+    .game-score {
+      font-size: 360px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      min-width: 460px;
+      text-align: center;
+    }
+    .game-dash { font-size: 140px; color: #222; line-height: 1; }
+    .game-label {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 22px;
+      font-weight: 600;
+      color: #333;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .game-wrap { position: relative; padding-bottom: 36px; }
+
+    /* ── Set score ── */
+    .set-row {
+      height: 216px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      border-top: 1px solid #161620;
+    }
+    .set-score {
+      font-size: 156px;
+      font-weight: 800;
+      line-height: 1;
+      color: #bbb;
+      font-variant-numeric: tabular-nums;
+      min-width: 200px;
+      text-align: center;
+    }
+    .set-dash { font-size: 80px; color: #222; line-height: 1; }
+    .set-label {
+      font-size: 20px;
+      font-weight: 600;
+      color: #2a2a3a;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      margin: 0 32px;
+      align-self: center;
+    }
+
+    /* ── Footer: completed sets / winner ── */
+    .footer {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      border-top: 1px solid #161620;
+    }
+    .set-chip {
+      font-size: 28px;
+      font-weight: 600;
+      color: #2a2a3a;
+      letter-spacing: .05em;
+    }
+    .set-chip.w1 { color: #4ade80; }
+    .set-chip.w2 { color: #f87171; }
+    .winner-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: #4ade80;
+      letter-spacing: .05em;
     }
   </style>
 </head>
@@ -231,54 +289,46 @@ function buildScoreboardHtml(code: string): string {
     <div class="code">${code}</div>
   </div>
 
-  <div id="scoreboard">
-    <div class="teams-row">
-      <div class="team">
-        <div class="team-name" id="team1-name">—</div>
-        <div class="team-label">Team 1</div>
-      </div>
-      <div class="divider">vs</div>
-      <div class="team">
-        <div class="team-name" id="team2-name">—</div>
-        <div class="team-label">Team 2</div>
+  <div id="board">
+    <div class="topbar">
+      <span class="court-code">${code}</span>
+      <div class="status-bar">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Live</span>
       </div>
     </div>
 
-    <div class="score-block">
-      <div class="score-row">
-        <div class="score-value" id="game-t1">0</div>
-        <div class="score-dash">–</div>
-        <div class="score-value" id="game-t2">0</div>
+    <div class="teams">
+      <div class="team-name" id="team1-name">—</div>
+      <div class="team-name" id="team2-name">—</div>
+    </div>
+
+    <div class="game-row">
+      <div class="game-wrap">
+        <div class="game-score" id="game-t1">0</div>
+        <div class="game-label" id="game-label">Game</div>
       </div>
-      <div class="score-label" id="game-label">Game</div>
-    </div>
-
-    <div class="score-block">
-      <div class="score-row">
-        <div class="score-value" id="set-t1" style="font-size:2.5rem">0</div>
-        <div class="score-dash">–</div>
-        <div class="score-value" id="set-t2" style="font-size:2.5rem">0</div>
+      <div class="game-dash">–</div>
+      <div class="game-wrap">
+        <div class="game-score" id="game-t2">0</div>
       </div>
-      <div class="score-label">Current Set</div>
     </div>
 
-    <div class="sets-row" id="sets-row"></div>
-
-    <div class="completed-banner" id="completed-banner" style="display:none"></div>
-
-    <div class="status-bar">
-      <div class="status-dot" id="status-dot"></div>
-      <span id="status-text">Live</span>
+    <div class="set-row">
+      <div class="set-score" id="set-t1">0</div>
+      <div class="set-label">Set</div>
+      <div class="set-dash">–</div>
+      <div class="set-label">Set</div>
+      <div class="set-score" id="set-t2">0</div>
     </div>
+
+    <div class="footer" id="footer"></div>
   </div>
 
   <script>
     const CODE = '${code}';
-    let lastUpdate = null;
 
     function updateDisplay(data) {
-      lastUpdate = data.updatedAt;
-
       const p = data.players || {};
       const sp = data.servingPlayer;
       const dot = '<span class="serve-dot"></span>';
@@ -311,24 +361,20 @@ function buildScoreboardHtml(code: string): string {
         document.getElementById('set-t2').textContent = data.currentSet.team2Games;
       }
 
-      const setsRow = document.getElementById('sets-row');
-      const completedSets = (data.sets || []).filter(s => s.winner !== null);
-      setsRow.innerHTML = completedSets.map((s, i) => {
-        const cls = s.winner === 1 ? 'winner1' : s.winner === 2 ? 'winner2' : '';
-        return '<div class="set-chip ' + cls + '">Set ' + (i + 1) + ': ' + s.team1Games + '–' + s.team2Games + '</div>';
-      }).join('');
-
-      const banner = document.getElementById('completed-banner');
+      const footer = document.getElementById('footer');
       if (data.isCompleted && data.winner) {
-        const winnerName = data.winner === 1 ? t1 : t2;
-        banner.textContent = 'Match completed — ' + winnerName + ' wins';
-        banner.style.display = 'block';
+        const winnerName = data.winner === 1 ? t1.replace(/<[^>]+>/g, '') : t2.replace(/<[^>]+>/g, '');
+        footer.innerHTML = '<span class="winner-text">Match completed — ' + winnerName + ' wins</span>';
       } else {
-        banner.style.display = 'none';
+        const completedSets = (data.sets || []).filter(s => s.winner !== null);
+        footer.innerHTML = completedSets.map((s, i) => {
+          const cls = s.winner === 1 ? 'w1' : s.winner === 2 ? 'w2' : '';
+          return '<span class="set-chip ' + cls + '">Set ' + (i + 1) + ': ' + s.team1Games + '–' + s.team2Games + '</span>';
+        }).join('');
       }
 
       document.getElementById('waiting').style.display = 'none';
-      document.getElementById('scoreboard').style.display = 'flex';
+      document.getElementById('board').style.display = 'flex';
     }
 
     function setStatus(live) {
@@ -349,18 +395,9 @@ function buildScoreboardHtml(code: string): string {
 
     function connect() {
       if (!window.EventSource) { startPolling(); return; }
-
       const es = new EventSource('/courts/' + CODE + '/score/stream');
-
-      es.addEventListener('score', (e) => {
-        setStatus(true);
-        updateDisplay(JSON.parse(e.data));
-      });
-
-      es.onerror = () => {
-        es.close();
-        startPolling();
-      };
+      es.addEventListener('score', (e) => { setStatus(true); updateDisplay(JSON.parse(e.data)); });
+      es.onerror = () => { es.close(); startPolling(); };
     }
 
     connect();
