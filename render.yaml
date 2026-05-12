@@ -6,7 +6,7 @@ services:
   - type: web
     name: padel-coordinator-api
     env: node
-    buildCommand: npm install -g pnpm && pnpm install && cd backend && npx prisma generate && npx prisma db push --accept-data-loss && cd .. && pnpm --filter backend build
+    buildCommand: npm install -g pnpm@9 && pnpm install && cd backend && npx prisma generate && npx prisma db push --accept-data-loss && cd .. && pnpm --filter backend build
     startCommand: cd backend && node dist/server.js
     healthCheckPath: /health
     envVars:
@@ -31,7 +31,7 @@ services:
   - type: web
     name: padel-coordinator-frontend
     env: static
-    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter frontend build
+    buildCommand: npm install -g pnpm@9 && pnpm install && pnpm --filter frontend build
     staticPublishPath: frontend/dist
     headers:
       - path: /*
