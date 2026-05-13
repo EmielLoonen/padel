@@ -162,24 +162,25 @@ function buildScoreboardHtml(code: string): string {
       margin-bottom: 1vh;
     }
     .teams-above .team-name { flex: 1; text-align: center; }
-    .teams-above .teams-spacer { flex-shrink: 0; width: 20vh; }
+    .teams-above .teams-spacer { flex-shrink: 0; width: min(20vh, 10vw); }
     .team-name {
-      font-size: 17vh;
+      font-size: min(17vh, 9vw);
       font-weight: 700;
       color: #fff;
       letter-spacing: .02em;
       line-height: 1;
+      white-space: nowrap;
     }
     .serve-dot {
       display: inline-block;
-      width: 7vh;
-      height: 7vh;
+      width: .4em;
+      height: .4em;
       background: #4ade80;
       border-radius: 50%;
-      margin-right: 2vh;
+      margin-right: .12em;
       vertical-align: middle;
       position: relative;
-      top: -1vh;
+      top: -.06em;
     }
     .game-row {
       display: flex;
@@ -191,7 +192,7 @@ function buildScoreboardHtml(code: string): string {
     }
     .game-score {
       flex: 1;
-      font-size: 50vh;
+      font-size: min(50vh, 30vw);
       font-weight: 900;
       line-height: 1;
       color: #fff;
@@ -199,7 +200,7 @@ function buildScoreboardHtml(code: string): string {
       text-align: center;
     }
     .game-dash {
-      font-size: 20vh;
+      font-size: min(20vh, 10vw);
       color: #fff;
       line-height: 1;
       flex-shrink: 0;
@@ -226,7 +227,7 @@ function buildScoreboardHtml(code: string): string {
     }
     .set-score {
       flex: 1;
-      font-size: 20vh;
+      font-size: min(20vh, 13vw);
       font-weight: 800;
       line-height: 1;
       color: #fff;
@@ -235,7 +236,7 @@ function buildScoreboardHtml(code: string): string {
       padding: 0 3vw;
     }
     .set-dash {
-      font-size: 7vh;
+      font-size: min(7vh, 4vw);
       color: #fff;
       line-height: 1;
       flex-shrink: 0;
