@@ -109,177 +109,194 @@ function buildScoreboardHtml(code: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PadelScore — ${code}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      width: 1920px;
-      height: 1080px;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       background: #08080d;
-      color: #f0f0f0;
+      color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+
+    /* ── Waiting ── */
     #waiting {
-      width: 1920px;
-      height: 1080px;
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 24px;
-      color: #444;
-      font-size: 36px;
+      gap: 2vh;
+      font-size: 3vh;
+      color: #fff;
     }
-    #waiting .code { color: #fff; font-weight: 700; font-size: 52px; letter-spacing: .2em; }
+    #waiting .code { font-size: 6vh; font-weight: 700; letter-spacing: .2em; }
+
+    /* ── Board ── */
     #board {
-      width: 1920px;
-      height: 1080px;
+      width: 100%;
+      height: 100%;
       display: none;
       flex-direction: column;
+      position: relative;
     }
 
-    /* ── Top bar ── */
-    .topbar {
-      height: 88px;
+    /* ── Game section: 75% ── */
+    .game-section {
+      height: 75%;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 80px;
-      border-bottom: 1px solid #161620;
+      justify-content: flex-end;
+      padding-bottom: 1vh;
     }
-    .court-code {
-      font-size: 26px;
-      font-weight: 600;
-      color: #333;
-      letter-spacing: .25em;
-      text-transform: uppercase;
-    }
-    .status-bar {
+    .teams-above {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 24px;
-      color: #444;
+      width: 100%;
+      padding: 0 3vw;
+      gap: 2vw;
+      margin-bottom: 1vh;
     }
-    .status-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #4ade80;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    .status-dot.offline { background: #f87171; animation: none; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
-
-    /* ── Team names ── */
-    .teams {
-      height: 156px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 100px;
-    }
+    .teams-above .team-name { flex: 1; text-align: center; }
+    .teams-above .teams-spacer { flex-shrink: 0; width: 20vh; }
     .team-name {
-      font-size: 68px;
+      font-size: 17vh;
       font-weight: 700;
+      color: #fff;
       letter-spacing: .02em;
       line-height: 1;
     }
     .serve-dot {
       display: inline-block;
-      width: 20px;
-      height: 20px;
+      width: 7vh;
+      height: 7vh;
       background: #4ade80;
       border-radius: 50%;
-      margin-right: 14px;
+      margin-right: 2vh;
       vertical-align: middle;
       position: relative;
-      top: -4px;
+      top: -1vh;
     }
-
-    /* ── Game score (dominant) ── */
     .game-row {
-      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 60px;
+      width: 100%;
+      padding: 0 3vw;
+      gap: 2vw;
     }
     .game-score {
-      font-size: 360px;
+      flex: 1;
+      font-size: 50vh;
       font-weight: 900;
       line-height: 1;
+      color: #fff;
       font-variant-numeric: tabular-nums;
-      min-width: 460px;
       text-align: center;
     }
-    .game-dash { font-size: 140px; color: #222; line-height: 1; }
+    .game-dash {
+      font-size: 20vh;
+      color: #fff;
+      line-height: 1;
+      flex-shrink: 0;
+    }
     .game-label {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 22px;
+      font-size: 1.8vh;
       font-weight: 600;
-      color: #333;
+      color: #fff;
       letter-spacing: .2em;
       text-transform: uppercase;
-      white-space: nowrap;
+      text-align: center;
+      margin-top: .5vh;
     }
-    .game-wrap { position: relative; padding-bottom: 36px; }
 
-    /* ── Set score ── */
-    .set-row {
-      height: 216px;
+    /* ── Set section: 25% ── */
+    .set-section {
+      height: 25%;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 48px;
-      border-top: 1px solid #161620;
+      gap: 2vw;
+      border-top: 1px solid #1a1a2a;
+      position: relative;
     }
     .set-score {
-      font-size: 156px;
+      flex: 1;
+      font-size: 20vh;
       font-weight: 800;
       line-height: 1;
-      color: #bbb;
+      color: #fff;
       font-variant-numeric: tabular-nums;
-      min-width: 200px;
       text-align: center;
+      padding: 0 3vw;
     }
-    .set-dash { font-size: 80px; color: #222; line-height: 1; }
-    .set-label {
-      font-size: 20px;
-      font-weight: 600;
-      color: #2a2a3a;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      margin: 0 32px;
-      align-self: center;
+    .set-dash {
+      font-size: 7vh;
+      color: #fff;
+      line-height: 1;
+      flex-shrink: 0;
     }
 
-    /* ── Footer: completed sets / winner ── */
-    .footer {
-      height: 72px;
+    /* ── Overlaid info ── */
+    .corner-tl {
+      position: absolute;
+      top: 1.5vh;
+      left: 2vw;
+      font-size: 1.6vh;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: .2em;
+      opacity: .4;
+    }
+    .corner-tr {
+      position: absolute;
+      top: 1.5vh;
+      right: 2vw;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 48px;
-      border-top: 1px solid #161620;
+      gap: .6vw;
+      font-size: 1.6vh;
+      color: #fff;
+      opacity: .4;
     }
-    .set-chip {
-      font-size: 28px;
+    .status-dot {
+      width: 1.2vh;
+      height: 1.2vh;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .status-dot.offline { background: #f87171; animation: none; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+
+    .sets-overlay {
+      position: absolute;
+      bottom: 1vh;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 3vw;
+      font-size: 3vh;
       font-weight: 600;
-      color: #2a2a3a;
-      letter-spacing: .05em;
+      color: #fff;
+      white-space: nowrap;
     }
-    .set-chip.w1 { color: #4ade80; }
-    .set-chip.w2 { color: #f87171; }
-    .winner-text {
-      font-size: 32px;
+    .set-chip.w1 { color: #4ade80; opacity: 1; }
+    .set-chip.w2 { color: #f87171; opacity: 1; }
+
+    .winner-banner {
+      position: absolute;
+      bottom: 1vh;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.5vh;
       font-weight: 700;
       color: #4ade80;
-      letter-spacing: .05em;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -290,39 +307,33 @@ function buildScoreboardHtml(code: string): string {
   </div>
 
   <div id="board">
-    <div class="topbar">
-      <span class="court-code">${code}</span>
-      <div class="status-bar">
+    <div class="game-section">
+      <div class="teams-above">
+        <div class="team-name" id="team1-name">—</div>
+        <div class="teams-spacer"></div>
+        <div class="team-name" id="team2-name">—</div>
+      </div>
+      <div class="game-row">
+        <div class="game-score" id="game-t1">0</div>
+        <div class="game-dash">–</div>
+        <div class="game-score" id="game-t2">0</div>
+      </div>
+      <div class="game-label" id="game-label">Game</div>
+    </div>
+
+    <div class="set-section">
+      <div class="set-score" id="set-t1">0</div>
+      <div class="set-dash">–</div>
+      <div class="set-score" id="set-t2">0</div>
+
+      <div class="corner-tl">${code}</div>
+      <div class="corner-tr">
         <div class="status-dot" id="status-dot"></div>
         <span id="status-text">Live</span>
       </div>
+      <div class="sets-overlay" id="sets-overlay"></div>
+      <div class="winner-banner" id="winner-banner" style="display:none"></div>
     </div>
-
-    <div class="teams">
-      <div class="team-name" id="team1-name">—</div>
-      <div class="team-name" id="team2-name">—</div>
-    </div>
-
-    <div class="game-row">
-      <div class="game-wrap">
-        <div class="game-score" id="game-t1">0</div>
-        <div class="game-label" id="game-label">Game</div>
-      </div>
-      <div class="game-dash">–</div>
-      <div class="game-wrap">
-        <div class="game-score" id="game-t2">0</div>
-      </div>
-    </div>
-
-    <div class="set-row">
-      <div class="set-score" id="set-t1">0</div>
-      <div class="set-label">Set</div>
-      <div class="set-dash">–</div>
-      <div class="set-label">Set</div>
-      <div class="set-score" id="set-t2">0</div>
-    </div>
-
-    <div class="footer" id="footer"></div>
   </div>
 
   <script>
@@ -332,6 +343,7 @@ function buildScoreboardHtml(code: string): string {
       const p = data.players || {};
       const sp = data.servingPlayer;
       const dot = '<span class="serve-dot"></span>';
+      const t1OnLeft = !data.team1Side || data.team1Side === 'L';
 
       function pn(key) {
         const name = p[key];
@@ -341,36 +353,47 @@ function buildScoreboardHtml(code: string): string {
 
       const t1 = [pn('A'), pn('B')].filter(Boolean).join(' / ') || '—';
       const t2 = [pn('C'), pn('D')].filter(Boolean).join(' / ') || '—';
+      const leftName  = t1OnLeft ? t1 : t2;
+      const rightName = t1OnLeft ? t2 : t1;
 
-      document.getElementById('team1-name').innerHTML = t1;
-      document.getElementById('team2-name').innerHTML = t2;
+      document.getElementById('team1-name').innerHTML = leftName;
+      document.getElementById('team2-name').innerHTML = rightName;
 
       const isTB = data.currentSet && data.currentSet.isTiebreak;
       if (isTB && data.tiebreak) {
-        document.getElementById('game-t1').textContent = data.tiebreak.team1;
-        document.getElementById('game-t2').textContent = data.tiebreak.team2;
+        document.getElementById('game-t1').textContent = t1OnLeft ? data.tiebreak.team1 : data.tiebreak.team2;
+        document.getElementById('game-t2').textContent = t1OnLeft ? data.tiebreak.team2 : data.tiebreak.team1;
         document.getElementById('game-label').textContent = 'Tiebreak';
       } else if (data.game) {
-        document.getElementById('game-t1').textContent = data.game.team1Points;
-        document.getElementById('game-t2').textContent = data.game.team2Points;
+        document.getElementById('game-t1').textContent = t1OnLeft ? data.game.team1Points : data.game.team2Points;
+        document.getElementById('game-t2').textContent = t1OnLeft ? data.game.team2Points : data.game.team1Points;
         document.getElementById('game-label').textContent = 'Game';
       }
 
       if (data.currentSet) {
-        document.getElementById('set-t1').textContent = data.currentSet.team1Games;
-        document.getElementById('set-t2').textContent = data.currentSet.team2Games;
+        document.getElementById('set-t1').textContent = t1OnLeft ? data.currentSet.team1Games : data.currentSet.team2Games;
+        document.getElementById('set-t2').textContent = t1OnLeft ? data.currentSet.team2Games : data.currentSet.team1Games;
       }
 
-      const footer = document.getElementById('footer');
+      const completedSets = (data.sets || []).filter(s => s.winner !== null);
+      document.getElementById('sets-overlay').innerHTML = completedSets.map((s, i) => {
+        const leftGames  = t1OnLeft ? s.team1Games : s.team2Games;
+        const rightGames = t1OnLeft ? s.team2Games : s.team1Games;
+        const leftWon = (t1OnLeft && s.winner === 1) || (!t1OnLeft && s.winner === 2);
+        const cls = s.winner === null ? '' : (leftWon ? 'w1' : 'w2');
+        return '<span class="set-chip ' + cls + '">Set ' + (i + 1) + ': ' + leftGames + '–' + rightGames + '</span>';
+      }).join('');
+
+      const banner = document.getElementById('winner-banner');
       if (data.isCompleted && data.winner) {
-        const winnerName = data.winner === 1 ? t1.replace(/<[^>]+>/g, '') : t2.replace(/<[^>]+>/g, '');
-        footer.innerHTML = '<span class="winner-text">Match completed — ' + winnerName + ' wins</span>';
+        const leftWon = (t1OnLeft && data.winner === 1) || (!t1OnLeft && data.winner === 2);
+        const winnerName = (leftWon ? leftName : rightName).replace(/<[^>]+>/g, '');
+        banner.textContent = 'Match completed — ' + winnerName + ' wins';
+        banner.style.display = 'block';
+        document.getElementById('sets-overlay').style.display = 'none';
       } else {
-        const completedSets = (data.sets || []).filter(s => s.winner !== null);
-        footer.innerHTML = completedSets.map((s, i) => {
-          const cls = s.winner === 1 ? 'w1' : s.winner === 2 ? 'w2' : '';
-          return '<span class="set-chip ' + cls + '">Set ' + (i + 1) + ': ' + s.team1Games + '–' + s.team2Games + '</span>';
-        }).join('');
+        banner.style.display = 'none';
+        document.getElementById('sets-overlay').style.display = 'flex';
       }
 
       document.getElementById('waiting').style.display = 'none';
