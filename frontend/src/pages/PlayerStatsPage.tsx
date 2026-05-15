@@ -284,7 +284,8 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         .sort((a, b) => {
           const dateA = a.date ? new Date(a.date).getTime() : 0;
           const dateB = b.date ? new Date(b.date).getTime() : 0;
-          return dateA - dateB;
+          if (dateA !== dateB) return dateA - dateB;
+          return (a.setNumber || 0) - (b.setNumber || 0);
         });
 
       let filteredSets = sortedSets;
@@ -294,7 +295,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
       if (filteredSets.length === 0) return [];
 
-      // Calculate sets won/lost from the sets that WILL be shown
+      // Calculate games won/lost from the sets that WILL be shown
       let totalWonFromShown = 0;
       let totalLostFromShown = 0;
       filteredSets.forEach((set) => {
@@ -305,19 +306,19 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
         set.scores?.forEach((s: any) => {
           if (s.gamesWon !== playerTeamScore) maxOpponentScore = Math.max(maxOpponentScore, s.gamesWon);
         });
-        if (playerTeamScore > maxOpponentScore) totalWonFromShown += 1;
-        else if (maxOpponentScore > playerTeamScore) totalLostFromShown += 1;
+        totalWonFromShown += playerTeamScore;
+        totalLostFromShown += maxOpponentScore;
       });
 
-      const baselineWon = (stats.setsWon || 0) - totalWonFromShown;
-      const baselineLost = (stats.setsLost || 0) - totalLostFromShown;
+      const baselineWon = (stats.gamesWon || 0) - totalWonFromShown;
+      const baselineLost = (stats.gamesLost || 0) - totalLostFromShown;
 
       let cumulativeWon = baselineWon;
       let cumulativeLost = baselineLost;
       const data: Array<{
         session: string;
-        setsWon: number;
-        setsLost: number;
+        gamesWon: number;
+        gamesLost: number;
         netChange: number;
         cumulativeNet: number;
         startValue: number;
@@ -335,13 +336,10 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           if (s.gamesWon !== playerTeamScore) maxOpponentScore = Math.max(maxOpponentScore, s.gamesWon);
         });
 
-        const setWon = playerTeamScore > maxOpponentScore ? 1 : 0;
-        const setLost = maxOpponentScore > playerTeamScore ? 1 : 0;
-
-        const netChange = setWon - setLost;
+        const netChange = playerTeamScore - maxOpponentScore;
         const startValue = cumulativeWon - cumulativeLost;
-        cumulativeWon += setWon;
-        cumulativeLost += setLost;
+        cumulativeWon += playerTeamScore;
+        cumulativeLost += maxOpponentScore;
         const cumulativeNet = cumulativeWon - cumulativeLost;
 
         let label = `Set ${index + 1}`;
@@ -359,8 +357,8 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
 
         data.push({
           session: label,
-          setsWon: setWon,
-          setsLost: setLost,
+          gamesWon: playerTeamScore,
+          gamesLost: maxOpponentScore,
           netChange,
           cumulativeNet,
           startValue,
@@ -874,7 +872,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               yAxisId="left"
                               stroke="#9CA3AF" 
                               style={{ fontSize: '12px' }} 
-                              label={{ value: 'Net Sets', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#9CA3AF' } }}
+                              label={{ value: 'Net Games', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#9CA3AF' } }}
                             />
                             <YAxis 
                               yAxisId="right"
@@ -895,10 +893,10 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               formatter={(value: number, name: string) => {
                                 if (name === 'cumulativeNet') {
                                   const sign = value >= 0 ? '+' : '';
-                                  return [`${sign}${value}`, 'Cumulative Net Sets'];
+                                  return [`${sign}${value}`, 'Cumulative Net Games'];
                                 } else if (name === 'netChange') {
                                   const sign = value >= 0 ? '+' : '';
-                                  return [`${sign}${value}`, 'Net Sets (this event)'];
+                                  return [`${sign}${value}`, 'Net Games (this set)'];
                                 } else if (name === 'rating') {
                                   return value !== null ? [value.toFixed(2), 'DSS Rating'] : ['N/A', 'DSS Rating'];
                                 }
