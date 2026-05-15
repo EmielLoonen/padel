@@ -125,7 +125,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSortBy>('sets');
   const [matchHistory, setMatchHistory] = useState<MatchHistory[]>([]);
   const [ratingHistory, setRatingHistory] = useState<Array<{ createdAt: string; rating: number | null; setId?: string | null }>>([]);
-  const [trendFilter, setTrendFilter] = useState<'all' | 'last10Sessions'>('last10Sessions');
+  const [trendFilter, setTrendFilter] = useState<'last5' | 'last10' | 'last20' | 'all'>('last10');
   const [matchAggStats, setMatchAggStats] = useState<MatchPlayerAggStats | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [leaderboardRolling, setLeaderboardRolling] = useState<5 | 10 | 20 | null>(10);
@@ -276,231 +276,108 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
     if (!matchHistory || matchHistory.length === 0 || !user?.id || !stats) return [];
 
     try {
-      // Sort by date (oldest first) first to group sessions properly
-      const sortedHistory = [...matchHistory].sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateA - dateB;
-      });
-
-      // Group sets by sessionId
-      const sessionsMap = new Map<string, typeof sortedHistory>();
-      sortedHistory.forEach((set) => {
-        if (!set.sessionId) return;
-        if (!sessionsMap.has(set.sessionId)) {
-          sessionsMap.set(set.sessionId, []);
-        }
-        sessionsMap.get(set.sessionId)!.push(set);
-      });
-
-      // Convert to array and sort sessions by date
-      let sessions = Array.from(sessionsMap.entries()).sort((a, b) => {
-        const dateA = a[1][0]?.date ? new Date(a[1][0].date).getTime() : 0;
-        const dateB = b[1][0]?.date ? new Date(b[1][0].date).getTime() : 0;
-        return dateA - dateB;
-      });
-
-      // Filter to last 5 sessions if needed (before calculating baseline)
-      if (trendFilter === 'last10Sessions') {
-        sessions = sessions.slice(-10);
-      }
-
-      if (sessions.length === 0) return [];
-
-      // Calculate total games from sessions that WILL be shown in the graph
-      let totalWonFromShownSessions = 0;
-      let totalLostFromShownSessions = 0;
-      sessions.forEach(([, sets]) => {
-        sets.forEach((set) => {
-          if (!set.scores || !Array.isArray(set.scores) || set.scores.length === 0) {
-            return;
-          }
-          const playerScore = set.scores.find((s: any) => s.userId === user.id);
-          if (playerScore && typeof playerScore.gamesWon === 'number') {
-            totalWonFromShownSessions += playerScore.gamesWon;
-            
-            // Group players by score to identify teams
-            const scoreGroups = new Map<number, Array<{ userId?: string; guestId?: string }>>();
-            set.scores.forEach((s: any) => {
-              const score = s.gamesWon;
-              if (!scoreGroups.has(score)) {
-                scoreGroups.set(score, []);
-              }
-              scoreGroups.get(score)!.push({ userId: s.userId, guestId: s.guestId });
-            });
-            
-            const playerTeamScore = playerScore.gamesWon;
-            let maxOpponentScore = 0;
-            scoreGroups.forEach((_, score) => {
-              if (score !== playerTeamScore) {
-                maxOpponentScore = Math.max(maxOpponentScore, score);
-              }
-            });
-            if (maxOpponentScore > 0) {
-              totalLostFromShownSessions += maxOpponentScore;
-            }
-          }
+      // Sort all sets by date oldest first
+      const sortedSets = [...matchHistory]
+        .filter((set) => set.scores?.some((s: any) => s.userId === user.id))
+        .sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          return dateA - dateB;
         });
+
+      let filteredSets = sortedSets;
+      if (trendFilter === 'last5') filteredSets = sortedSets.slice(-5);
+      else if (trendFilter === 'last10') filteredSets = sortedSets.slice(-10);
+      else if (trendFilter === 'last20') filteredSets = sortedSets.slice(-20);
+
+      if (filteredSets.length === 0) return [];
+
+      // Calculate sets won/lost from the sets that WILL be shown
+      let totalWonFromShown = 0;
+      let totalLostFromShown = 0;
+      filteredSets.forEach((set) => {
+        const playerScore = set.scores?.find((s: any) => s.userId === user.id);
+        if (!playerScore || typeof playerScore.gamesWon !== 'number') return;
+        const playerTeamScore = playerScore.gamesWon;
+        let maxOpponentScore = 0;
+        set.scores?.forEach((s: any) => {
+          if (s.gamesWon !== playerTeamScore) maxOpponentScore = Math.max(maxOpponentScore, s.gamesWon);
+        });
+        if (playerTeamScore > maxOpponentScore) totalWonFromShown += 1;
+        else if (maxOpponentScore > playerTeamScore) totalLostFromShown += 1;
       });
 
-      // Calculate starting baseline: total stats minus what will be shown
-      // This ensures the final cumulative value matches the total stats
-      const baselineWon = (stats.gamesWon || 0) - totalWonFromShownSessions;
-      const baselineLost = (stats.gamesLost || 0) - totalLostFromShownSessions;
+      const baselineWon = (stats.setsWon || 0) - totalWonFromShown;
+      const baselineLost = (stats.setsLost || 0) - totalLostFromShown;
 
-      // Start cumulative values from baseline (to account for sessions not shown)
       let cumulativeWon = baselineWon;
       let cumulativeLost = baselineLost;
-      const data: Array<{ 
-        session: string; 
-        gamesWon: number; 
-        gamesLost: number; 
-        netChange: number; // gamesWon - gamesLost for this session
-        cumulativeNet: number; // cumulative net difference
-        startValue: number; // starting cumulative net value
+      const data: Array<{
+        session: string;
+        setsWon: number;
+        setsLost: number;
+        netChange: number;
+        cumulativeNet: number;
+        startValue: number;
         sessionNumber: number;
-        rating: number | null; // DSS rating at this point
+        rating: number | null;
       }> = [];
 
-      sessions.forEach(([, sets], sessionIndex) => {
-        let sessionWon = 0;
-        let sessionLost = 0;
+      filteredSets.forEach((set, index) => {
+        const playerScore = set.scores?.find((s: any) => s.userId === user.id);
+        if (!playerScore || typeof playerScore.gamesWon !== 'number') return;
 
-        sets.forEach((set) => {
-          if (!set.scores || !Array.isArray(set.scores) || set.scores.length === 0) {
-            return;
-          }
-
-          // Find the player's score in this set
-          // Note: user.id is always a registered user ID, not a guest ID
-          const playerScore = set.scores.find((s: any) => s.userId === user.id);
-
-          if (playerScore && typeof playerScore.gamesWon === 'number') {
-            sessionWon += playerScore.gamesWon;
-            
-            // Group players by score to identify teams (teammates have the same score)
-            const scoreGroups = new Map<number, Array<{ userId?: string; guestId?: string }>>();
-            set.scores.forEach((s: any) => {
-              const score = s.gamesWon;
-              if (!scoreGroups.has(score)) {
-                scoreGroups.set(score, []);
-              }
-              scoreGroups.get(score)!.push({ userId: s.userId, guestId: s.guestId });
-            });
-
-            // Find which team the current player belongs to (by score)
-            const playerTeamScore = playerScore.gamesWon;
-            
-            // Find opponent team (the team with a different score)
-            let maxOpponentScore = 0;
-            scoreGroups.forEach((_, score) => {
-              if (score !== playerTeamScore) {
-                // This is the opponent team, take their max score
-                maxOpponentScore = Math.max(maxOpponentScore, score);
-              }
-            });
-            
-            if (maxOpponentScore > 0) {
-              sessionLost += maxOpponentScore;
-            }
-          }
+        const playerTeamScore = playerScore.gamesWon;
+        let maxOpponentScore = 0;
+        set.scores?.forEach((s: any) => {
+          if (s.gamesWon !== playerTeamScore) maxOpponentScore = Math.max(maxOpponentScore, s.gamesWon);
         });
 
-        // Only add session if player participated
-        if (sessionWon > 0 || sessionLost > 0) {
-          const netChange = sessionWon - sessionLost;
-          const startValue = cumulativeWon - cumulativeLost;
-          
-          cumulativeWon += sessionWon;
-          cumulativeLost += sessionLost;
-          const cumulativeNet = cumulativeWon - cumulativeLost;
+        const setWon = playerTeamScore > maxOpponentScore ? 1 : 0;
+        const setLost = maxOpponentScore > playerTeamScore ? 1 : 0;
 
-          // Format session label with date
-          const firstSet = sets[0];
-          let sessionLabel = `Session ${sessionIndex + 1}`;
-          
-          // Add date to label
-          let dateStr = '';
-          if (firstSet?.date) {
-            try {
-              const date = new Date(firstSet.date);
-              if (!isNaN(date.getTime())) {
-                dateStr = date.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                });
-              }
-            } catch (e) {
-              // Ignore date parsing errors
-            }
-          }
-          
-          if (firstSet?.venueName) {
-            // Shorten venue name if too long
-            const venueShort = firstSet.venueName.length > 12 
-              ? firstSet.venueName.substring(0, 12) + '...' 
-              : firstSet.venueName;
-            sessionLabel = dateStr ? `${venueShort} (${dateStr})` : venueShort;
-          } else if (dateStr) {
-            sessionLabel = `${sessionLabel} (${dateStr})`;
-          }
+        const netChange = setWon - setLost;
+        const startValue = cumulativeWon - cumulativeLost;
+        cumulativeWon += setWon;
+        cumulativeLost += setLost;
+        const cumulativeNet = cumulativeWon - cumulativeLost;
 
-          // Find rating at the end of this session
-          // Match ratings to sets within this session, or use the most recent rating before this session
-          let sessionRating: number | null = null;
-          
-          if (ratingHistory.length > 0) {
-            // First, try to find ratings that correspond to sets in this session
-            const setIdsInSession = new Set(sets.map((s: any) => s.id));
-            let latestRatingInSession: number | null = null;
-            let latestRatingDate = 0;
-            
-            // Look for ratings that match sets in this session (iterate in reverse to get latest)
-            for (let i = ratingHistory.length - 1; i >= 0; i--) {
-              const ratingEntry = ratingHistory[i];
-              if (ratingEntry.setId && setIdsInSession.has(ratingEntry.setId)) {
-                const ratingDate = new Date(ratingEntry.createdAt).getTime();
-                if (ratingDate > latestRatingDate) {
-                  latestRatingDate = ratingDate;
-                  latestRatingInSession = ratingEntry.rating;
-                }
-              }
+        let label = `Set ${index + 1}`;
+        if (set.date) {
+          try {
+            const date = new Date(set.date);
+            if (!isNaN(date.getTime())) {
+              label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             }
-            
-            if (latestRatingInSession !== null) {
-              sessionRating = latestRatingInSession;
-            } else if (firstSet?.date) {
-              // If no rating found for sets in this session, use the most recent rating before or at this session date
-              const sessionDate = new Date(firstSet.date).getTime();
-              // Find the latest rating entry before or at this session date
-              for (let i = ratingHistory.length - 1; i >= 0; i--) {
-                const ratingDate = new Date(ratingHistory[i].createdAt).getTime();
-                if (ratingDate <= sessionDate) {
-                  sessionRating = ratingHistory[i].rating;
-                  break;
-                }
-              }
-              // If no rating found before this session, use the first available rating (oldest)
-              if (sessionRating === null && ratingHistory.length > 0) {
-                sessionRating = ratingHistory[0].rating;
-              }
-            } else {
-              // No date available, use the most recent rating
-              sessionRating = ratingHistory[ratingHistory.length - 1].rating;
-            }
-          }
-
-          data.push({
-            session: sessionLabel,
-            gamesWon: sessionWon,
-            gamesLost: sessionLost,
-            netChange,
-            cumulativeNet,
-            startValue,
-            sessionNumber: sessionIndex + 1,
-            rating: sessionRating,
-          });
+          } catch {}
         }
+
+        let setRating: number | null = null;
+        if (ratingHistory.length > 0) {
+          const matchingRating = ratingHistory.find((r: any) => r.setId === set.id);
+          if (matchingRating) {
+            setRating = matchingRating.rating;
+          } else if (set.date) {
+            const setDate = new Date(set.date).getTime();
+            for (let i = ratingHistory.length - 1; i >= 0; i--) {
+              if (new Date(ratingHistory[i].createdAt).getTime() <= setDate) {
+                setRating = ratingHistory[i].rating;
+                break;
+              }
+            }
+          }
+        }
+
+        data.push({
+          session: label,
+          setsWon: setWon,
+          setsLost: setLost,
+          netChange,
+          cumulativeNet,
+          startValue,
+          sessionNumber: index + 1,
+          rating: setRating,
+        });
       });
 
       return data;
@@ -975,28 +852,21 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                   {trendData.length > 0 && (
                     <div className="bg-dark-elevated p-6 rounded-xl border border-gray-700">
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Event Trend</h3>
+                        <h3 className="text-lg font-semibold text-white">Set Trend</h3>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setTrendFilter('last10Sessions')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                              trendFilter === 'last10Sessions'
-                                ? 'bg-padel-green text-white'
-                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
-                            }`}
-                          >
-                            Last 10 Events
-                          </button>
-                          <button
-                            onClick={() => setTrendFilter('all')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                              trendFilter === 'all'
-                                ? 'bg-padel-green text-white'
-                                : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
-                            }`}
-                          >
-                            All Events
-                          </button>
+                          {(['last5', 'last10', 'last20', 'all'] as const).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => setTrendFilter(f)}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                                trendFilter === f
+                                  ? 'bg-padel-green text-white'
+                                  : 'bg-dark-card text-gray-400 hover:text-white border border-gray-700'
+                              }`}
+                            >
+                              {f === 'last5' ? 'Last 5' : f === 'last10' ? 'Last 10' : f === 'last20' ? 'Last 20' : 'All'}
+                            </button>
+                          ))}
                         </div>
                       </div>
                       <div className="w-full" style={{ height: '300px', minHeight: '300px' }}>
@@ -1015,7 +885,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               yAxisId="left"
                               stroke="#9CA3AF" 
                               style={{ fontSize: '12px' }} 
-                              label={{ value: 'Net Games', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#9CA3AF' } }}
+                              label={{ value: 'Net Sets', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#9CA3AF' } }}
                             />
                             <YAxis 
                               yAxisId="right"
@@ -1036,10 +906,10 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
                               formatter={(value: number, name: string) => {
                                 if (name === 'cumulativeNet') {
                                   const sign = value >= 0 ? '+' : '';
-                                  return [`${sign}${value}`, 'Cumulative Net'];
+                                  return [`${sign}${value}`, 'Cumulative Net Sets'];
                                 } else if (name === 'netChange') {
                                   const sign = value >= 0 ? '+' : '';
-                                  return [`${sign}${value}`, 'Net Change (this session)'];
+                                  return [`${sign}${value}`, 'Net Sets (this event)'];
                                 } else if (name === 'rating') {
                                   return value !== null ? [value.toFixed(2), 'DSS Rating'] : ['N/A', 'DSS Rating'];
                                 }
