@@ -349,7 +349,8 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           try {
             const date = new Date(set.date);
             if (!isNaN(date.getTime())) {
-              label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              label = set.setNumber ? `${dateStr} #${set.setNumber}` : dateStr;
             }
           } catch {}
         }
