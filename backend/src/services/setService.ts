@@ -803,6 +803,7 @@ export const setService = {
         id: set.id,
         setNumber: set.setNumber,
         date: set.court.session.date,
+        createdAt: set.createdAt,
         sessionId: set.court.session.id,
         venueName: set.court.session.venueName,
         courtNumber: set.court.courtNumber,
