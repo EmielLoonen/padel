@@ -44,6 +44,7 @@ interface MatchHistory {
   id: string;
   date: string;
   createdAt?: string;
+  ratingAfter?: number | null;
   sessionId: string;
   venueName: string;
   courtNumber: number;
@@ -353,21 +354,7 @@ export default function PlayerStatsPage({ onBack }: PlayerStatsPageProps) {
           } catch {}
         }
 
-        let setRating: number | null = null;
-        if (ratingHistory.length > 0) {
-          const matchingRating = ratingHistory.find((r: any) => r.setId === set.id);
-          if (matchingRating) {
-            setRating = matchingRating.rating;
-          } else {
-            const fallbackDate = new Date(set.createdAt ?? set.date).getTime();
-            for (let i = ratingHistory.length - 1; i >= 0; i--) {
-              if (new Date(ratingHistory[i].createdAt).getTime() <= fallbackDate) {
-                setRating = ratingHistory[i].rating;
-                break;
-              }
-            }
-          }
-        }
+        const setRating: number | null = set.ratingAfter ?? null;
 
         data.push({
           session: label,

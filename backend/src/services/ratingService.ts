@@ -256,8 +256,11 @@ export async function calculatePlayerRating(
 
 /**
  * Recalculate DSS ratings for ALL players in a specific group.
+ * Returns final ratings plus a per-set snapshot: setId → (userId → rating after that set).
  */
-export async function recalculateAllRatings(groupId?: string): Promise<Map<string, number>> {
+export async function recalculateAllRatings(
+  groupId?: string
+): Promise<{ finalRatings: Map<string, number>; setRatings: Map<string, Map<string, number>> }> {
   const allSets = await prisma.set.findMany({
     where: {
       createdAt: {
@@ -277,6 +280,7 @@ export async function recalculateAllRatings(groupId?: string): Promise<Map<strin
   });
 
   const ratings = new Map<string, number>();
+  const setRatings = new Map<string, Map<string, number>>();
   const getRating = (userId: string) => ratings.get(userId) ?? DEFAULT_RATING;
 
   for (const rawSet of allSets) {
@@ -315,6 +319,9 @@ export async function recalculateAllRatings(groupId?: string): Promise<Map<strin
       ratings.set(id, rating);
     }
 
+    // Capture intermediate rating for each set
+    setRatings.set(rawSet.id, new Map(newRatings));
+
     // Persist after each set if we know the group
     if (setGroupId) {
       for (const [userId, rating] of newRatings) {
@@ -326,7 +333,7 @@ export async function recalculateAllRatings(groupId?: string): Promise<Map<strin
     }
   }
 
-  return ratings;
+  return { finalRatings: ratings, setRatings };
 }
 
 /**
@@ -445,7 +452,7 @@ export async function recalculateRatingsForSet(setId: string): Promise<void> {
   // Recalculate ALL players in the group simultaneously so opponent ratings
   // evolve correctly through history (fixes the bug where opponents were
   // assigned the same rating as the player being calculated)
-  const newRatings = await recalculateAllRatings(groupId);
+  const { finalRatings, setRatings } = await recalculateAllRatings(groupId);
 
   // Write matchRating + ratingHistory entries for players in the triggering set
   const setWithRatings: SetWithScores = {
@@ -460,7 +467,8 @@ export async function recalculateRatingsForSet(setId: string): Promise<void> {
 
   for (const userId of userIds) {
     const previousRating = previousRatings.get(userId) ?? DEFAULT_RATING;
-    const newRating = newRatings.get(userId) ?? DEFAULT_RATING;
+    // Use the incremental rating at this specific set, not the final recalculated value
+    const newRating = setRatings.get(setId)?.get(userId) ?? finalRatings.get(userId) ?? DEFAULT_RATING;
 
     const matchRatingData = await calculateMatchRating(userId, setWithRatings, previousRating);
     let matchRating: number | null = null;
@@ -487,6 +495,11 @@ export async function recalculateRatingsForSet(setId: string): Promise<void> {
       });
     }
 
+    // Delete any existing entry for this userId/setId/groupId before creating the updated one
+    await prisma.ratingHistory.deleteMany({
+      where: { userId, setId, ...(groupId ? { groupId } : {}) },
+    });
+
     await prisma.ratingHistory.create({
       data: {
         userId,
@@ -505,8 +518,8 @@ export async function recalculateRatingsForSet(setId: string): Promise<void> {
  * Runs group-wide recalculation to ensure opponent ratings are correct.
  */
 export async function recalculatePlayerRating(userId: string, groupId: string): Promise<number> {
-  const ratings = await recalculateAllRatings(groupId);
-  return ratings.get(userId) ?? DEFAULT_RATING;
+  const { finalRatings } = await recalculateAllRatings(groupId);
+  return finalRatings.get(userId) ?? DEFAULT_RATING;
 }
 
 /**

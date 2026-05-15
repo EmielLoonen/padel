@@ -787,6 +787,11 @@ export const setService = {
             gamesWon: 'desc',
           },
         },
+        ratingHistory: {
+          where: { userId, ...(groupId ? { groupId } : {}) },
+          select: { rating: true },
+          take: 1,
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -794,10 +799,10 @@ export const setService = {
     });
 
     return sets.map((set) => {
-      // Find max score (winner)
       const maxScore = Math.max(...set.scores.map((s) => s.gamesWon));
       const userScore = set.scores.find((s) => s.userId === userId);
       const playerWon = userScore && userScore.gamesWon === maxScore && userScore.gamesWon >= 6;
+      const ratingAfter = set.ratingHistory[0]?.rating ? Number(set.ratingHistory[0].rating) : null;
 
       return {
         id: set.id,
@@ -810,6 +815,7 @@ export const setService = {
         scores: set.scores,
         playerWon,
         maxScore,
+        ratingAfter,
       };
     });
   },
