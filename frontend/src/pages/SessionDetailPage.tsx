@@ -456,6 +456,33 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
     }
   };
 
+  const handleLeaveWaitlist = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!hasInitialized.current || isLoadingRSVP || isProcessingRSVPRef.current) return;
+
+    isProcessingRSVPRef.current = true;
+    setIsProcessingRSVP(true);
+    setRSVPStatus(null);
+    setSelectedCourtId(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/rsvps/session/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await fetchSessionById(sessionId);
+      await fetchRSVPs(sessionId);
+    } catch (error: any) {
+      setRSVPStatus('yes');
+      alert(error?.response?.data?.error || 'Failed to leave waitlist');
+    } finally {
+      isProcessingRSVPRef.current = false;
+      setIsProcessingRSVP(false);
+    }
+  };
+
   const handleDelete = async () => {
     try {
       await deleteSession(sessionId);
@@ -662,17 +689,17 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                 <div className="mb-6">
                   <button
                     type="button"
-                    onClick={(e) => handleRSVPChange('yes', e)}
-                    disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current || rsvpStatus === 'yes'}
+                    onClick={(e) => rsvpStatus === 'yes' ? handleLeaveWaitlist(e) : handleRSVPChange('yes', e)}
+                    disabled={isLoadingRSVP || isProcessingRSVP || !hasInitialized.current}
                     className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all border-2 ${
                       rsvpStatus === 'yes'
-                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                        ? 'bg-orange-500/20 border-orange-500 text-orange-400 hover:bg-red-500/20 hover:border-red-500 hover:text-red-400'
                         : 'bg-dark-elevated text-gray-300 hover:bg-yellow-500/20 border-gray-700 hover:border-yellow-500'
                     } ${(isLoadingRSVP || isProcessingRSVP || !hasInitialized.current) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-2xl">⏳</span>
-                      <span>{rsvpStatus === 'yes' ? 'On Waitlist' : 'Join Waitlist'}</span>
+                      <span>{rsvpStatus === 'yes' ? 'Leave Waitlist' : 'Join Waitlist'}</span>
                     </div>
                   </button>
                 </div>
@@ -995,10 +1022,10 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                             size="sm" 
                           />
                         )}
-                        {(user?.isAdmin || (user?.canCreateSessions !== false && (!rsvp.user.canCreateSessions && !rsvp.user.isAdmin))) && (
+                        {(rsvp.user.id === user?.id || isCreator) && (
                           <button
-                            onClick={() => handleAdminRemoveUser(rsvp.user.id)}
-                            className="ml-auto text-red-500 hover:text-red-400 text-sm sm:text-xs sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => rsvp.user.id === user?.id ? handleLeaveWaitlist(e) : handleAdminRemoveUser(rsvp.user.id)}
+                            className="ml-auto text-red-500 hover:text-red-400 text-sm transition-colors"
                             title="Remove from waitlist"
                           >
                             ✕
@@ -1043,6 +1070,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       >
                         <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
                         <span className="text-sm font-medium text-yellow-300">{rsvp.user.name}</span>
+                        {(rsvp.user.id === user?.id || isCreator) && (
+                          <button
+                            onClick={() => handleAdminRemoveUser(rsvp.user.id)}
+                            className="ml-auto text-red-500 hover:text-red-400 text-sm transition-colors"
+                            title="Remove from maybe"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     ))}
                     {/* Guests */}
@@ -1082,6 +1118,15 @@ export default function SessionDetailPage({ sessionId, onBack }: SessionDetailPa
                       >
                         <Avatar src={rsvp.user.avatarUrl} name={rsvp.user.name} size="sm" />
                         <span className="text-sm font-medium text-red-300">{rsvp.user.name}</span>
+                        {(rsvp.user.id === user?.id || isCreator) && (
+                          <button
+                            onClick={() => handleAdminRemoveUser(rsvp.user.id)}
+                            className="ml-auto text-red-500 hover:text-red-400 text-sm transition-colors"
+                            title="Remove from can't make it"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     ))}
                     {/* Guests */}

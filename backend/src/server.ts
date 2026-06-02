@@ -27,7 +27,7 @@ const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = [corsOrigin];
 // In development, also allow local network access for mobile testing
 if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://192.168.2.21:5173');
+  allowedOrigins.push('http://192.168.2.22:5173');
 }
 console.log(`🌐 CORS enabled for origins:`, allowedOrigins);
 app.use(cors({
